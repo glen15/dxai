@@ -1,0 +1,133 @@
+# dxai
+
+> AI dev environment manager for macOS
+
+dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI, Gemini CLI). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
+
+## Repository
+
+- URL: https://github.com/glen15/dxai
+- License: MIT
+- Platform: macOS 13+
+
+## Components
+
+### Menu Bar App (DxaiBar)
+
+SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `com.dxai.DxaiBar`.
+
+Features:
+- Real-time token usage tracking across Claude Code, Codex CLI, Gemini CLI
+- Quota bars for Claude/Codex 5-hour session and 7-day limits
+- Pioneer Rank system: 8 tiers (Bronze → Challenger), 36 levels based on daily token usage
+- Kill Streak milestone notifications
+- Quick Actions: system status, AI env scan, disk cleanup, optimization
+- AI Environment Scan: global/project MCP servers, skills, CLAUDE.md/AGENTS.md detection
+- EN/KR bilingual localization
+- Auto-start at login
+
+Source: `app/DxaiBar/Sources/`
+Build: `cd app/DxaiBar && ./scripts/build-app.sh release`
+
+### CLI
+
+Bash entrypoint (`dxai`) dispatching to Python/Shell/Go implementations.
+
+Commands:
+- `dxai ai` — Token usage dashboard (Claude + Codex + Gemini)
+- `dxai ai watch` — Real-time token monitoring
+- `dxai scan` — AI agent environment diagnosis
+- `dxai scan --json` — Structured JSON output (used by menu bar app)
+- `dxai status` — System health (CPU, memory, disk, network)
+- `dxai clean` — Cache, log, temp file cleanup
+- `dxai optimize` — Memory, DNS, system DB rebuild
+- `dxai analyze` — Disk usage visual explorer
+- `dxai purge` — Build artifact cleanup (node_modules, .build, etc.)
+- `dxai uninstall` — Full app removal
+
+## Install
+
+```bash
+# Menu Bar App (recommended)
+brew tap glen15/dxai
+brew install --cask dxaibar
+
+# CLI only
+brew install dxai
+
+# From source
+curl -fsSL https://raw.githubusercontent.com/glen15/dxai/main/install.sh | bash
+```
+
+Requirements: macOS 13 (Ventura)+, Python 3
+
+## Architecture
+
+```
+dxai/
+├── dxai                     # CLI entrypoint (Bash)
+├── bin/                     # Command implementations (Python/Shell)
+│   ├── ai.py                # Token dashboard
+│   ├── scan.py              # AI environment scanner
+│   ├── clean.sh             # Disk cleanup
+│   └── optimize.sh          # System optimization
+├── lib/                     # Shared libraries
+├── cmd/                     # Go binaries (analyze, status)
+├── app/DxaiBar/             # macOS menu bar app (SwiftUI)
+│   ├── Sources/             # Swift source files
+│   └── scripts/build-app.sh # App bundle builder
+├── homebrew/
+│   ├── Formula/dxai.rb      # Homebrew formula (CLI)
+│   └── Casks/dxaibar.rb     # Homebrew cask (GUI app)
+└── .github/workflows/
+    └── release.yml           # CI/CD pipeline
+```
+
+## Data Handling
+
+- Reads AI tool logs from `~/.claude/`, `~/.codex/`, `~/.gemini/` (read-only)
+- Never deletes AI tool data
+- All processing is local — no data leaves the machine
+- Log files (.jsonl) are parsed but never modified
+
+## Token Sources
+
+- Claude Code: `~/.claude/projects/*/logs/*.jsonl`
+- Codex CLI: `~/.codex/logs/*.jsonl`
+- Gemini CLI: `~/.gemini/logs/*.jsonl`
+
+## Pioneer Rank Tiers
+
+| Tier | Entry Threshold | Divisions |
+|------|----------------|-----------|
+| Bronze | 10K tokens | 5 → 1 |
+| Silver | 500K | 5 → 1 |
+| Gold | 8M | 5 → 1 |
+| Platinum | 50M | 5 → 1 |
+| Diamond | 220M | 5 → 1 |
+| Master | 620M | 5 → 1 |
+| Grandmaster | 1.5B | 5 → 1 |
+| Challenger | 5B | Final |
+
+## Key Files
+
+- `app/DxaiBar/Sources/DxaiViewModel.swift` — Core logic, token parsing, rank calculation
+- `app/DxaiBar/Sources/DxaiMenuView.swift` — Main UI view
+- `app/DxaiBar/Sources/Localization.swift` — EN/KR localization strings
+- `app/DxaiBar/Sources/DxaiDatabase.swift` — SQLite persistence
+- `app/DxaiBar/Sources/ScanPanelView.swift` — AI environment scan UI
+- `bin/ai.py` — CLI token dashboard
+- `bin/scan.py` — CLI environment scanner
+
+## Contributing
+
+```bash
+# Build and run menu bar app
+cd app/DxaiBar
+./scripts/build-app.sh release
+open build/DxaiBar.app
+
+# Run CLI
+./dxai ai
+./dxai scan
+```
