@@ -147,7 +147,7 @@ dxai/
 
 ## 크레딧
 
-[Tw93](https://github.com/tw93)의 [Mole](https://github.com/tw93/Mole) (MIT 라이선스)을 기반으로 시스템 정리/최적화 기능을 구축했습니다.
+[Tw93](https://github.com/tw93)의 [Mole](https://github.com/tw93/Mole) (MIT 라이선스)에서 영감을 받아, 시스템 정리/최적화 기반을 AI 중심으로 재구성했습니다 — 토큰 추적, 쿼터 모니터링, 게이미피케이션 개발자 경험을 더했습니다.
 
 ## 라이선스
 

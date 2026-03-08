@@ -147,7 +147,7 @@ dxai/
 
 ## Credits
 
-Built on [Mole](https://github.com/tw93/Mole) by [Tw93](https://github.com/tw93) (MIT License) for system cleanup/optimization foundations.
+Inspired by [Mole](https://github.com/tw93/Mole) by [Tw93](https://github.com/tw93) (MIT License). The system cleanup and optimization foundations from Mole were rebuilt and extended with an AI-first approach — token tracking, quota monitoring, and a gamified developer experience.
 
 ## License
 
