@@ -12,6 +12,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var lastUpdated: Date = Date()
     @Published var systemStatus: SystemStatus?
     @Published var scanResult: ScanResult?
+    @Published var weeklyStats: [DxaiDatabase.DailyStats] = []
 
     private var timer: Timer?
     private var lastNotifiedLevel: PioneerLevel?

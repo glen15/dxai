@@ -58,6 +58,7 @@ struct DxaiMenuView: View {
     @State private var hoveredAction: String?
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showAbout = false
+    @State private var showInsights = false
     @AppStorage("appLanguage") private var lang = "en"
     private var l: L { L(lang) }
 
@@ -65,6 +66,8 @@ struct DxaiMenuView: View {
         VStack(spacing: 0) {
             if showAbout {
                 aboutView
+            } else if showInsights {
+                insightsNavigationView
             } else if viewModel.showTaskPanel {
                 taskPanelView
             } else {
@@ -363,6 +366,29 @@ struct DxaiMenuView: View {
         }
 
         return VStack(spacing: 0) {
+            // Section header with Insights button
+            HStack {
+                Spacer()
+                Button(action: {
+                    viewModel.weeklyStats = DxaiDatabase.shared.weeklyStats()
+                    showInsights = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 10))
+                        Text(l.insights)
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.purple.opacity(0.1))
+                    .foregroundColor(.purple)
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 4)
+
             if filtered.isEmpty {
                 HStack {
                     Spacer()
@@ -837,6 +863,47 @@ struct DxaiMenuView: View {
                 .frame(width: 20)
             Text(text)
                 .font(.system(size: 13))
+        }
+    }
+
+    // MARK: - Insights
+
+    private var insightsNavigationView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { showInsights = false }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text(l.back)
+                    }
+                    .font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(l.insightsTitle)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            InsightsView(stats: viewModel.weeklyStats)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button(l.close) { showInsights = false }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.vertical, 10)
         }
     }
 

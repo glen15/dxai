@@ -63,6 +63,21 @@ struct L {
     var maxRank: String { "MAX RANK" }
     var today: String { ko ? "오늘" : "today" }
 
+    // MARK: - Insights
+
+    var insights: String { ko ? "인사이트" : "Insights" }
+    var insightsTitle: String { ko ? "주간 인사이트" : "Weekly Insights" }
+    var insightsDailyAvg: String { ko ? "일 평균" : "Daily Avg" }
+    var insightsPeakDay: String { ko ? "최고 사용일" : "Peak Day" }
+    var insightsTotalWeek: String { ko ? "주간 총합" : "Week Total" }
+    var insightsToolBreakdown: String { ko ? "도구별 사용량" : "Tool Breakdown" }
+    var insightsTokenTypes: String { ko ? "토큰 유형" : "Token Types" }
+    var insightsInput: String { ko ? "입력" : "Input" }
+    var insightsOutput: String { ko ? "출력" : "Output" }
+    var insightsCache: String { ko ? "캐시" : "Cache" }
+    var insightsNoData: String { ko ? "최근 7일간 데이터가 없습니다" : "No data in the last 7 days" }
+    var insightsRequests: String { ko ? "요청" : "requests" }
+
     // MARK: - Usage Bars
 
     var session5h: String { ko ? "세션 (5h)" : "Session (5h)" }

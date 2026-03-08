@@ -183,6 +183,151 @@ final class DxaiDatabase {
         return accum
     }
 
+    // MARK: - Weekly Stats (7 days)
+
+    func weeklyStats() -> [DailyStats] {
+        let startDate = Self.startOfDayUTC(daysAgo: 6)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let endDate = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date()))!
+
+        let claudeByDate = parseClaude(from: startDate, to: endDate)
+        let codexByDate = parseCodex(from: startDate, to: endDate)
+
+        var results: [DailyStats] = []
+        for daysAgo in (0...6).reversed() {
+            let dayDate = Self.startOfDayUTC(daysAgo: daysAgo)
+            let dateKey = Self.dateStringUTC(dayDate)
+
+            let c = claudeByDate[dateKey] ?? TokenAccum()
+            results.append(DailyStats(
+                date: dateKey, tool: "claude",
+                totalTokens: c.totalTokens, inputTokens: c.inputTokens,
+                outputTokens: c.outputTokens, cacheReadTokens: c.cacheReadTokens,
+                requests: c.requests
+            ))
+
+            let x = codexByDate[dateKey] ?? TokenAccum()
+            results.append(DailyStats(
+                date: dateKey, tool: "codex",
+                totalTokens: x.totalTokens, inputTokens: x.inputTokens,
+                outputTokens: x.outputTokens, cacheReadTokens: x.cacheReadTokens,
+                requests: x.requests
+            ))
+        }
+        return results
+    }
+
+    private func parseClaude(from startDate: Date, to endDate: Date) -> [String: TokenAccum] {
+        var accum: [String: TokenAccum] = [:]
+        let claudeDir = home.appendingPathComponent(".claude/projects")
+        guard let enumerator = FileManager.default.enumerator(
+            at: claudeDir,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return accum }
+
+        let rangeStart = startDate.timeIntervalSince1970
+        for case let url as URL in enumerator {
+            guard url.pathExtension == "jsonl" else { continue }
+            if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+               let mdate = vals.contentModificationDate,
+               mdate.timeIntervalSince1970 < rangeStart { continue }
+
+            forEachLine(in: url) { lineData in
+                guard let entry = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                      entry["type"] as? String == "assistant",
+                      let message = entry["message"] as? [String: Any],
+                      let usage = message["usage"] as? [String: Any],
+                      let timestamp = entry["timestamp"] as? String,
+                      let dt = Self.parseISO8601(timestamp),
+                      dt >= startDate, dt < endDate else { return }
+
+                let dateKey = Self.dateStringUTC(dt)
+                let input = usage["input_tokens"] as? Int ?? 0
+                let output = usage["output_tokens"] as? Int ?? 0
+                let cacheRead = usage["cache_read_input_tokens"] as? Int ?? 0
+
+                var bucket = accum[dateKey] ?? TokenAccum()
+                bucket.inputTokens += input
+                bucket.outputTokens += output
+                bucket.cacheReadTokens += cacheRead
+                bucket.totalTokens += input + output + cacheRead
+                bucket.requests += 1
+                accum[dateKey] = bucket
+            }
+        }
+        return accum
+    }
+
+    private func parseCodex(from startDate: Date, to endDate: Date) -> [String: TokenAccum] {
+        var accum: [String: TokenAccum] = [:]
+        let sessionsDir = home.appendingPathComponent(".codex/sessions")
+        guard let enumerator = FileManager.default.enumerator(
+            at: sessionsDir,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return accum }
+
+        let rangeStart = startDate.timeIntervalSince1970
+        for case let url as URL in enumerator {
+            guard url.pathExtension == "jsonl" else { continue }
+            if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+               let mdate = vals.contentModificationDate,
+               mdate.timeIntervalSince1970 < rangeStart { continue }
+
+            var prevTotals: [String: Int]?
+            forEachLine(in: url) { lineData in
+                guard let entry = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                      entry["type"] as? String == "event_msg",
+                      let payload = entry["payload"] as? [String: Any],
+                      payload["type"] as? String == "token_count",
+                      let info = payload["info"] as? [String: Any],
+                      let totalUsage = info["total_token_usage"] as? [String: Any] else { return }
+
+                let cur = [
+                    "input":  totalUsage["input_tokens"] as? Int ?? 0,
+                    "cached": totalUsage["cached_input_tokens"] as? Int ?? 0,
+                    "output": totalUsage["output_tokens"] as? Int ?? 0,
+                    "total":  totalUsage["total_tokens"] as? Int ?? 0,
+                ]
+                let delta: [String: Int]
+                if let prev = prevTotals {
+                    delta = [
+                        "input":  max(0, cur["input"]!  - prev["input"]!),
+                        "cached": max(0, cur["cached"]! - prev["cached"]!),
+                        "output": max(0, cur["output"]! - prev["output"]!),
+                        "total":  max(0, cur["total"]!  - prev["total"]!),
+                    ]
+                } else {
+                    let last = info["last_token_usage"] as? [String: Any] ?? [:]
+                    delta = [
+                        "input":  last["input_tokens"] as? Int ?? 0,
+                        "cached": last["cached_input_tokens"] as? Int ?? 0,
+                        "output": last["output_tokens"] as? Int ?? 0,
+                        "total":  last["total_tokens"] as? Int ?? 0,
+                    ]
+                }
+                prevTotals = cur
+
+                guard delta["total"]! > 0,
+                      let timestamp = entry["timestamp"] as? String,
+                      let dt = Self.parseISO8601(timestamp),
+                      dt >= startDate, dt < endDate else { return }
+
+                let dateKey = Self.dateStringUTC(dt)
+                var bucket = accum[dateKey] ?? TokenAccum()
+                bucket.inputTokens += delta["input"]!
+                bucket.cacheReadTokens += delta["cached"]!
+                bucket.outputTokens += delta["output"]!
+                bucket.totalTokens += delta["total"]!
+                bucket.requests += 1
+                accum[dateKey] = bucket
+            }
+        }
+        return accum
+    }
+
     // MARK: - Line-by-line Reader
 
     private func forEachLine(in url: URL, _ handler: (Data) -> Void) {
@@ -222,6 +367,20 @@ final class DxaiDatabase {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         return cal.startOfDay(for: Date())
+    }
+
+    private static func startOfDayUTC(daysAgo: Int) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let today = cal.startOfDay(for: Date())
+        return cal.date(byAdding: .day, value: -daysAgo, to: today)!
+    }
+
+    private static func dateStringUTC(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = TimeZone(identifier: "UTC")
+        return fmt.string(from: date)
     }
 
     private static func parseISO8601(_ str: String) -> Date? {
