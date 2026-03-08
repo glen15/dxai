@@ -115,7 +115,6 @@ def get_global_setup():
 AI_SIGNATURES = [
     ".claude",
     ".codex",
-    ".gemini",
     "CLAUDE.md",
     "AGENTS.md",
 ]
@@ -388,20 +387,6 @@ def get_active_sessions():
                     "cwd": cwd,
                     "cmd": cmd[:120],
                 })
-
-            # Gemini CLI
-            elif re.search(r'\bgemini\b', cmd) and 'grep' not in cmd:
-                if '.gemini/' not in cmd:
-                    tty = cols[6] if len(cols) > 6 else ""
-                    if tty == "??" or not tty.startswith("s"):
-                        continue
-                    cwd = _get_process_cwd(pid)
-                    sessions.append({
-                        "tool": "gemini",
-                        "pid": int(pid),
-                        "cwd": cwd,
-                        "cmd": cmd[:120],
-                    })
 
     except Exception:
         pass

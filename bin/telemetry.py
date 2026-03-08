@@ -136,7 +136,7 @@ def collect_telemetry_payload():
     # 프로젝트 개수 (이름 없음)
     work_dir = Path.home() / "Desktop" / "work"
     if work_dir.exists():
-        ai_sigs = [".claude", ".codex", ".gemini", "CLAUDE.md", "AGENTS.md"]
+        ai_sigs = [".claude", ".codex", "CLAUDE.md", "AGENTS.md"]
         count = 0
         for item in work_dir.iterdir():
             if item.is_dir() and any((item / s).exists() for s in ai_sigs):
@@ -196,7 +196,7 @@ def cmd_on():
     print()
     print(f"  {Colors.GREEN}수집하는 것 (숫자만):{Colors.END}")
     print("    - 일일 토큰 사용량, 요청 수")
-    print("    - 사용 도구 이름 (claude, codex, gemini)")
+    print("    - 사용 도구 이름 (claude, codex)")
     print("    - 스킬/MCP/프로젝트 개수 (이름 없음)")
     print("    - 캐시 히트율, OS 버전, dxai 버전")
     print()

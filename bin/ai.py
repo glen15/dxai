@@ -3,11 +3,10 @@
 dxai ai - AI 서비스 통합 사용량 대시보드
 
 사용법:
-    dxai ai              # 전체 요약 (Claude + Codex + Gemini)
+    dxai ai              # 전체 요약 (Claude + Codex)
     dxai ai claude       # Claude 상세
     dxai ai codex        # Codex 상세
-    dxai ai gemini       # Gemini 상세
-    dxai ai tokens       # 전체 토큰 요약 (Claude + Codex + Gemini)
+    dxai ai tokens       # 전체 토큰 요약 (Claude + Codex)
     dxai ai today        # Claude 오늘 토큰 사용량
     dxai ai week         # Claude 최근 7일
     dxai ai month        # Claude 최근 30일
@@ -553,325 +552,12 @@ def get_codex_token_stats(period='today'):
     return stats
 
 
-GEMINI_CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com/v1internal"
-
-
-# ─── Gemini 데이터 수집 ──────────────────────────────────────
-
-def get_gemini_usage():
-    subscription = _get_gemini_code_assist_usage()
-    api_key = _get_gemini_api_key_usage()
-
-    if not subscription and not api_key:
-        return None
-
-    usage = {
-        "subscription": subscription,
-        "api_key": api_key,
-        "source": (
-            "dual"
-            if subscription and api_key
-            else "subscription" if subscription else "api_key"
-        ),
-    }
-
-    if subscription:
-        usage["used_percent"] = subscription.get("used_percent", 0)
-        usage["reset_time"] = subscription.get("reset_time")
-        usage["top_model"] = subscription.get("top_model", "")
-        usage["models"] = subscription.get("models", {})
-    elif api_key:
-        usage["used_percent"] = api_key.get("used_percent", 0)
-        usage["reset_time"] = api_key.get("reset_time")
-        usage["top_model"] = api_key.get("top_model", "")
-        usage["models"] = {}
-
-    return usage
-
-
-def _get_gemini_code_assist_usage():
-    token = _get_gemini_token()
-    if not token:
-        return None
-
-    project_id = _get_gemini_project_id(token)
-    if not project_id:
-        return None
-
-    try:
-        body = json.dumps({"project": project_id}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{GEMINI_CODE_ASSIST_ENDPOINT}:retrieveUserQuota",
-            data=body,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-
-        buckets = data.get("buckets", [])
-        if not buckets:
-            return None
-
-        models = {}
-        for b in buckets:
-            model_id = b.get("modelId", "")
-            if model_id.endswith("_vertex"):
-                continue
-            remaining = b.get("remainingFraction", 1.0)
-            reset_time = b.get("resetTime")
-            used_pct = int((1.0 - remaining) * 100)
-            models[model_id] = {"used_percent": used_pct, "reset_time": reset_time}
-
-        if not models:
-            return None
-
-        most_used = max(models.items(), key=lambda x: x[1]["used_percent"])
-
-        return {
-            "used_percent": most_used[1]["used_percent"],
-            "reset_time": most_used[1]["reset_time"],
-            "top_model": most_used[0],
-            "models": models,
-            "source": "code_assist",
-        }
-    except Exception:
-        return None
-
-
-def _get_gemini_api_key_usage():
-    api_key = _get_gemini_api_key()
-    if not api_key:
-        return None
-
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-
-        models = data.get("models", [])
-        model_names = [m.get("name", "").replace("models/", "") for m in models]
-        top = model_names[0] if model_names else "unknown"
-        cloud_usage = _get_gemini_cloud_monitoring_usage()
-
-        result = {
-            "used_percent": 0,
-            "reset_time": None,
-            "top_model": top,
-            "model_count": len(model_names),
-            "source": "api_key",
-        }
-        if cloud_usage:
-            result["cloud"] = cloud_usage
-        return result
-    except Exception:
-        return None
-
-
-def _get_gemini_api_key():
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if key:
-        return key.strip()
-
-    key_path = Path.home() / ".gemini" / "api_key"
-    if key_path.exists():
-        try:
-            return key_path.read_text(encoding="utf-8").strip()
-        except Exception:
-            return None
-    return None
-
-
-def _get_gcloud_access_token():
-    adc_path = Path.home() / ".config" / "gcloud" / "application_default_credentials.json"
-    if not adc_path.exists():
-        return None
-    try:
-        adc = json.loads(adc_path.read_text(encoding="utf-8"))
-        data = urllib.parse.urlencode({
-            "client_id": adc["client_id"],
-            "client_secret": adc["client_secret"],
-            "refresh_token": adc["refresh_token"],
-            "grant_type": "refresh_token",
-        }).encode()
-        req = urllib.request.Request("https://oauth2.googleapis.com/token", data=data)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode("utf-8")).get("access_token")
-    except Exception:
-        return None
-
-
-def _get_gemini_cloud_monitoring_usage():
-    cache_path = Path.home() / ".cache" / "dxai" / "gemini-cloud-lite.json"
-    stale_cache = None
-
-    try:
-        if cache_path.exists():
-            cached = json.loads(cache_path.read_text(encoding="utf-8"))
-            ts = cached.pop("_ts", 0)
-            if time.time() - ts < 1800:
-                return cached
-            stale_cache = cached
-    except Exception:
-        pass
-
-    token = _get_gcloud_access_token()
-    if not token:
-        return stale_cache
-
-    project_id = os.environ.get("GEMINI_GCP_PROJECT", "nxtcloud-tt")
-    now = datetime.now(timezone.utc)
-    end_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    start_30d = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    start_7d = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    start_24h = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    service = "generativelanguage.googleapis.com"
-    request_filter = (
-        f'metric.type="serviceruntime.googleapis.com/api/request_count" '
-        f'AND resource.labels.service="{service}"'
-    )
-    input_token_filter = (
-        f'metric.type="{service}/quota/generate_content_paid_tier_input_token_count/usage"'
-    )
-
-    def query_sum(filter_str, start, end, alignment):
-        params = {
-            "filter": filter_str,
-            "interval.startTime": start,
-            "interval.endTime": end,
-            "aggregation.alignmentPeriod": alignment,
-            "aggregation.perSeriesAligner": "ALIGN_SUM",
-            "aggregation.crossSeriesReducer": "REDUCE_SUM",
-        }
-        query = urllib.parse.urlencode(params)
-        url = f"https://monitoring.googleapis.com/v3/projects/{project_id}/timeSeries?{query}"
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-
-        total = 0
-        for series in payload.get("timeSeries", []):
-            for point in series.get("points", []):
-                value = point.get("value", {}).get("int64Value", 0)
-                total += int(value)
-        return total
-
-    try:
-        data = {
-            "requests_30d": query_sum(request_filter, start_30d, end_str, "2592000s"),
-            "requests_7d": query_sum(request_filter, start_7d, end_str, "604800s"),
-            "requests_24h": query_sum(request_filter, start_24h, end_str, "86400s"),
-            "input_tokens_30d": query_sum(input_token_filter, start_30d, end_str, "2592000s"),
-            "input_tokens_7d": query_sum(input_token_filter, start_7d, end_str, "604800s"),
-            "input_tokens_24h": query_sum(input_token_filter, start_24h, end_str, "86400s"),
-        }
-
-        data["input_cost_estimate"] = round(data["input_tokens_30d"] * 0.10 / 1_000_000, 4)
-
-        try:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            cache_path.write_text(
-                json.dumps({**data, "_ts": time.time()}, ensure_ascii=False),
-                encoding="utf-8",
-            )
-        except Exception:
-            pass
-
-        return data
-    except Exception:
-        return stale_cache
-
-
-def get_gemini_subscription_token_stats(period='today'):
-    chats_root = Path.home() / ".terminai" / "tmp"
-    if not chats_root.exists():
-        return None
-
-    session_files = list(chats_root.glob("**/chats/session-*.json"))
-    if not session_files:
-        return empty_token_stats(extra_keys=["thought_tokens", "tool_tokens"])
-
-    start_time = get_period_start(period)
-    stats = empty_token_stats(extra_keys=["thought_tokens", "tool_tokens"])
-
-    for filepath in session_files:
-        try:
-            payload = json.loads(filepath.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-
-        for msg in payload.get("messages", []):
-            if msg.get("type") != "gemini":
-                continue
-
-            token_usage = msg.get("tokens")
-            if not token_usage:
-                continue
-
-            dt = parse_iso_utc(msg.get("timestamp"))
-            if not dt or dt < start_time:
-                continue
-
-            stats["input_tokens"] += int(token_usage.get("input", 0) or 0)
-            stats["output_tokens"] += int(token_usage.get("output", 0) or 0)
-            stats["cache_read_tokens"] += int(token_usage.get("cached", 0) or 0)
-            stats["thought_tokens"] += int(token_usage.get("thoughts", 0) or 0)
-            stats["tool_tokens"] += int(token_usage.get("tool", 0) or 0)
-            stats["total_tokens"] += int(token_usage.get("total", 0) or 0)
-            stats["requests"] += 1
-
-    return stats
-
-
-def _get_gemini_token():
-    for dir_name in [".terminai", ".gemini"]:
-        cred_path = Path.home() / dir_name / "oauth_creds.json"
-        if cred_path.exists():
-            try:
-                cred = json.loads(cred_path.read_text(encoding="utf-8"))
-                token = cred.get("access_token")
-                if token:
-                    return token
-            except Exception:
-                continue
-    return None
-
-
-def _get_gemini_project_id(token):
-    try:
-        body = json.dumps({
-            "metadata": {
-                "ideType": "IDE_UNSPECIFIED",
-                "platform": "PLATFORM_UNSPECIFIED",
-                "pluginType": "GEMINI",
-            }
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            f"{GEMINI_CODE_ASSIST_ENDPOINT}:loadCodeAssist",
-            data=body,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        return data.get("cloudaicompanionProject")
-    except Exception:
-        return None
-
-
 # ─── 표시 함수 ───────────────────────────────────────────────
 
 def _get_total_today_tokens():
     claude = get_claude_token_stats('today') or empty_token_stats()
     codex = get_codex_token_stats('today') or empty_token_stats()
-    gemini = get_gemini_subscription_token_stats('today') or empty_token_stats()
-    return claude['total_tokens'] + codex['total_tokens'] + gemini['total_tokens']
+    return claude['total_tokens'] + codex['total_tokens']
 
 
 def display_summary():
@@ -938,48 +624,6 @@ def display_summary():
             )
         else:
             print(f" {Colors.RED}(데이터 없음){Colors.END}")
-
-    print_separator()
-
-    # Gemini
-    gemini = get_gemini_usage() or {}
-    subscription = gemini.get("subscription")
-    api_key = gemini.get("api_key")
-    print(f"\n{Colors.BOLD} Gemini{Colors.END}")
-
-    if subscription:
-        pct = subscription.get("used_percent", 0)
-        color = usage_color(pct)
-        reset = format_time_remaining(subscription.get("reset_time"))
-        print(f"  {Colors.GRAY}[구독]{Colors.END}")
-        print(f"  일일       {make_bar(pct, 25, color)} {color}{pct}%{Colors.END} | 리셋 {reset}")
-    else:
-        gemini_today = get_gemini_subscription_token_stats('today') or empty_token_stats()
-        gemini_week = get_gemini_subscription_token_stats('week') or empty_token_stats()
-        if gemini_today['total_tokens'] > 0 or gemini_week['total_tokens'] > 0:
-            print(f"  {Colors.YELLOW}[구독] 로컬 토큰 로그{Colors.END}")
-            print(
-                f"  오늘 {format_number(gemini_today['total_tokens'])}"
-                f" | 7일 {format_number(gemini_week['total_tokens'])}"
-                f" | 요청 {gemini_today['requests']}"
-            )
-        else:
-            print(f"  {Colors.RED}[구독] 데이터 없음{Colors.END}")
-
-    if api_key:
-        cloud = (api_key or {}).get("cloud", {})
-        print(f"  {Colors.GRAY}[API Key]{Colors.END}")
-        if cloud:
-            print(
-                "  입력 토큰  "
-                f"30d {format_number(cloud.get('input_tokens_30d', 0))} | "
-                f"7d {format_number(cloud.get('input_tokens_7d', 0))} | "
-                f"24h {format_number(cloud.get('input_tokens_24h', 0))}"
-            )
-        else:
-            print(f"  {Colors.YELLOW}Cloud Monitoring 데이터 없음{Colors.END}")
-    else:
-        print(f"  {Colors.RED}[API Key] 연결 없음{Colors.END}")
 
     # Pioneer Alert
     total_today = _get_total_today_tokens()
@@ -1084,81 +728,6 @@ def display_codex_detail():
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
 
-def display_gemini_detail():
-    print_header("  Gemini 상세 정보")
-
-    gemini = get_gemini_usage() or {}
-    subscription = gemini.get("subscription")
-    api_key = gemini.get("api_key")
-
-    if not gemini:
-        print(f"\n{Colors.YELLOW}Gemini 할당량/API 상태를 가져오지 못했습니다.{Colors.END}")
-        print("로컬 구독 토큰 통계는 계속 표시합니다.")
-
-    if subscription:
-        pct = subscription["used_percent"]
-        color = usage_color(pct)
-        reset = format_time_remaining(subscription.get("reset_time"))
-
-        print(f"\n{Colors.BOLD}[구독] Gemini Code Assist:{Colors.END}")
-        print(f"  일일 할당량  {make_bar(pct, 30, color)} {color}{pct}%{Colors.END}")
-        print(f"  리셋까지: {reset}")
-
-        models = subscription.get("models", {})
-        if models:
-            print(f"\n{Colors.BOLD}모델별 사용량:{Colors.END}")
-            for model_id in sorted(models.keys()):
-                info = models[model_id]
-                m_pct = info["used_percent"]
-                m_color = usage_color(m_pct)
-                m_reset = format_time_remaining(info.get("reset_time"))
-                print(f"  {model_id:30} {make_bar(m_pct, 20, m_color)} {m_color}{m_pct:3}%{Colors.END} | 리셋 {m_reset}")
-    elif gemini:
-        print(f"\n{Colors.YELLOW}Gemini 구독 할당량 정보를 가져오지 못했습니다.{Colors.END}")
-
-    if api_key:
-        cloud = api_key.get("cloud", {})
-        print(f"\n{Colors.BOLD}[API Key] Gemini API:{Colors.END}")
-        if cloud:
-            print(
-                f"  입력 토큰 30d {format_number(cloud.get('input_tokens_30d', 0))}"
-                f" | 7d {format_number(cloud.get('input_tokens_7d', 0))}"
-                f" | 24h {format_number(cloud.get('input_tokens_24h', 0))}"
-            )
-            print(
-                f"  요청 수    30d {format_number(cloud.get('requests_30d', 0))}"
-                f" | 7d {format_number(cloud.get('requests_7d', 0))}"
-                f" | 24h {format_number(cloud.get('requests_24h', 0))}"
-            )
-            print(f"  입력 비용(추정,30d): ${cloud.get('input_cost_estimate', 0):.4f}")
-        else:
-            print("  Cloud Monitoring 데이터 없음 (권한/프로젝트 확인 필요)")
-    elif gemini:
-        print(f"\n{Colors.YELLOW}Gemini API Key 사용량 정보를 가져오지 못했습니다.{Colors.END}")
-
-    sub_today = get_gemini_subscription_token_stats('today')
-    sub_week = get_gemini_subscription_token_stats('week')
-    sub_month = get_gemini_subscription_token_stats('month')
-    if sub_today:
-        print(f"\n{Colors.BOLD}구독 토큰:{Colors.END}")
-        print(
-            f"  오늘 {format_number(sub_today['total_tokens'])}"
-            f" | 7일 {format_number(sub_week['total_tokens'])}"
-            f" | 30일 {format_number(sub_month['total_tokens'])}"
-        )
-        if sub_today['total_tokens'] > 0:
-            total = sub_today['total_tokens']
-            print(f"\n{Colors.BOLD}구독 오늘 상세:{Colors.END}")
-            _print_bar("입력 토큰", sub_today['input_tokens'], total, Colors.BLUE)
-            _print_bar("출력 토큰", sub_today['output_tokens'], total, Colors.GREEN)
-            _print_bar("캐시 읽기", sub_today['cache_read_tokens'], total, Colors.CYAN)
-            _print_bar("사고 토큰", sub_today['thought_tokens'], total, Colors.YELLOW)
-            _print_bar("툴 토큰", sub_today['tool_tokens'], total, Colors.GRAY)
-            print(f"  요청 수      {sub_today['requests']}")
-
-    print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
-
-
 def display_claude_period(period):
     period_names = {
         'today': '오늘',
@@ -1199,13 +768,6 @@ def display_token_overview():
     codex_week = get_codex_token_stats('week') or empty_token_stats()
     codex_month = get_codex_token_stats('month') or empty_token_stats()
 
-    gemini_sub_today = get_gemini_subscription_token_stats('today') or empty_token_stats()
-    gemini_sub_week = get_gemini_subscription_token_stats('week') or empty_token_stats()
-    gemini_sub_month = get_gemini_subscription_token_stats('month') or empty_token_stats()
-
-    gemini = get_gemini_usage() or {}
-    gemini_api = (gemini.get("api_key") or {}).get("cloud", {})
-
     print(f"\n{Colors.BOLD}Claude{Colors.END}")
     print(
         f"  오늘 {format_number(claude_today['total_tokens'])}"
@@ -1220,32 +782,10 @@ def display_token_overview():
         f" | 30일 {format_number(codex_month['total_tokens'])}"
     )
 
-    print(f"\n{Colors.BOLD}Gemini (구독/Code Assist){Colors.END}")
-    print(
-        f"  오늘 {format_number(gemini_sub_today['total_tokens'])}"
-        f" | 7일 {format_number(gemini_sub_week['total_tokens'])}"
-        f" | 30일 {format_number(gemini_sub_month['total_tokens'])}"
-    )
-
-    print(f"\n{Colors.BOLD}Gemini (API Key/Cloud Monitoring){Colors.END}")
-    print(
-        f"  입력 토큰 30d {format_number(gemini_api.get('input_tokens_30d', 0))}"
-        f" | 7d {format_number(gemini_api.get('input_tokens_7d', 0))}"
-        f" | 24h {format_number(gemini_api.get('input_tokens_24h', 0))}"
-    )
-    print(
-        f"  요청 수    30d {format_number(gemini_api.get('requests_30d', 0))}"
-        f" | 7d {format_number(gemini_api.get('requests_7d', 0))}"
-        f" | 24h {format_number(gemini_api.get('requests_24h', 0))}"
-    )
-    if gemini_api:
-        print(f"  입력 비용(추정,30d): ${gemini_api.get('input_cost_estimate', 0):.4f}")
-
     # Pioneer Alert
     total_today = (
         claude_today['total_tokens']
         + codex_today['total_tokens']
-        + gemini_sub_today['total_tokens']
     )
     show_pioneer_alert(total_today)
 
@@ -1299,11 +839,6 @@ def collect_to_db():
     if codex and codex['total_tokens'] > 0:
         db.upsert_daily(today, 'codex', codex)
         print(f"  Codex:  {format_number(codex['total_tokens'])} tokens")
-
-    gemini = get_gemini_subscription_token_stats('today')
-    if gemini and gemini['total_tokens'] > 0:
-        db.upsert_daily(today, 'gemini', gemini)
-        print(f"  Gemini: {format_number(gemini['total_tokens'])} tokens")
 
     # 할당량 스냅샷 저장
     quota = get_claude_quota()
@@ -1409,18 +944,11 @@ def main():
                 "week": get_codex_token_stats('week'),
                 "month": get_codex_token_stats('month'),
             },
-            "gemini": get_gemini_usage(),
-            "gemini_subscription_tokens": {
-                "today": get_gemini_subscription_token_stats('today'),
-                "week": get_gemini_subscription_token_stats('week'),
-                "month": get_gemini_subscription_token_stats('month'),
-            },
             "pioneer": None,
         }
         total_today = (
             (data["claude_tokens"]["today"] or {}).get("total_tokens", 0)
             + (data["codex_tokens"]["today"] or {}).get("total_tokens", 0)
-            + (data["gemini_subscription_tokens"]["today"] or {}).get("total_tokens", 0)
         )
         level, _, message = get_pioneer_alert(total_today)
         if level:
@@ -1434,10 +962,6 @@ def main():
 
     if command == 'codex':
         display_codex_detail()
-        return
-
-    if command == 'gemini':
-        display_gemini_detail()
         return
 
     if command == 'tokens':
@@ -1457,7 +981,7 @@ def main():
         return
 
     valid_commands = ['', 'today', 'week', 'month', 'all',
-                      'claude', 'codex', 'gemini', 'tokens', 'watch', 'json',
+                      'claude', 'codex', 'tokens', 'watch', 'json',
                       'collect', 'insights']
     if command and command not in valid_commands:
         print(f"{Colors.RED}잘못된 명령어: {command}{Colors.END}")
@@ -1465,7 +989,6 @@ def main():
         print("  (없음)     전체 요약")
         print("  claude     Claude 상세")
         print("  codex      Codex 상세")
-        print("  gemini     Gemini 상세")
         print("  tokens     통합 토큰 요약")
         print("  today      Claude 오늘 토큰")
         print("  week       Claude 최근 7일")

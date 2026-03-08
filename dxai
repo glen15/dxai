@@ -257,7 +257,6 @@ show_help() {
     echo
     printf "  %s%-28s%s %s\n" "$GREEN" "dxai ai claude" "$NC" "Claude token details"
     printf "  %s%-28s%s %s\n" "$GREEN" "dxai ai codex" "$NC" "Codex token details"
-    printf "  %s%-28s%s %s\n" "$GREEN" "dxai ai gemini" "$NC" "Gemini token details"
     printf "  %s%-28s%s %s\n" "$GREEN" "dxai ai watch" "$NC" "Real-time monitoring"
     printf "  %s%-28s%s %s\n" "$GREEN" "dxai ai json" "$NC" "JSON output"
     echo

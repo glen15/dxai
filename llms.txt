@@ -2,7 +2,7 @@
 
 > AI dev environment manager for macOS
 
-dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI, Gemini CLI). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
+dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
 
 ## Repository
 
@@ -17,7 +17,7 @@ dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI co
 SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `com.dxai.DxaiBar`.
 
 Features:
-- Real-time token usage tracking across Claude Code, Codex CLI, Gemini CLI
+- Real-time token usage tracking across Claude Code, Codex CLI
 - Quota bars for Claude/Codex 5-hour session and 7-day limits
 - Pioneer Rank system: 8 tiers (Bronze → Challenger), 36 levels based on daily token usage
 - Kill Streak milestone notifications
@@ -34,7 +34,7 @@ Build: `cd app/DxaiBar && ./scripts/build-app.sh release`
 Bash entrypoint (`dxai`) dispatching to Python/Shell/Go implementations.
 
 Commands:
-- `dxai ai` — Token usage dashboard (Claude + Codex + Gemini)
+- `dxai ai` — Token usage dashboard (Claude + Codex)
 - `dxai ai watch` — Real-time token monitoring
 - `dxai scan` — AI agent environment diagnosis
 - `dxai scan --json` — Structured JSON output (used by menu bar app)
@@ -85,7 +85,7 @@ dxai/
 
 ## Data Handling
 
-- Reads AI tool logs from `~/.claude/`, `~/.codex/`, `~/.gemini/` (read-only)
+- Reads AI tool logs from `~/.claude/`, `~/.codex/` (read-only)
 - Never deletes AI tool data
 - All processing is local — no data leaves the machine
 - Log files (.jsonl) are parsed but never modified
@@ -94,7 +94,6 @@ dxai/
 
 - Claude Code: `~/.claude/projects/*/logs/*.jsonl`
 - Codex CLI: `~/.codex/logs/*.jsonl`
-- Gemini CLI: `~/.gemini/logs/*.jsonl`
 
 ## Pioneer Rank Tiers
 

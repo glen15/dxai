@@ -15,7 +15,7 @@
 
 ## What is dxai?
 
-A macOS menu bar app + CLI that gives you a single dashboard for all your AI coding tools — Claude Code, Codex CLI, Gemini CLI.
+A macOS menu bar app + CLI that gives you a single dashboard for all your AI coding tools — Claude Code, Codex CLI.
 
 No API keys needed. Everything runs locally by parsing your tools' log files.
 
@@ -35,7 +35,7 @@ The core product. Lives in your menu bar and shows:
 ### CLI Tools
 
 ```bash
-dxai ai                # Token usage dashboard (Claude + Codex + Gemini)
+dxai ai                # Token usage dashboard (Claude + Codex)
 dxai ai watch          # Real-time monitoring
 dxai scan              # AI agent environment diagnosis
 dxai scan --json       # Structured output (used by menu bar app)

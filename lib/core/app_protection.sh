@@ -248,7 +248,6 @@ readonly DATA_PROTECTED_BUNDLES=(
     "co.supertool.chatbox"
     "page.jan.jan"
     "com.huggingface.huggingchat"
-    "Gemini"
     "com.perplexity.Perplexity"
     "com.drawthings.DrawThings"
     "com.divamgupta.diffusionbee"

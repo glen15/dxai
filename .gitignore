@@ -44,10 +44,8 @@ tests/tmp-*
 # AI Assistant Instructions
 .claude/
 .agents/
-.gemini/
 .kiro/
 CLAUDE.md
-GEMINI.md
 ANTIGRAVITY.md
 WARP.md
 AGENTS.md
