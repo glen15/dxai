@@ -1,11 +1,17 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 @main
 struct DxaiBarApp: App {
     @StateObject private var viewModel = DxaiViewModel()
 
     init() {
+        // 첫 실행 시 자동시작 등록
+        if SMAppService.mainApp.status != .enabled {
+            try? SMAppService.mainApp.register()
+        }
+
         let bundleID = Bundle.main.bundleIdentifier ?? "com.dxai.DxaiBar"
         let running = NSRunningApplication.runningApplications(
             withBundleIdentifier: bundleID
