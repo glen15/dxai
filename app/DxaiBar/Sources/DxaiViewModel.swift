@@ -16,9 +16,9 @@ final class DxaiViewModel: ObservableObject {
 
     private var timer: Timer?
     private var lastNotifiedLevel: PioneerLevel?
-    private var lastNotifiedStreak: Int = 0
-    private var streakBaselineSet: Bool = false
-    private var streakDate: String = ""  // "yyyy-MM-dd"
+    private var lastNotifiedMilestone: Int = 0
+    private var milestoneBaselineSet: Bool = false
+    private var milestoneDate: String = ""  // "yyyy-MM-dd"
 
     // MARK: - Task Execution
     @Published var showTaskPanel = false
@@ -42,7 +42,7 @@ final class DxaiViewModel: ObservableObject {
         }
 
         var emoji: String { tier.emoji }
-        var message: String { tier.message }
+        var message: String { tier.message(division: division) }
 
         static func == (lhs: PioneerLevel, rhs: PioneerLevel) -> Bool {
             lhs.tier == rhs.tier && lhs.division == rhs.division
@@ -71,8 +71,8 @@ final class DxaiViewModel: ObservableObject {
                 }
             }
 
-            var message: String {
-                L().pioneerMessage(self.rawValue)
+            func message(division: Int?) -> String {
+                L().pioneerMessage(self.rawValue, division: division)
             }
         }
 
@@ -174,7 +174,7 @@ final class DxaiViewModel: ObservableObject {
             pioneerLevel = newLevel
         }
 
-        checkStreakMilestone()
+        checkTokenMilestone()
 
         // 백그라운드에서 주간 데이터 미리 로드
         Task.detached {
@@ -185,9 +185,9 @@ final class DxaiViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Kill Streak (LoL style)
+    // MARK: - Token Milestones
 
-    struct StreakInfo {
+    struct MilestoneInfo {
         let currentTitle: String
         let currentBody: String
         let nextTitle: String?
@@ -195,8 +195,8 @@ final class DxaiViewModel: ObservableObject {
         let progress: Double  // 0.0 ~ 1.0 within current→next range
     }
 
-    var currentStreakInfo: StreakInfo {
-        let milestones = Self.streakMilestones
+    var currentMilestoneInfo: MilestoneInfo {
+        let milestones = Self.tokenMilestones
         let current = milestones.last(where: { todayTokens >= $0.threshold })
         let currentIdx = current.flatMap { c in milestones.firstIndex(where: { $0.threshold == c.threshold }) }
         let next = currentIdx.flatMap { i in i + 1 < milestones.count ? milestones[i + 1] : nil }
@@ -211,7 +211,7 @@ final class DxaiViewModel: ObservableObject {
             progress = 1.0
         }
 
-        return StreakInfo(
+        return MilestoneInfo(
             currentTitle: current?.title ?? "---",
             currentBody: current?.body ?? "",
             nextTitle: next?.title,
@@ -220,48 +220,48 @@ final class DxaiViewModel: ObservableObject {
         )
     }
 
-    func resendLastStreak() {
-        if let milestone = Self.streakMilestones.last(where: { todayTokens >= $0.threshold }) {
-            sendStreakNotification(milestone)
+    func resendLastMilestone() {
+        if let milestone = Self.tokenMilestones.last(where: { todayTokens >= $0.threshold }) {
+            sendMilestoneNotification(milestone)
         }
     }
 
-    private static var streakMilestones: [(threshold: Int, title: String, body: String)] {
-        L().streakMilestones
+    private static var tokenMilestones: [(threshold: Int, title: String, body: String)] {
+        L().milestones
     }
 
-    private func checkStreakMilestone() {
+    private func checkTokenMilestone() {
         // 날짜 변경 감지 → 리셋
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         let today = fmt.string(from: Date())
-        if today != streakDate {
-            streakDate = today
-            streakBaselineSet = false
-            lastNotifiedStreak = 0
+        if today != milestoneDate {
+            milestoneDate = today
+            milestoneBaselineSet = false
+            lastNotifiedMilestone = 0
         }
 
         // 첫 실행/새 날: 가장 최근 마일스톤 1개만 알림 + 베이스라인 설정
-        if !streakBaselineSet {
-            streakBaselineSet = true
-            if let highest = Self.streakMilestones.last(where: { todayTokens >= $0.threshold }) {
-                lastNotifiedStreak = highest.threshold
-                sendStreakNotification(highest)
+        if !milestoneBaselineSet {
+            milestoneBaselineSet = true
+            if let highest = Self.tokenMilestones.last(where: { todayTokens >= $0.threshold }) {
+                lastNotifiedMilestone = highest.threshold
+                sendMilestoneNotification(highest)
             }
             return
         }
 
         // 새로 넘은 마일스톤 모두 발사 (오름차순)
-        let pending = Self.streakMilestones.filter {
-            todayTokens >= $0.threshold && $0.threshold > lastNotifiedStreak
+        let pending = Self.tokenMilestones.filter {
+            todayTokens >= $0.threshold && $0.threshold > lastNotifiedMilestone
         }
         for milestone in pending {
-            lastNotifiedStreak = milestone.threshold
-            sendStreakNotification(milestone)
+            lastNotifiedMilestone = milestone.threshold
+            sendMilestoneNotification(milestone)
         }
     }
 
-    private func sendStreakNotification(_ milestone: (threshold: Int, title: String, body: String)) {
+    private func sendMilestoneNotification(_ milestone: (threshold: Int, title: String, body: String)) {
         let title = "\u{2694}\u{FE0F} \(milestone.title)"
         let body = milestone.body
 
@@ -271,7 +271,7 @@ final class DxaiViewModel: ObservableObject {
             content.body = body
             content.sound = .default
             let request = UNNotificationRequest(
-                identifier: "streak-\(milestone.threshold)",
+                identifier: "milestone-\(milestone.threshold)",
                 content: content,
                 trigger: nil
             )

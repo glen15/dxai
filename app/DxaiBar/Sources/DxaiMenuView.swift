@@ -170,7 +170,7 @@ struct DxaiMenuView: View {
                         .background(pioneerColor(level).opacity(0.12))
                         .foregroundColor(pioneerColor(level))
                         .cornerRadius(5)
-                    Text(l.pioneerMessage(level.tier.rawValue))
+                    Text(l.pioneerMessage(level.tier.rawValue, division: level.division))
                         .font(.system(size: 12))
                         .foregroundColor(pioneerColor(level).opacity(0.7))
                         .italic()
@@ -267,15 +267,15 @@ struct DxaiMenuView: View {
                 }
             }
 
-            // Kill Streak XP bar
-            streakProgressBar
+            // Token Milestone bar
+            milestoneProgressBar
         }
     }
 
-    // MARK: - Streak Progress
+    // MARK: - Milestone Progress
 
-    private var streakProgressBar: some View {
-        let info = viewModel.currentStreakInfo
+    private var milestoneProgressBar: some View {
+        let info = viewModel.currentMilestoneInfo
         let currentAbbr = pioneerAbbrev(viewModel.pioneerLevel)
         let nextAbbr = DxaiViewModel.PioneerLevel.nextLevel(after: viewModel.pioneerLevel)
             .map { pioneerAbbrev($0) } ?? "MAX"
@@ -303,7 +303,7 @@ struct DxaiMenuView: View {
                     .foregroundColor(.secondary.opacity(0.5))
             }
 
-            // Streak title + resend button
+            // Milestone title + resend button
             HStack(spacing: 4) {
                 Text("\u{2694}\u{FE0F} \(info.currentBody)")
                     .font(.system(size: 10))
@@ -311,7 +311,7 @@ struct DxaiMenuView: View {
                     .lineLimit(1)
                 Spacer()
                 Button {
-                    viewModel.resendLastStreak()
+                    viewModel.resendLastMilestone()
                 } label: {
                     Text(l.testAlert)
                         .font(.system(size: 10))

@@ -26,7 +26,7 @@ dxai
 │   ├── 토큰 대시보드     — 오늘 토큰, 도구별 사용량
 │   ├── 쿼터 모니터링     — Claude/Codex 5h/7d 제한 + 리셋 타이머
 │   ├── Pioneer Rank     — 8등급 36레벨 게이미피케이션
-│   ├── Kill Streak      — 16단계 토큰 마일스톤 알림
+│   ├── Token Milestone  — 16단계 토큰 마일스톤 알림
 │   ├── Quick Actions    — 시스템 상태, AI 스캔, 정리, 최적화
 │   ├── AI 환경 스캔     — 네이티브 SwiftUI UI
 │   ├── About 페이지     — 앱 소개 + GitHub Star 링크
@@ -56,12 +56,13 @@ dxai
 - [x] Claude/Codex 토큰 파싱 (`.jsonl` 로그)
 - [x] Claude 쿼터 API 직접 호출 (`api.anthropic.com/api/oauth/usage`)
 - [x] 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
-- [x] Pioneer Rank 시스템 (8등급 36레벨)
-- [x] Kill Streak 마일스톤 알림 (16단계, AI 테마)
+- [x] Pioneer Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
+- [x] Token Milestone 알림 (16단계, AI 테마)
 - [x] Quick Actions (status, scan, clean, optimize)
 - [x] AI 환경 스캔 네이티브 SwiftUI UI (ScanPanelView)
 - [x] About 페이지 (앱 소개, GitHub Star 링크)
 - [x] EN/KR 로컬라이제이션 (L 구조체, @AppStorage 반응형)
+- [x] 주간 인사이트 대시보드 (InsightsView — 7일 바 차트, 도구별/토큰 유형 분석)
 - [x] 자동시작 기본 설정 (SMAppService)
 - [x] macOS 네이티브 알림 (UNUserNotificationCenter + osascript 폴백)
 - [x] SQLite 데이터 영속화 (DxaiDatabase)
@@ -91,8 +92,7 @@ dxai
 
 #### 단기 (Next)
 - [ ] 첫 릴리스 태그 (V1.0.0) 및 Homebrew Tap 레포 생성
-- [ ] `dxai ai insights` — 시계열 인사이트 대시보드 (트렌드, 패턴, 효율)
-- [ ] Codex 쿼터 모니터링 (현재 Claude만)
+- [ ] `dxai ai insights` — CLI 인사이트 커맨드 (메뉴바 앱에는 이미 구현)
 
 #### 중기
 - [ ] `dxai telemetry` — opt-in 익명 텔레메트리
@@ -120,9 +120,9 @@ dxai
 | Grandmaster | 1.5B | 5 → 1 |
 | Challenger | 5B | 최종 등급 |
 
-8개 등급, 36개 레벨. 등급 상승 시 macOS 네이티브 알림.
+8개 등급, 36개 레벨. 디비전마다 고유 멘트. 등급 상승 시 macOS 네이티브 알림.
 
-## Kill Streak 마일스톤
+## Token Milestone
 
 | 토큰 | 제목 (AI 테마) |
 |------|---------------|
@@ -184,6 +184,7 @@ dxai/
 │   │   ├── DxaiMenuView.swift     # 메인 UI
 │   │   ├── DxaiViewModel.swift    # 핵심 로직, 토큰 파싱, 랭크
 │   │   ├── DxaiDatabase.swift     # SQLite 영속화
+│   │   ├── InsightsView.swift      # 주간 인사이트 대시보드
 │   │   ├── ScanPanelView.swift    # AI 환경 스캔 UI
 │   │   ├── StatusPanelView.swift  # 시스템 상태 UI
 │   │   └── Localization.swift     # EN/KR 문자열

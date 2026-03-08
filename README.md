@@ -26,7 +26,7 @@ The core product. Lives in your menu bar and shows:
 - **Today's token count** — total across all AI tools
 - **Quota bars** — Claude/Codex 5-hour session & 7-day limits with reset timers
 - **Pioneer Rank** — gamified tier system (Bronze → Challenger) based on daily usage
-- **Kill Streak** — milestone notifications as you hit token thresholds
+- **Token Milestones** — achievement notifications as you hit token thresholds
 - **Quick Actions** — system status, AI env scan, disk cleanup, optimization
 - **AI Env Scan** — global/project MCP servers, skills, CLAUDE.md/AGENTS.md detection
 - **EN/KR** — full English and Korean localization
@@ -99,7 +99,7 @@ Daily token usage determines your rank. Resets each day.
 | Grandmaster | 1.5B | 5 → 1 |
 | Challenger | 5B | Final rank |
 
-8 tiers, 36 levels. macOS notifications on rank-up and kill streak milestones.
+8 tiers, 36 levels. Each division has a unique message. macOS notifications on rank-up and token milestones.
 
 ---
 

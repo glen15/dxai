@@ -164,34 +164,104 @@ struct L {
     var configLabel: String { ko ? "설정파일 :" : "Config :" }
     func moreProjects(_ n: Int) -> String { ko ? "... 외 \(n)개 프로젝트" : "... and \(n) more" }
 
-    // MARK: - Pioneer Level Messages
+    // MARK: - Pioneer Level Messages (tier + division)
 
-    func pioneerMessage(_ tier: String) -> String {
-        switch tier {
-        case "Bronze":
-            return ko ? "AI와 함께하는 첫 걸음"           : "First steps with AI"
-        case "Silver":
-            return ko ? "AI 활용에 익숙해지고 있군요"      : "Getting comfortable with AI"
-        case "Gold":
-            return ko ? "AI 시대의 파이오니어"             : "Pioneer of the AI era"
-        case "Platinum":
-            return ko ? "AI와 하나가 되어가고 있습니다"     : "Becoming one with AI"
-        case "Diamond":
-            return ko ? "진정한 AI 네이티브"               : "True AI native"
-        case "Master":
-            return ko ? "AI 마스터의 경지"                 : "AI Master level reached"
-        case "Grandmaster":
-            return ko ? "전설의 영역에 진입"               : "Entering legendary territory"
-        case "Challenger":
-            return ko ? "당신이 곧 AI 시대입니다"          : "You ARE the AI era"
-        default:
-            return ""
+    func pioneerMessage(_ tier: String, division: Int?) -> String {
+        let key = division.map { "\(tier).\($0)" } ?? tier
+        if ko {
+            switch key {
+            // Bronze — 첫 시작, 호기심
+            case "Bronze.5": return "AI와의 첫 대화, 시작이 반입니다"
+            case "Bronze.4": return "호기심이 이끄는 대로"
+            case "Bronze.3": return "AI가 당신을 기억하기 시작합니다"
+            case "Bronze.2": return "AI 없던 시절이 가물가물..."
+            case "Bronze.1": return "Bronze 졸업이 코앞입니다"
+            // Silver — 익숙해짐, 성장
+            case "Silver.5": return "AI 활용에 익숙해지고 있군요"
+            case "Silver.4": return "토큰 밀리어네어의 탄생!"
+            case "Silver.3": return "이제 AI 없이는 좀 불편하죠?"
+            case "Silver.2": return "이쯤 되면 AI가 동료입니다"
+            case "Silver.1": return "Silver 마스터리 달성 직전!"
+            // Gold — 파이오니어, 본격
+            case "Gold.5":   return "AI 시대의 파이오니어"
+            case "Gold.4":   return "Context Window가 당신을 환영합니다"
+            case "Gold.3":   return "슬슬 API가 긴장하기 시작합니다"
+            case "Gold.2":   return "AI와의 시너지가 폭발하고 있어요"
+            case "Gold.1":   return "Gold의 끝이 보입니다... 그 너머엔?"
+            // Platinum — 합일, 강렬
+            case "Platinum.5": return "AI와 하나가 되어가고 있습니다"
+            case "Platinum.4": return "Rate Limit이 슬슬 당신을 주시합니다"
+            case "Platinum.3": return "1억 토큰! 멈출 수가 없다"
+            case "Platinum.2": return "Anthropic 서버실에 당신의 이름이..."
+            case "Platinum.1": return "Platinum 정상이 코앞입니다"
+            // Diamond — 네이티브, 전설적
+            case "Diamond.5": return "진정한 AI 네이티브의 영역"
+            case "Diamond.4": return "당신의 토큰이 GDP에 잡힐 수도..."
+            case "Diamond.3": return "AI가 당신을 학습하고 있을지도?"
+            case "Diamond.2": return "데이터센터에서 경보가 울립니다"
+            case "Diamond.1": return "Diamond의 빛이 점점 강렬해집니다"
+            // Master — 경지, 초월
+            case "Master.5": return "AI 마스터의 경지에 진입"
+            case "Master.4": return "Ctrl+C? 그게 뭐죠?"
+            case "Master.3": return "Sam Altman이 당신을 주목합니다"
+            case "Master.2": return "10억 토큰! 인류의 한계를 시험 중"
+            case "Master.1": return "Master의 끝... 전설이 시작됩니다"
+            // Grandmaster — 전설, 초월
+            case "Grandmaster.5": return "전설의 영역에 진입"
+            case "Grandmaster.4": return "Dario Amodei가 직접 연락할 수도..."
+            case "Grandmaster.3": return "항복은 없다. 오직 전진뿐"
+            case "Grandmaster.2": return "당신이 곧 벤치마크입니다"
+            case "Grandmaster.1": return "AGI까지 얼마 남지 않았습니다"
+            // Challenger
+            case "Challenger": return "당신이 곧 AI 시대입니다"
+            default: return ""
+            }
+        } else {
+            switch key {
+            case "Bronze.5": return "First chat with AI — every journey starts here"
+            case "Bronze.4": return "Curiosity leads the way"
+            case "Bronze.3": return "AI is starting to remember you"
+            case "Bronze.2": return "Can barely remember life before AI..."
+            case "Bronze.1": return "Ready to graduate from Bronze"
+            case "Silver.5": return "Getting comfortable with AI"
+            case "Silver.4": return "Token millionaire is born!"
+            case "Silver.3": return "Life without AI? Uncomfortable now, right?"
+            case "Silver.2": return "At this point, AI is your colleague"
+            case "Silver.1": return "Silver mastery almost complete!"
+            case "Gold.5":   return "Pioneer of the AI era"
+            case "Gold.4":   return "Context Window welcomes you"
+            case "Gold.3":   return "The API is getting nervous"
+            case "Gold.2":   return "AI synergy is off the charts"
+            case "Gold.1":   return "End of Gold... what lies beyond?"
+            case "Platinum.5": return "Becoming one with AI"
+            case "Platinum.4": return "Rate Limit is watching you closely"
+            case "Platinum.3": return "100M tokens! Can't stop won't stop"
+            case "Platinum.2": return "Your name echoes in Anthropic's server room"
+            case "Platinum.1": return "Almost at the Platinum summit"
+            case "Diamond.5": return "True AI native territory"
+            case "Diamond.4": return "Your tokens might show up in GDP..."
+            case "Diamond.3": return "AI might be learning from you now"
+            case "Diamond.2": return "Alarms going off at the datacenter"
+            case "Diamond.1": return "Diamond's brilliance intensifies"
+            case "Master.5": return "Entering AI Master realm"
+            case "Master.4": return "Ctrl+C? What's that?"
+            case "Master.3": return "Sam Altman has noticed you"
+            case "Master.2": return "1B tokens! Testing the limits of humanity"
+            case "Master.1": return "End of Master... legend begins"
+            case "Grandmaster.5": return "Entering legendary territory"
+            case "Grandmaster.4": return "Dario Amodei might reach out personally..."
+            case "Grandmaster.3": return "No surrender. Only forward"
+            case "Grandmaster.2": return "You ARE the benchmark"
+            case "Grandmaster.1": return "AGI is within reach"
+            case "Challenger": return "You ARE the AI era"
+            default: return ""
+            }
         }
     }
 
-    // MARK: - Streak Milestones
+    // MARK: - Token Milestones
 
-    var streakMilestones: [(threshold: Int, title: String, body: String)] {
+    var milestones: [(threshold: Int, title: String, body: String)] {
         if ko {
             return [
                 (500_000,      "Hello, World!",              "50만 토큰 돌파! 워밍업 완료"),

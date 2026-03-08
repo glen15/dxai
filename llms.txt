@@ -19,8 +19,8 @@ SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `co
 Features:
 - Real-time token usage tracking across Claude Code, Codex CLI
 - Quota bars for Claude/Codex 5-hour session and 7-day limits
-- Pioneer Rank system: 8 tiers (Bronze → Challenger), 36 levels based on daily token usage
-- Kill Streak milestone notifications
+- Pioneer Rank system: 8 tiers (Bronze → Challenger), 36 levels with unique messages per division
+- Token Milestone achievement notifications (16 thresholds)
 - Quick Actions: system status, AI env scan, disk cleanup, optimization
 - AI Environment Scan: global/project MCP servers, skills, CLAUDE.md/AGENTS.md detection
 - EN/KR bilingual localization
