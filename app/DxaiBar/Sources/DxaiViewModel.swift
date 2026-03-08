@@ -175,6 +175,14 @@ final class DxaiViewModel: ObservableObject {
         }
 
         checkStreakMilestone()
+
+        // 백그라운드에서 주간 데이터 미리 로드
+        Task.detached {
+            let weekly = db.weeklyStats()
+            await MainActor.run { [weak self] in
+                self?.weeklyStats = weekly
+            }
+        }
     }
 
     // MARK: - Kill Streak (LoL style)

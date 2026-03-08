@@ -87,11 +87,9 @@ struct InsightsView: View {
             Text(label)
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
-            if let sub {
-                Text(sub)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.6))
-            }
+            Text(sub ?? " ")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary.opacity(sub != nil ? 0.6 : 0))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)

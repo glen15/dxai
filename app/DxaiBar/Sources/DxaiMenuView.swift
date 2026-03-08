@@ -370,7 +370,6 @@ struct DxaiMenuView: View {
             HStack {
                 Spacer()
                 Button(action: {
-                    viewModel.weeklyStats = DxaiDatabase.shared.weeklyStats()
                     showInsights = true
                 }) {
                     HStack(spacing: 4) {
