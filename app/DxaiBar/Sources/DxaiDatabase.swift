@@ -186,7 +186,7 @@ final class DxaiDatabase {
     // MARK: - Weekly Stats (7 days)
 
     func weeklyStats() -> [DailyStats] {
-        let startDate = Self.startOfDayUTC(daysAgo: 6)
+        let startDate = Self.startOfDayUTC(daysAgo: 13)
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
         let endDate = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date()))!
@@ -195,7 +195,7 @@ final class DxaiDatabase {
         let codexByDate = parseCodex(from: startDate, to: endDate)
 
         var results: [DailyStats] = []
-        for daysAgo in (0...6).reversed() {
+        for daysAgo in (0...13).reversed() {
             let dayDate = Self.startOfDayUTC(daysAgo: daysAgo)
             let dateKey = Self.dateStringUTC(dayDate)
 

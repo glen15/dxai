@@ -153,8 +153,10 @@ struct DxaiMenuView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Token total (full width)
             VStack(alignment: .leading, spacing: 2) {
-                Text(formatNumber(viewModel.todayTokens))
+                Text(l.formatImpact(viewModel.todayTokens))
                     .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(l.tokensToday)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
@@ -366,26 +368,23 @@ struct DxaiMenuView: View {
         }
 
         return VStack(spacing: 0) {
-            // Section header with Insights button
-            HStack {
-                Spacer()
-                Button(action: {
-                    showInsights = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chart.bar.fill")
-                            .font(.system(size: 10))
-                        Text(l.insights)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.purple.opacity(0.1))
-                    .foregroundColor(.purple)
-                    .cornerRadius(4)
+            // Insights full-width button
+            Button(action: {
+                showInsights = true
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 11))
+                    Text(l.insights)
+                        .font(.system(size: 12, weight: .medium))
                 }
-                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(Color.purple.opacity(0.08))
+                .foregroundColor(.purple)
+                .cornerRadius(6)
             }
+            .buttonStyle(.plain)
             .padding(.bottom, 4)
 
             if filtered.isEmpty {

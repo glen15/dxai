@@ -58,14 +58,14 @@ struct L {
 
     // MARK: - Dashboard
 
-    var tokensToday: String { ko ? "오늘 토큰" : "tokens today" }
+    var tokensToday: String { ko ? "오늘 하루 이만큼 토큰 불태우는 중!" : "tokens burned today!" }
     var remaining: String { ko ? "남음" : "remaining" }
     var maxRank: String { "MAX RANK" }
     var today: String { ko ? "오늘" : "today" }
 
     // MARK: - Insights
 
-    var insights: String { ko ? "인사이트" : "Insights" }
+    var insights: String { ko ? "Claude / Codex 주간 인사이트" : "Claude / Codex Weekly Insight" }
     var insightsTitle: String { ko ? "주간 인사이트" : "Weekly Insights" }
     var insightsDailyAvg: String { ko ? "일 평균" : "Daily Avg" }
     var insightsPeakDay: String { ko ? "최고 사용일" : "Peak Day" }
@@ -75,8 +75,36 @@ struct L {
     var insightsInput: String { ko ? "입력" : "Input" }
     var insightsOutput: String { ko ? "출력" : "Output" }
     var insightsCache: String { ko ? "캐시" : "Cache" }
-    var insightsNoData: String { ko ? "최근 7일간 데이터가 없습니다" : "No data in the last 7 days" }
+    var insightsNoData: String { ko ? "최근 14일간 데이터가 없습니다" : "No data in the last 14 days" }
     var insightsRequests: String { ko ? "요청" : "requests" }
+    var insightsCacheHitRate: String { ko ? "캐시 적중" : "Cache Hit" }
+    var insightsVsLastWeek: String { ko ? "전주 대비" : "vs last week" }
+
+    func insightsBulletTotal(_ total: String, _ change: String) -> String {
+        if change.isEmpty {
+            return ko ? "이번 주 총 \(total) 토큰 사용"
+                      : "Total \(total) tokens this week"
+        }
+        return ko ? "이번 주 총 \(total) 토큰 (전주 대비 \(change))"
+                  : "\(total) tokens this week (\(change) vs last week)"
+    }
+
+    func insightsBulletCache(_ rate: Int) -> String {
+        if rate >= 50 {
+            return ko ? "캐시 적중률 \(rate)% — 컨텍스트 재사용 효율 좋음"
+                      : "Cache hit rate \(rate)% — good context reuse"
+        } else if rate >= 20 {
+            return ko ? "캐시 적중률 \(rate)% — 컨텍스트 재사용 보통"
+                      : "Cache hit rate \(rate)% — moderate context reuse"
+        }
+        return ko ? "캐시 적중률 \(rate)% — 새 컨텍스트 비중 높음"
+                  : "Cache hit rate \(rate)% — mostly fresh context"
+    }
+
+    func insightsBulletPeak(_ day: String, _ tokens: String) -> String {
+        ko ? "\(day)에 \(tokens) 토큰 집중 사용"
+           : "Peak on \(day) with \(tokens) tokens"
+    }
 
     // MARK: - Usage Bars
 
@@ -163,6 +191,33 @@ struct L {
     var openPorts: String { ko ? "열린 포트 (개발 서버)" : "Open Ports (Dev Servers)" }
     var configLabel: String { ko ? "설정파일 :" : "Config :" }
     func moreProjects(_ n: Int) -> String { ko ? "... 외 \(n)개 프로젝트" : "... and \(n) more" }
+
+    // MARK: - Impact Number Format
+
+    func formatImpact(_ n: Int) -> String {
+        if ko {
+            let eok = n / 100_000_000
+            let man = (n % 100_000_000) / 10_000
+            if eok > 0 && man > 0 { return "\(eok)억 \(man)만" }
+            if eok > 0 { return "\(eok)억" }
+            if man > 0 { return "\(man)만" }
+            return "\(n)"
+        } else {
+            if n >= 1_000_000_000 {
+                let s = String(format: "%.1f", Double(n) / 1_000_000_000)
+                return "\(s.hasSuffix(".0") ? String(s.dropLast(2)) : s) billion"
+            }
+            if n >= 1_000_000 {
+                let s = String(format: "%.1f", Double(n) / 1_000_000)
+                return "\(s.hasSuffix(".0") ? String(s.dropLast(2)) : s) million"
+            }
+            if n >= 1_000 {
+                let s = String(format: "%.1f", Double(n) / 1_000)
+                return "\(s.hasSuffix(".0") ? String(s.dropLast(2)) : s)K"
+            }
+            return "\(n)"
+        }
+    }
 
     // MARK: - Pioneer Level Messages (tier + division)
 
