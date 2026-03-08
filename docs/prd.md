@@ -62,7 +62,8 @@ dxai
 - [x] AI 환경 스캔 네이티브 SwiftUI UI (ScanPanelView)
 - [x] About 페이지 (앱 소개, GitHub Star 링크)
 - [x] EN/KR 로컬라이제이션 (L 구조체, @AppStorage 반응형)
-- [x] 주간 인사이트 대시보드 (InsightsView — 7일 바 차트, 도구별/토큰 유형 분석)
+- [x] 주간 인사이트 대시보드 (전주 대비 추세, 캐시 적중률, 자연어 요약 불렛, 색상 카드)
+- [x] 히어로 넘버 로컬라이즈 (KR: 억/만, EN: million/billion)
 - [x] 자동시작 기본 설정 (SMAppService)
 - [x] macOS 네이티브 알림 (UNUserNotificationCenter + osascript 폴백)
 - [x] SQLite 데이터 영속화 (DxaiDatabase)
@@ -90,20 +91,24 @@ dxai
 
 ### 미구현 / 향후 계획
 
-#### 단기 (Next)
+#### Phase 1 — 릴리스 (단기)
 - [ ] 첫 릴리스 태그 (V1.0.0) 및 Homebrew Tap 레포 생성
-- [ ] `dxai ai insights` — CLI 인사이트 커맨드 (메뉴바 앱에는 이미 구현)
+- [ ] 사용자 확보 (수업 배포, 사내 공유)
 
-#### 중기
-- [ ] `dxai telemetry` — opt-in 익명 텔레메트리
-- [ ] 커뮤니티 벤치마크 ("상위 N% 파이오니어")
-- [ ] config.toml 기반 설정 커스터마이징
-- [ ] 디스크 부족 알림
+#### Phase 2 — DXAI Point & 랭킹 서비스 (핵심 목표)
+- [ ] DXAI Point 시스템 설계 (일일 Pioneer Rank → 포인트 변환)
+- [ ] opt-in 데이터 제출 (닉네임 + 일일 포인트 + 타임스탬프만)
+- [ ] 백엔드 서버 + DB (포인트 수신, 랭킹 집계)
+- [ ] 랭킹 웹사이트 (리더보드, 누적 포인트, 파이오니어 통계)
 
-#### 장기
-- [ ] Homebrew Core 등록 (star 30-75+ 확보 후)
-- [ ] 모델별 비용 추정 (pricing.json)
+> **제출 데이터**: 닉네임, 일일 토큰 합계(도구별), 일일 DXAI Point, 누적 포인트, 타임스탬프
+> **수집하지 않는 것**: 프로젝트명, 프롬프트, 파일 경로, 대화 내용
+> DXAI Point는 AI 활용도를 보여주는 스펙/지표로 활용
+
+#### Phase 3 — 확장 (장기)
+- [ ] Homebrew Core 등록
 - [ ] 다국어 확장 (JP, CN 등)
+- [ ] 디스크 부족 알림
 
 ## Pioneer Rank 시스템
 
