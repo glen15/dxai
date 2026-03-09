@@ -19,8 +19,8 @@ final class DxaiDatabase {
     // MARK: - Live .jsonl Parsing
 
     func todayStats() -> [DailyStats] {
-        let today = Self.todayUTCString()
-        let startOfDay = Self.startOfTodayUTC()
+        let today = Self.todayString()
+        let startOfDay = Self.startOfToday()
 
         var results: [DailyStats] = []
 
@@ -186,9 +186,9 @@ final class DxaiDatabase {
     // MARK: - Weekly Stats (7 days)
 
     func weeklyStats() -> [DailyStats] {
-        let startDate = Self.startOfDayUTC(daysAgo: 13)
+        let startDate = Self.startOfDay(daysAgo: 13)
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = .current
         let endDate = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date()))!
 
         let claudeByDate = parseClaude(from: startDate, to: endDate)
@@ -196,8 +196,8 @@ final class DxaiDatabase {
 
         var results: [DailyStats] = []
         for daysAgo in (0...13).reversed() {
-            let dayDate = Self.startOfDayUTC(daysAgo: daysAgo)
-            let dateKey = Self.dateStringUTC(dayDate)
+            let dayDate = Self.startOfDay(daysAgo: daysAgo)
+            let dateKey = Self.dateString(dayDate)
 
             let c = claudeByDate[dateKey] ?? TokenAccum()
             results.append(DailyStats(
@@ -243,7 +243,7 @@ final class DxaiDatabase {
                       let dt = Self.parseISO8601(timestamp),
                       dt >= startDate, dt < endDate else { return }
 
-                let dateKey = Self.dateStringUTC(dt)
+                let dateKey = Self.dateString(dt)
                 let input = usage["input_tokens"] as? Int ?? 0
                 let output = usage["output_tokens"] as? Int ?? 0
                 let cacheRead = usage["cache_read_input_tokens"] as? Int ?? 0
@@ -315,7 +315,7 @@ final class DxaiDatabase {
                       let dt = Self.parseISO8601(timestamp),
                       dt >= startDate, dt < endDate else { return }
 
-                let dateKey = Self.dateStringUTC(dt)
+                let dateKey = Self.dateString(dt)
                 var bucket = accum[dateKey] ?? TokenAccum()
                 bucket.inputTokens += delta["input"]!
                 bucket.cacheReadTokens += delta["cached"]!
@@ -356,30 +356,30 @@ final class DxaiDatabase {
 
     // MARK: - Helpers
 
-    private static func todayUTCString() -> String {
+    private static func todayString() -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = TimeZone(identifier: "UTC")
+        fmt.timeZone = .current
         return fmt.string(from: Date())
     }
 
-    private static func startOfTodayUTC() -> Date {
+    private static func startOfToday() -> Date {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = .current
         return cal.startOfDay(for: Date())
     }
 
-    private static func startOfDayUTC(daysAgo: Int) -> Date {
+    private static func startOfDay(daysAgo: Int) -> Date {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = .current
         let today = cal.startOfDay(for: Date())
         return cal.date(byAdding: .day, value: -daysAgo, to: today)!
     }
 
-    private static func dateStringUTC(_ date: Date) -> String {
+    private static func dateString(_ date: Date) -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = TimeZone(identifier: "UTC")
+        fmt.timeZone = .current
         return fmt.string(from: date)
     }
 

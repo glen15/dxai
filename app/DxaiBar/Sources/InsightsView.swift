@@ -9,11 +9,11 @@ struct InsightsView: View {
 
     private var thisWeekDates: Set<String> {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = .current
         let today = cal.startOfDay(for: Date())
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = TimeZone(identifier: "UTC")
+        fmt.timeZone = .current
         return Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
     }
 
@@ -346,7 +346,7 @@ struct InsightsView: View {
     private func shortDay(_ dateStr: String) -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = TimeZone(identifier: "UTC")
+        fmt.timeZone = .current
         guard let date = fmt.date(from: dateStr) else { return dateStr.suffix(2).description }
         let out = DateFormatter()
         out.dateFormat = "EEE"
