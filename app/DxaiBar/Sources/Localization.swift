@@ -219,6 +219,33 @@ struct L {
         }
     }
 
+    // MARK: - Points & Settings
+
+    var pointsToday: String { ko ? "오늘" : "today" }
+    var pointsTotal: String { ko ? "누적" : "total" }
+    var pointsLabel: String { "pt" }
+
+    var leaderboard: String { ko ? "리더보드" : "Leaderboard" }
+
+    var settingsTitle: String { ko ? "설정" : "Settings" }
+    var settingsNickname: String { ko ? "닉네임" : "Nickname" }
+    var settingsNicknamePlaceholder: String { ko ? "영문/숫자/밑줄 2-16자" : "2-16 chars, a-z 0-9 _" }
+    var settingsNicknameValidation: String { ko ? "영문, 숫자, 밑줄만 허용 (2-16자)" : "Only a-z, 0-9, underscore (2-16 chars)" }
+    var settingsOptIn: String { ko ? "랭킹 참여" : "Join Ranking" }
+    var settingsOptInDesc: String {
+        ko ? "익명화된 포인트 데이터를 리더보드에 제출합니다"
+           : "Submit anonymized point data to the leaderboard"
+    }
+    var settingsDataPreview: String { ko ? "제출 데이터 미리보기" : "Data Preview" }
+    var settingsNotCollected: String { ko ? "수집하지 않는 것" : "Not Collected" }
+    var settingsNotCollectedItems: [String] {
+        if ko {
+            return ["프로젝트명, 파일 경로", "프롬프트, 대화 내용", "API 키, 환경변수"]
+        } else {
+            return ["Project names, file paths", "Prompts, conversations", "API keys, env variables"]
+        }
+    }
+
     // MARK: - Pioneer Level Messages (tier + division)
 
     func pioneerMessage(_ tier: String, division: Int?) -> String {

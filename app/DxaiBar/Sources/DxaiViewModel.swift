@@ -13,6 +13,8 @@ final class DxaiViewModel: ObservableObject {
     @Published var systemStatus: SystemStatus?
     @Published var scanResult: ScanResult?
     @Published var weeklyStats: [DxaiDatabase.DailyStats] = []
+    @Published var todayPoints: Int = 0
+    @Published var totalPoints: Int = 0
 
     private var timer: Timer?
     private var lastNotifiedLevel: PioneerLevel?
@@ -176,6 +178,9 @@ final class DxaiViewModel: ObservableObject {
 
         checkTokenMilestone()
 
+        // DXAI Point 기록
+        updatePoints()
+
         // 백그라운드에서 주간 데이터 미리 로드
         Task.detached {
             let weekly = db.weeklyStats()
@@ -183,6 +188,27 @@ final class DxaiViewModel: ObservableObject {
                 self?.weeklyStats = weekly
             }
         }
+    }
+
+    // MARK: - DXAI Points
+
+    private func updatePoints() {
+        let ps = DxaiPointService.shared
+        ps.finalizePreviousDay()
+
+        if let level = pioneerLevel {
+            let claudeTokens = toolStats.filter { $0.tool == "claude" }.reduce(0) { $0 + $1.totalTokens }
+            let codexTokens = toolStats.filter { $0.tool == "codex" }.reduce(0) { $0 + $1.totalTokens }
+            ps.recordDailyBest(
+                tier: level.tier.rawValue,
+                division: level.division,
+                claudeTokens: claudeTokens,
+                codexTokens: codexTokens
+            )
+        }
+
+        todayPoints = ps.todayPoints
+        totalPoints = ps.totalPoints
     }
 
     // MARK: - Token Milestones

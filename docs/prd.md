@@ -68,6 +68,7 @@ dxai
 - [x] macOS 네이티브 알림 (UNUserNotificationCenter + osascript 폴백)
 - [x] SQLite 데이터 영속화 (DxaiDatabase)
 - [x] 중복 실행 방지 (Bundle ID + PID 체크)
+- [x] 로컬 타임존 기반 날짜 경계 (UTC → TimeZone.current)
 
 #### CLI
 - [x] `dxai ai` — 토큰 대시보드 (Claude + Codex)

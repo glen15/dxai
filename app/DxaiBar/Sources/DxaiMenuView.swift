@@ -59,6 +59,7 @@ struct DxaiMenuView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showAbout = false
     @State private var showInsights = false
+    @State private var showSettings = false
     @AppStorage("appLanguage") private var lang = "en"
     private var l: L { L(lang) }
 
@@ -68,6 +69,8 @@ struct DxaiMenuView: View {
                 aboutView
             } else if showInsights {
                 insightsNavigationView
+            } else if showSettings {
+                settingsNavigationView
             } else if viewModel.showTaskPanel {
                 taskPanelView
             } else {
@@ -162,7 +165,7 @@ struct DxaiMenuView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Pioneer badge + message
+            // Pioneer badge + points + message
             if let level = viewModel.pioneerLevel {
                 HStack(spacing: 8) {
                     Text("\(level.emoji) \(level.displayName)")
@@ -172,11 +175,65 @@ struct DxaiMenuView: View {
                         .background(pioneerColor(level).opacity(0.12))
                         .foregroundColor(pioneerColor(level))
                         .cornerRadius(5)
+
+                    if viewModel.todayPoints > 0 {
+                        Text("+\(viewModel.todayPoints)\(l.pointsLabel)")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(.yellow.opacity(0.9))
+                    }
+
                     Text(l.pioneerMessage(level.tier.rawValue, division: level.division))
                         .font(.system(size: 12))
                         .foregroundColor(pioneerColor(level).opacity(0.7))
                         .italic()
                         .lineLimit(1)
+                }
+            }
+
+            // Total points + action buttons
+            if viewModel.totalPoints > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.yellow)
+                    Text("DXAI Point")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text("\(formatNumber(viewModel.totalPoints)) \(l.pointsLabel)")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(.yellow.opacity(0.9))
+
+                    Spacer()
+
+                    Button(action: {
+                        if let url = URL(string: "https://dxai.dev/ranking") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 9))
+                            Text(l.leaderboard)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.yellow.opacity(0.1))
+                        .foregroundColor(.yellow)
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { showSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 10))
+                            .padding(4)
+                            .background(Color.secondary.opacity(0.08))
+                            .foregroundColor(.secondary)
+                            .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -726,6 +783,13 @@ struct DxaiMenuView: View {
             }
             .buttonStyle(.plain)
 
+            Button(action: { showSettings = true }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.secondary)
+
             Text("\u{00B7}")
                 .foregroundColor(.secondary.opacity(0.3))
 
@@ -896,6 +960,47 @@ struct DxaiMenuView: View {
             HStack {
                 Spacer()
                 Button(l.close) { showInsights = false }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+            .padding(.vertical, 10)
+        }
+    }
+
+    // MARK: - Settings
+
+    private var settingsNavigationView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: { showSettings = false }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text(l.back)
+                    }
+                    .font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(l.settingsTitle)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            SettingsView(viewModel: viewModel)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button(l.close) { showSettings = false }
                     .buttonStyle(.plain)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
