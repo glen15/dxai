@@ -60,6 +60,7 @@ struct L {
 
     var tokensToday: String { ko ? "오늘 하루 이만큼 토큰 불태우는 중!" : "tokens burned today!" }
     var remaining: String { ko ? "남음" : "remaining" }
+    func weeklyShort(_ n: Int) -> String { ko ? "주간 \(formatImpact(n))" : "wk \(formatImpact(n))" }
     var maxRank: String { "MAX RANK" }
     var today: String { ko ? "오늘" : "today" }
 
@@ -222,6 +223,7 @@ struct L {
     // MARK: - Points & Settings
 
     var pointsToday: String { ko ? "오늘" : "today" }
+    var pointsWeekly: String { ko ? "주간" : "week" }
     var pointsTotal: String { ko ? "누적" : "total" }
     var pointsLabel: String { "pt" }
 

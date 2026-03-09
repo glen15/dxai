@@ -82,6 +82,17 @@ final class DxaiPointService {
         return history.last(where: { $0.date == today })?.dailyPoints ?? 0
     }
 
+    var weeklyPoints: Int {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        let today = cal.startOfDay(for: Date())
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = .current
+        let dates = Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
+        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyPoints }
+    }
+
     var recentHistory: [DailyRecord] {
         Array(history.suffix(30))
     }

@@ -156,10 +156,17 @@ struct DxaiMenuView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Token total (full width)
             VStack(alignment: .leading, spacing: 2) {
-                Text(l.formatImpact(viewModel.todayTokens))
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(l.formatImpact(viewModel.todayTokens))
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    if viewModel.weeklyTokenTotal > viewModel.todayTokens {
+                        Text(l.weeklyShort(viewModel.weeklyTokenTotal))
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
                 Text(l.tokensToday)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
@@ -190,50 +197,54 @@ struct DxaiMenuView: View {
                 }
             }
 
-            // Total points + action buttons
-            if viewModel.totalPoints > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.yellow)
-                    Text("DXAI Point")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Text("\(formatNumber(viewModel.totalPoints)) \(l.pointsLabel)")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(.yellow.opacity(0.9))
-
-                    Spacer()
-
-                    Button(action: {
-                        if let url = URL(string: "https://dxai.dev/ranking") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "trophy.fill")
-                                .font(.system(size: 9))
-                            Text(l.leaderboard)
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.yellow.opacity(0.1))
-                        .foregroundColor(.yellow)
-                        .cornerRadius(4)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape")
+            // DXAI Point summary + action buttons
+            if viewModel.todayPoints > 0 || viewModel.totalPoints > 0 {
+                VStack(spacing: 6) {
+                    // Point stats row
+                    HStack(spacing: 0) {
+                        Image(systemName: "star.fill")
                             .font(.system(size: 10))
-                            .padding(4)
-                            .background(Color.secondary.opacity(0.08))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.yellow)
+                            .padding(.trailing, 5)
+
+                        pointChip(l.pointsToday, "+\(viewModel.todayPoints)")
+                        dotSeparator
+                        pointChip(l.pointsWeekly, "\(viewModel.weeklyPoints)")
+                        dotSeparator
+                        pointChip(l.pointsTotal, "\(formatNumber(viewModel.totalPoints))")
+
+                        Spacer()
+
+                        Button(action: {
+                            if let url = URL(string: "https://dxai.dev/ranking") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "trophy.fill")
+                                    .font(.system(size: 9))
+                                Text(l.leaderboard)
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.yellow.opacity(0.1))
+                            .foregroundColor(.yellow)
                             .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { showSettings = true }) {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 10))
+                                .padding(4)
+                                .background(Color.secondary.opacity(0.08))
+                                .foregroundColor(.secondary)
+                                .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 4)
                     }
-                    .buttonStyle(.plain)
                 }
             }
 
@@ -967,6 +978,26 @@ struct DxaiMenuView: View {
             }
             .padding(.vertical, 10)
         }
+    }
+
+    // MARK: - Point Helpers
+
+    private func pointChip(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 3) {
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary.opacity(0.6))
+            Text("\(value)\(l.pointsLabel)")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(.yellow.opacity(0.9))
+        }
+    }
+
+    private var dotSeparator: some View {
+        Text("\u{00B7}")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary.opacity(0.3))
+            .padding(.horizontal, 4)
     }
 
     // MARK: - Settings

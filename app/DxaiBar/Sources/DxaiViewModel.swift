@@ -14,7 +14,19 @@ final class DxaiViewModel: ObservableObject {
     @Published var scanResult: ScanResult?
     @Published var weeklyStats: [DxaiDatabase.DailyStats] = []
     @Published var todayPoints: Int = 0
+    @Published var weeklyPoints: Int = 0
     @Published var totalPoints: Int = 0
+
+    var weeklyTokenTotal: Int {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        let today = cal.startOfDay(for: Date())
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = .current
+        let dates = Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
+        return weeklyStats.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.totalTokens }
+    }
 
     private var timer: Timer?
     private var lastNotifiedLevel: PioneerLevel?
@@ -208,6 +220,7 @@ final class DxaiViewModel: ObservableObject {
         }
 
         todayPoints = ps.todayPoints
+        weeklyPoints = ps.weeklyPoints
         totalPoints = ps.totalPoints
     }
 
