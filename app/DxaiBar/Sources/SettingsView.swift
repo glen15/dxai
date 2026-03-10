@@ -8,6 +8,12 @@ struct SettingsView: View {
     @State private var nickname: String = DxaiPointService.shared.config.nickname
     @State private var optIn: Bool = DxaiPointService.shared.config.optIn
     @State private var nicknameError: String?
+    @State private var nicknameSuccess: String?
+    @State private var isSaving = false
+
+    private var nicknameChanged: Bool {
+        nickname.trimmingCharacters(in: .whitespaces) != DxaiPointService.shared.config.nickname
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -21,15 +27,36 @@ struct SettingsView: View {
                     TextField(l.settingsNicknamePlaceholder, text: $nickname)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 13, design: .monospaced))
-                        .onChange(of: nickname) { newValue in
-                            validateAndSave(newValue)
+                        .onChange(of: nickname) { _ in
+                            nicknameError = nil
+                            nicknameSuccess = nil
                         }
+
+                    Button(action: saveNickname) {
+                        if isSaving {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .frame(width: 40)
+                        } else {
+                            Text(lang == "ko" ? "저장" : "Save")
+                                .font(.system(size: 12, weight: .medium))
+                                .frame(width: 40)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.purple)
+                    .disabled(!nicknameChanged || isSaving)
                 }
 
                 if let error = nicknameError {
                     Text(error)
                         .font(.system(size: 11))
                         .foregroundColor(.red)
+                }
+                if let success = nicknameSuccess {
+                    Text(success)
+                        .font(.system(size: 11))
+                        .foregroundColor(.green)
                 }
             }
 
@@ -54,30 +81,6 @@ struct SettingsView: View {
 
             Divider()
 
-            // Data preview
-            VStack(alignment: .leading, spacing: 6) {
-                Text(l.settingsDataPreview)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
-
-                let claudeTokens = viewModel.toolStats
-                    .filter { $0.tool == "claude" }
-                    .reduce(0) { $0 + $1.totalTokens }
-                let codexTokens = viewModel.toolStats
-                    .filter { $0.tool == "codex" }
-                    .reduce(0) { $0 + $1.totalTokens }
-
-                Text(DxaiPointService.shared.submissionPreview(
-                    claudeTokens: claudeTokens,
-                    codexTokens: codexTokens
-                ))
-                .font(.system(size: 11, design: .monospaced))
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.secondary.opacity(0.06))
-                .cornerRadius(6)
-            }
-
             // Not collected
             VStack(alignment: .leading, spacing: 4) {
                 Text(l.settingsNotCollected)
@@ -100,18 +103,31 @@ struct SettingsView: View {
         .padding(.vertical, 12)
     }
 
-    private func validateAndSave(_ value: String) {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
-        let pattern = "^[a-zA-Z0-9_]{0,16}$"
+    private func saveNickname() {
+        let trimmed = nickname.trimmingCharacters(in: .whitespaces)
+        let pattern = "^[a-zA-Z0-9_]{2,16}$"
         guard trimmed.range(of: pattern, options: .regularExpression) != nil else {
             nicknameError = l.settingsNicknameValidation
             return
         }
-        if !trimmed.isEmpty && trimmed.count < 2 {
-            nicknameError = l.settingsNicknameValidation
-            return
-        }
+
+        isSaving = true
         nicknameError = nil
-        DxaiPointService.shared.updateNickname(trimmed)
+        nicknameSuccess = nil
+
+        DxaiPointService.shared.checkNickname(trimmed) { result in
+            DispatchQueue.main.async {
+                isSaving = false
+                switch result {
+                case .available:
+                    DxaiPointService.shared.updateNickname(trimmed)
+                    nicknameSuccess = lang == "ko" ? "저장되었습니다" : "Saved"
+                case .taken:
+                    nicknameError = lang == "ko" ? "이미 사용 중인 닉네임입니다" : "Nickname already taken"
+                case .error(let msg):
+                    nicknameError = msg
+                }
+            }
+        }
     }
 }

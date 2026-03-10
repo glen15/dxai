@@ -238,12 +238,26 @@ struct DxaiMenuView: View {
                         .buttonStyle(.plain)
 
                         Button(action: { showSettings = true }) {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 10))
-                                .padding(4)
-                                .background(Color.secondary.opacity(0.08))
-                                .foregroundColor(.secondary)
-                                .cornerRadius(4)
+                            HStack(spacing: 3) {
+                                Image(systemName: DxaiPointService.shared.config.nickname.isEmpty
+                                    ? "person.crop.circle.badge.plus"
+                                    : "person.crop.circle")
+                                    .font(.system(size: 9))
+                                Text(DxaiPointService.shared.config.nickname.isEmpty
+                                    ? (lang == "ko" ? "닉네임 지정" : "Set Nickname")
+                                    : DxaiPointService.shared.config.nickname)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(DxaiPointService.shared.config.nickname.isEmpty
+                                ? Color.purple.opacity(0.15)
+                                : Color.secondary.opacity(0.08))
+                            .foregroundColor(DxaiPointService.shared.config.nickname.isEmpty
+                                ? .purple
+                                : .secondary)
+                            .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
                         .padding(.leading, 4)

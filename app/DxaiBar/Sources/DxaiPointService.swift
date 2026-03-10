@@ -24,7 +24,7 @@ final class DxaiPointService {
         static var `default`: PointConfig {
             PointConfig(
                 nickname: "",
-                optIn: false,
+                optIn: true,
                 deviceUUID: UUID().uuidString,
                 lastRecordedDate: ""
             )
@@ -185,6 +185,48 @@ final class DxaiPointService {
 
     // MARK: - Config Mutation
 
+    enum NicknameResult {
+        case available
+        case taken
+        case error(String)
+    }
+
+    /// 서버에서 닉네임 중복 확인 (자기 device_uuid 제외)
+    func checkNickname(_ name: String, completion: @escaping (NicknameResult) -> Void) {
+        let urlStr = Self.submitURL.replacingOccurrences(of: "submit-daily", with: "leaderboard")
+            + "?check_nickname=\(name)&device_uuid=\(config.deviceUUID)"
+        guard let url = URL(string: urlStr) else {
+            completion(.error("Invalid URL"))
+            return
+        }
+
+        // 간단하게: Supabase REST로 직접 조회
+        let restURL = "https://ldsqtmirplfgclzessrd.supabase.co/rest/v1/users?nickname=eq.\(name)&device_uuid=neq.\(config.deviceUUID)&select=id"
+        guard let checkURL = URL(string: restURL) else {
+            completion(.error("Invalid URL"))
+            return
+        }
+
+        var request = URLRequest(url: checkURL)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("sb_publishable_0A_u1M6MBppiDn8Yl4WZUw_t930Z61C", forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 10
+
+        URLSession.shared.dataTask(with: request) { data, _, error in
+            if error != nil {
+                completion(.error("Network error"))
+                return
+            }
+            guard let data = data,
+                  let arr = try? JSONDecoder().decode([[String: String]].self, from: data) else {
+                // 빈 배열이면 사용 가능
+                completion(.available)
+                return
+            }
+            completion(arr.isEmpty ? .available : .taken)
+        }.resume()
+    }
+
     func updateNickname(_ name: String) {
         config.nickname = name
         saveConfig()
@@ -193,24 +235,6 @@ final class DxaiPointService {
     func updateOptIn(_ value: Bool) {
         config.optIn = value
         saveConfig()
-    }
-
-    // MARK: - Submission Data Preview
-
-    func submissionPreview(claudeTokens: Int, codexTokens: Int) -> String {
-        let today = Self.todayString()
-        let record = history.last(where: { $0.date == today })
-        let pts = record?.dailyPoints ?? 0
-        return """
-        {
-          "nickname": "\(config.nickname)",
-          "date": "\(today)",
-          "daily_points": \(pts),
-          "total_points": \(totalPoints),
-          "claude_tokens": \(claudeTokens),
-          "codex_tokens": \(codexTokens)
-        }
-        """
     }
 
     // MARK: - Private

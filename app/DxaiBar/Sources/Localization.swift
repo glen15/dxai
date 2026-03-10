@@ -238,7 +238,6 @@ struct L {
         ko ? "익명화된 포인트 데이터를 리더보드에 제출합니다"
            : "Submit anonymized point data to the leaderboard"
     }
-    var settingsDataPreview: String { ko ? "제출 데이터 미리보기" : "Data Preview" }
     var settingsNotCollected: String { ko ? "수집하지 않는 것" : "Not Collected" }
     var settingsNotCollectedItems: [String] {
         if ko {
