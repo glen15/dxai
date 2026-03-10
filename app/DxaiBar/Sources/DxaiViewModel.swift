@@ -39,6 +39,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var isTaskRunning = false
     @Published var taskTitle = ""
     @Published var taskOutput = ""
+    @Published var isJsonTask = false
     private var taskProcess: Process?
 
     // MARK: - Pioneer Level System
@@ -392,6 +393,7 @@ final class DxaiViewModel: ObservableObject {
         systemStatus = nil
         scanResult = nil
         isTaskRunning = true
+        isJsonTask = command.contains("--json") || command.starts(with: "status")
         showTaskPanel = true
 
         let dxaiPath = Self.findDxaiPath()
@@ -410,18 +412,7 @@ final class DxaiViewModel: ObservableObject {
 
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            // 5분 타임아웃 적용
-            process.arguments = ["-l", "-c", """
-                \(dxaiPath) \(command) &
-                PID=$!
-                ( sleep 300 && kill $PID 2>/dev/null ) &
-                TIMER=$!
-                wait $PID 2>/dev/null
-                STATUS=$?
-                kill $TIMER 2>/dev/null
-                wait $TIMER 2>/dev/null
-                exit $STATUS
-                """]
+            process.arguments = ["-c", "\(dxaiPath) \(command)"]
 
             var env = ProcessInfo.processInfo.environment
             env["TERM"] = "dumb"
@@ -449,46 +440,62 @@ final class DxaiViewModel: ObservableObject {
                 return
             }
 
-            let handle = outputPipe.fileHandleForReading
-            while true {
-                let data = handle.availableData
-                if data.isEmpty { break }
-                if let str = String(data: data, encoding: .utf8) {
-                    let clean = Self.stripANSI(str)
-                    await MainActor.run {
-                        self?.taskOutput += clean
-                        // Parse JSON as soon as it's complete (process may keep running)
-                        if let output = self?.taskOutput,
-                           output.trimmingCharacters(in: .whitespacesAndNewlines).hasSuffix("}") {
-                            if self?.systemStatus == nil,
-                               let status = SystemStatus.parse(from: output) {
-                                self?.systemStatus = status
-                                self?.isTaskRunning = false
-                                process.terminate()
-                            } else if self?.scanResult == nil,
-                                      let scan = ScanResult.parse(from: output) {
-                                self?.scanResult = scan
-                                self?.isTaskRunning = false
-                                process.terminate()
-                            }
-                        }
-                    }
-                }
+            // 5분 타임아웃 (Swift 레벨)
+            let timeoutTask = Task {
+                try await Task.sleep(nanoseconds: 300_000_000_000)
+                if process.isRunning { process.terminate() }
             }
 
-            process.waitUntilExit()
+            let handle = outputPipe.fileHandleForReading
+            let isJson = await MainActor.run { self?.isJsonTask ?? false }
+
+            if isJson {
+                // JSON 커맨드: 전체 출력을 한번에 읽기 (버퍼링 문제 방지)
+                process.waitUntilExit()
+                let allData = handle.readDataToEndOfFile()
+                if let str = String(data: allData, encoding: .utf8) {
+                    let clean = Self.stripANSI(str)
+                    await MainActor.run { self?.taskOutput = clean }
+                }
+            } else {
+                // 인터랙티브 커맨드: 스트리밍 출력
+                while true {
+                    let data = handle.availableData
+                    if data.isEmpty { break }
+                    if let str = String(data: data, encoding: .utf8) {
+                        let clean = Self.stripANSI(str)
+                        await MainActor.run { self?.taskOutput += clean }
+                    }
+                }
+                process.waitUntilExit()
+            }
+            timeoutTask.cancel()
             await MainActor.run {
                 if let output = self?.taskOutput {
+                    NSLog("[DxaiTask] output length=\(output.count), starts=\(String(output.prefix(40)))")
                     if self?.systemStatus == nil, let status = SystemStatus.parse(from: output) {
+                        NSLog("[DxaiTask] → SystemStatus parsed")
                         self?.systemStatus = status
                     } else if self?.scanResult == nil, let scan = ScanResult.parse(from: output) {
+                        NSLog("[DxaiTask] → ScanResult parsed")
                         self?.scanResult = scan
                     } else if self?.systemStatus == nil, let formatted = Self.formatStatusJSON(output) {
+                        NSLog("[DxaiTask] → formatStatusJSON matched")
                         self?.taskOutput = formatted
+                    } else {
+                        NSLog("[DxaiTask] → NO parser matched")
                     }
+                }
+                // JSON 파싱 성공했으면 플래그 해제
+                if self?.systemStatus != nil || self?.scanResult != nil {
+                    self?.isJsonTask = false
                 }
                 if process.terminationStatus == 137 || process.terminationStatus == 143 {
                     self?.taskOutput += "\n\n\(L().timedOut)"
+                }
+                // JSON 태스크인데 파싱 실패한 경우 raw 출력 보여주기
+                if self?.isJsonTask == true {
+                    self?.isJsonTask = false
                 }
                 self?.isTaskRunning = false
                 self?.taskProcess = nil
@@ -508,6 +515,7 @@ final class DxaiViewModel: ObservableObject {
         taskProcess?.terminate()
         taskProcess = nil
         isTaskRunning = false
+        isJsonTask = false
         showTaskPanel = false
         taskOutput = ""
         taskTitle = ""
@@ -558,7 +566,8 @@ final class DxaiViewModel: ObservableObject {
               let end = raw.lastIndex(of: "}") else { return nil }
         let jsonStr = String(raw[start...end])
         guard let data = jsonStr.data(using: .utf8),
-              let d = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+              let d = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              d["hardware"] != nil else {
             return nil
         }
 

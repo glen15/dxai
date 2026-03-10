@@ -603,6 +603,17 @@ struct DxaiMenuView: View {
             } else if let scan = viewModel.scanResult {
                 ScanPanelView(scan: scan)
                     .frame(maxHeight: 420)
+            } else if viewModel.isJsonTask {
+                // JSON 커맨드 (scan --json, status --json): 파싱 완료까지 로딩 표시
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(0.9)
+                    Text(l.runningDots)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
