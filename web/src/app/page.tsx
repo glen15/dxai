@@ -14,9 +14,12 @@ import {
   type RankEntry,
   type Lang,
   formatTokens,
+  formatHeroTokens,
   formatNumber,
   vanguardMessage,
   tokenMilestone,
+  tierProgress,
+  TIER_THRESHOLDS,
   t,
 } from "@/lib/supabase";
 
@@ -60,7 +63,53 @@ function TierBadge({ tier, division }: { tier: string; division: number | null }
   );
 }
 
-// Countdown ring SVG
+const TIER_COLORS = [
+  "text-amber-600",     // B
+  "text-slate-400",     // S
+  "text-yellow-400",    // G
+  "text-cyan-300",      // P
+  "text-blue-400",      // D
+  "text-purple-400",    // M
+  "text-red-400",       // GM
+  "text-orange-400",    // C
+];
+const TIER_BAR_COLORS = [
+  "bg-amber-600",
+  "bg-slate-400",
+  "bg-yellow-400",
+  "bg-cyan-300",
+  "bg-blue-400",
+  "bg-purple-400",
+  "bg-red-400",
+  "bg-orange-400",
+];
+
+function TierProgressBar({ totalTokens }: { totalTokens: number }) {
+  const { index, fraction } = tierProgress(totalTokens);
+  return (
+    <div className="flex items-center gap-0.5 w-full">
+      {TIER_THRESHOLDS.map((t, i) => {
+        const isCurrent = i === index;
+        const isPast = i < index || (index === -1 ? false : i < index);
+        const fillWidth = isCurrent ? `${Math.round(fraction * 100)}%` : isPast ? "100%" : "0%";
+        return (
+          <div key={t.tier} className="flex-1 flex flex-col items-center gap-0.5">
+            <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${TIER_BAR_COLORS[i]}`}
+                style={{ width: fillWidth, opacity: isPast ? 0.5 : 1 }}
+              />
+            </div>
+            <span className={`text-[8px] font-bold leading-none ${isCurrent ? TIER_COLORS[i] : "text-white/20"}`}>
+              {t.tier}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Top 3 podium card
 function PodiumCard({ entry, lang, diff }: {
   entry: RankEntry;
@@ -126,10 +175,20 @@ function PodiumCard({ entry, lang, diff }: {
         <p className="text-sm text-white/50 italic mb-3 leading-relaxed">{message}</p>
       )}
 
-      {/* Points */}
-      <div className="font-mono text-xl font-bold tracking-tight mb-2">
-        <NumberTicker value={points} className="text-xl font-bold text-white" />{" "}
-        <span className="text-sm font-normal text-white/50">{lang === "ko" ? "점" : "pts"}</span>
+      {/* Hero number + Points */}
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="font-mono text-lg font-bold text-white/90">
+          {formatHeroTokens(claude + codex, lang)}
+        </div>
+        <div className="font-mono text-sm text-white/60">
+          <NumberTicker value={points} className="text-sm font-bold text-white/60" />
+          <span className="text-xs font-normal text-white/40 ml-0.5">{lang === "ko" ? "점" : "pts"}</span>
+        </div>
+      </div>
+
+      {/* Tier progress bar */}
+      <div className="mb-3">
+        <TierProgressBar totalTokens={claude + codex} />
       </div>
 
       {/* Token bars */}
@@ -424,12 +483,15 @@ function RankRow({ entry, type, lang, diff, index }: {
       </td>
       <td className="py-3 px-5">
         <div>
-          <a
-            href={`/user/${entry.nickname}`}
-            className="text-base text-white/90 group-hover:text-white transition-colors cursor-pointer"
-          >
-            {entry.nickname}
-          </a>
+          <div className="flex items-baseline gap-2">
+            <a
+              href={`/user/${entry.nickname}`}
+              className="text-base text-white/90 group-hover:text-white transition-colors cursor-pointer"
+            >
+              {entry.nickname}
+            </a>
+            <span className="font-mono text-xs text-white/40">{formatHeroTokens(claude + codex, lang)}</span>
+          </div>
           {milestone && (
             <p className="text-xs text-purple-400/70 mt-0.5">{milestone}</p>
           )}
@@ -438,9 +500,9 @@ function RankRow({ entry, type, lang, diff, index }: {
       <td className="py-3 px-5">
         <div>
           <TierBadge tier={tier} division={division} />
-          {message && (
-            <p className="text-xs text-white/45 mt-0.5 italic">{message}</p>
-          )}
+          <div className="mt-1 w-24">
+            <TierProgressBar totalTokens={claude + codex} />
+          </div>
         </div>
       </td>
       <td className="py-3 px-5 text-right font-mono text-sm hidden sm:table-cell">

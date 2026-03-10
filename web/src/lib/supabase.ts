@@ -238,6 +238,51 @@ export function formatTokens(n: number): string {
   return String(n);
 }
 
+/** 히어로 넘버: 억/만 or M/B */
+export function formatHeroTokens(n: number, lang: Lang): string {
+  if (lang === "ko") {
+    if (n >= 100_000_000) {
+      const eok = Math.floor(n / 100_000_000);
+      const man = Math.floor((n % 100_000_000) / 10_000);
+      return man > 0 ? `${eok}억 ${man.toLocaleString()}만` : `${eok}억`;
+    }
+    if (n >= 10_000) return `${Math.floor(n / 10_000).toLocaleString()}만`;
+    return n.toLocaleString();
+  }
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
+}
+
+/** 티어 진행 정보 */
+export const TIER_THRESHOLDS = [
+  { tier: "B", label: "Bronze", min: 10_000 },
+  { tier: "S", label: "Silver", min: 500_000 },
+  { tier: "G", label: "Gold", min: 8_000_000 },
+  { tier: "P", label: "Platinum", min: 50_000_000 },
+  { tier: "D", label: "Diamond", min: 220_000_000 },
+  { tier: "M", label: "Master", min: 620_000_000 },
+  { tier: "GM", label: "Grandmaster", min: 1_500_000_000 },
+  { tier: "C", label: "Challenger", min: 5_000_000_000 },
+] as const;
+
+export function tierProgress(totalTokens: number): { index: number; fraction: number } {
+  for (let i = TIER_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (totalTokens >= TIER_THRESHOLDS[i].min) {
+      const next = TIER_THRESHOLDS[i + 1];
+      if (!next) return { index: i, fraction: 1 };
+      const range = next.min - TIER_THRESHOLDS[i].min;
+      const progress = totalTokens - TIER_THRESHOLDS[i].min;
+      return { index: i, fraction: Math.min(progress / range, 1) };
+    }
+  }
+  if (totalTokens > 0) {
+    return { index: -1, fraction: Math.min(totalTokens / TIER_THRESHOLDS[0].min, 1) };
+  }
+  return { index: -1, fraction: 0 };
+}
+
 export function formatNumber(n: number): string {
   return n.toLocaleString();
 }
