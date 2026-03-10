@@ -1,18 +1,120 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
-  --foreground: #f3f4f6;
+  --background: #020617;
+  --foreground: #f0f4f8;
+  --accent-purple: #a78bfa;
+  --accent-cyan: #22d3ee;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-chakra);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Subtle dot grid for depth */
+  background-image:
+    radial-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Top 3 podium cards */
+.podium-card {
+  position: relative;
+  border-radius: 12px;
+  padding: 1.25rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.podium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--glow-color) 0%, transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.podium-gold {
+  --glow-color: #facc15;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0%, rgba(250, 204, 21, 0.02) 100%);
+}
+.podium-silver {
+  --glow-color: #94a3b8;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.06) 0%, rgba(148, 163, 184, 0.02) 100%);
+}
+.podium-bronze {
+  --glow-color: #d97706;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.06) 0%, rgba(217, 119, 6, 0.02) 100%);
+}
+
+/* Rank number glow */
+.rank-gold { text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); }
+.rank-silver { text-shadow: 0 0 16px rgba(203, 213, 225, 0.4); }
+.rank-bronze { text-shadow: 0 0 16px rgba(217, 119, 6, 0.4); }
+
+/* Row glow for table */
+.row-glow-gold {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.04) 0%, transparent 50%);
+}
+.row-glow-silver {
+  background: linear-gradient(90deg, rgba(203, 213, 225, 0.03) 0%, transparent 50%);
+}
+.row-glow-bronze {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.03) 0%, transparent 50%);
+}
+
+/* Countdown ring */
+.countdown-ring {
+  transform: rotate(-90deg);
+}
+.countdown-track { stroke: rgba(148, 163, 184, 0.1); }
+.countdown-fill {
+  stroke: #22d3ee;
+  transition: stroke-dashoffset 1s linear;
+}
+
+/* Token diff */
+@keyframes token-flash {
+  0% { opacity: 0; transform: translateY(4px); }
+  20% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.token-diff {
+  animation: token-flash 1.5s ease-out forwards;
+}
+
+/* Scanline overlay */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.015) 2px,
+    rgba(0, 0, 0, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .token-diff,
+  [class*="animate-"] {
+    animation: none !important;
+    transition: none !important;
+  }
+  .scanlines::after { display: none; }
 }
