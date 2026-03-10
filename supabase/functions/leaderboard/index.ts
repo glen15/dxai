@@ -301,30 +301,31 @@ async function getUserProfile(supabase: any, nickname: string) {
 
 // ── Helpers ──
 
+/** KST (UTC+9) 기준 현재 시각 */
+function nowKST(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000);
+}
+
 function todayDateString(): string {
-  // KST (UTC+9) 기준 오늘 날짜
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().slice(0, 10);
+  return nowKST().toISOString().slice(0, 10);
 }
 
 function dateOffset(days: number): string {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const kst = nowKST();
   kst.setDate(kst.getDate() + days);
   return kst.toISOString().slice(0, 10);
 }
 
 function parsePeriod(period: "weekly" | "monthly", param: string | null) {
   if (period === "weekly") {
-    // Format: YYYY-Wxx or auto (current week)
+    // Format: YYYY-Wxx or auto (current week, KST)
     if (!param) {
-      const now = new Date();
-      const dayOfWeek = now.getDay(); // 0=Sun
+      const now = nowKST();
+      const dayOfWeek = now.getUTCDay(); // KST를 UTC로 변환했으므로 getUTCDay 사용
       const monday = new Date(now);
-      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+      monday.setUTCDate(now.getUTCDate() - ((dayOfWeek + 6) % 7));
       const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
+      sunday.setUTCDate(monday.getUTCDate() + 6);
       return {
         startDate: monday.toISOString().slice(0, 10),
         endDate: sunday.toISOString().slice(0, 10),
@@ -335,12 +336,12 @@ function parsePeriod(period: "weekly" | "monthly", param: string | null) {
     if (!match) return { startDate: null, endDate: null, label: null };
     const year = parseInt(match[1]);
     const week = parseInt(match[2]);
-    const jan4 = new Date(year, 0, 4);
-    const dayOfWeek = jan4.getDay() || 7;
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const dayOfWeek = jan4.getUTCDay() || 7;
     const monday = new Date(jan4);
-    monday.setDate(jan4.getDate() - dayOfWeek + 1 + (week - 1) * 7);
+    monday.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1 + (week - 1) * 7);
     const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
     return {
       startDate: monday.toISOString().slice(0, 10),
       endDate: sunday.toISOString().slice(0, 10),
@@ -348,12 +349,12 @@ function parsePeriod(period: "weekly" | "monthly", param: string | null) {
     };
   }
 
-  // Monthly: YYYY-MM
+  // Monthly: YYYY-MM (KST)
   if (!param) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const now = nowKST();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+    const lastDay = new Date(Date.UTC(year, now.getUTCMonth() + 1, 0)).getUTCDate();
     return {
       startDate: `${year}-${month}-01`,
       endDate: `${year}-${month}-${lastDay}`,
