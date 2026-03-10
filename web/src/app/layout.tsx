@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, JetBrains_Mono } from "next/font/google";
+import { Chakra_Petch, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+import { ClickSpark } from "@/components/ui/click-spark";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const chakra = Chakra_Petch({
   variable: "--font-chakra",
@@ -25,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
       <body
         className={`${chakra.variable} ${jetbrains.variable} antialiased min-h-screen scanlines`}
       >
@@ -57,7 +61,9 @@ export default function RootLayout({
             </a>
           </div>
         </nav>
-        <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+        <ClickSpark sparkColor="rgba(167, 139, 250, 0.7)" sparkCount={8} sparkRadius={18}>
+          <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+        </ClickSpark>
         <footer className="border-t border-white/[0.03] mt-16">
           <div className="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-white/20 tracking-wider">
             DXAI — Deus eX AI

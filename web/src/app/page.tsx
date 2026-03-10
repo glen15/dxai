@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { SparklesText } from "@/components/ui/sparkles-text";
+import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
 import {
   fetchLeaderboard,
   supabase,
@@ -26,20 +30,31 @@ const TABS: { key: LeaderboardType; label: string }[] = [
 
 // Tier badge colors for backgrounds
 const TIER_BG: Record<string, string> = {
-  Bronze: "bg-amber-900/20 text-amber-600 border-amber-800/30",
-  Silver: "bg-slate-700/20 text-slate-300 border-slate-600/30",
-  Gold: "bg-yellow-900/20 text-yellow-400 border-yellow-700/30",
-  Platinum: "bg-cyan-900/20 text-cyan-300 border-cyan-700/30",
-  Diamond: "bg-blue-900/20 text-blue-400 border-blue-700/30",
-  Master: "bg-purple-900/20 text-purple-400 border-purple-700/30",
-  Grandmaster: "bg-red-900/20 text-red-400 border-red-700/30",
-  Challenger: "bg-orange-900/20 text-orange-400 border-orange-700/30",
+  Bronze: "bg-amber-900/25 text-amber-500 border-amber-700/40",
+  Silver: "bg-slate-700/25 text-slate-200 border-slate-500/40",
+  Gold: "bg-yellow-900/25 text-yellow-300 border-yellow-600/40",
+  Platinum: "bg-cyan-900/25 text-cyan-300 border-cyan-600/40",
+  Diamond: "bg-blue-900/25 text-blue-300 border-blue-600/40",
+  Master: "bg-purple-900/25 text-purple-300 border-purple-600/40",
+  Grandmaster: "bg-red-900/25 text-red-300 border-red-600/40",
+  Challenger: "bg-orange-900/25 text-orange-300 border-orange-600/40",
 };
 
 function TierBadge({ tier, division }: { tier: string; division: number | null }) {
   const cls = TIER_BG[tier] ?? "bg-gray-800/20 text-gray-400 border-gray-700/30";
+  if (tier === "Challenger") {
+    return (
+      <SparklesText
+        sparklesCount={6}
+        colors={{ first: "#facc15", second: "#fb923c" }}
+        className="text-xs font-bold"
+      >
+        Challenger
+      </SparklesText>
+    );
+  }
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${cls}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-sm font-medium border ${cls}`}>
       {tier}{division != null && ` ${division}`}
     </span>
   );
@@ -62,7 +77,7 @@ function CountdownRing({ seconds, total = 60 }: { seconds: number; total?: numbe
           strokeLinecap="round"
         />
       </svg>
-      <span className="font-mono text-xs tabular-nums text-cyan-400/80">
+      <span className="font-mono text-sm tabular-nums text-cyan-400/80">
         {seconds > 0 ? `${seconds}s` : "..."}
       </span>
     </div>
@@ -92,23 +107,36 @@ function PodiumCard({ entry, lang, prev }: {
 
   const rankColors = ["text-yellow-400", "text-slate-300", "text-amber-600"];
   const rankLabels = ["1st", "2nd", "3rd"];
+  const beamColors: [string, string][] = [
+    ["#facc15", "#fbbf24"],  // gold
+    ["#94a3b8", "#cbd5e1"],  // silver
+    ["#d97706", "#f59e0b"],  // bronze
+  ];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: entry.rank * 0.1 }}
-      className={podiumClass}
+      className={`${podiumClass} relative`}
     >
+      <BorderBeam
+        size={80}
+        duration={8}
+        colorFrom={beamColors[entry.rank - 1][0]}
+        colorTo={beamColors[entry.rank - 1][1]}
+        borderWidth={1}
+      />
+
       {/* Rank + Name */}
       <div className="flex items-start justify-between mb-3">
         <div>
-          <span className={`font-mono text-2xl font-bold ${rankColors[entry.rank - 1]}`}>
+          <span className={`font-mono text-3xl font-bold ${rankColors[entry.rank - 1]}`}>
             {rankLabels[entry.rank - 1]}
           </span>
           <a
             href={`/user/${entry.nickname}`}
-            className="block text-sm font-semibold mt-1 hover:text-purple-400 transition-colors cursor-pointer"
+            className="block text-base font-semibold mt-1 hover:text-purple-400 transition-colors cursor-pointer"
           >
             {entry.nickname}
           </a>
@@ -118,35 +146,36 @@ function PodiumCard({ entry, lang, prev }: {
 
       {/* Pioneer message */}
       {message && (
-        <p className="text-xs text-white/30 italic mb-3 leading-relaxed">{message}</p>
+        <p className="text-sm text-white/50 italic mb-3 leading-relaxed">{message}</p>
       )}
 
       {/* Points */}
-      <div className="font-mono text-lg font-bold tracking-tight mb-2">
-        {formatNumber(points)} <span className="text-xs font-normal text-white/30">pts</span>
+      <div className="font-mono text-xl font-bold tracking-tight mb-2">
+        <NumberTicker value={points} className="text-xl font-bold text-white" />{" "}
+        <span className="text-sm font-normal text-white/50">pts</span>
       </div>
 
       {/* Token bars */}
-      <div className="flex gap-3 text-xs font-mono">
+      <div className="flex gap-3 text-sm font-mono">
         <div className="flex-1">
-          <div className="text-orange-400/50 mb-0.5">Claude</div>
-          <div className="text-orange-400/80">
+          <div className="text-orange-400/70 text-xs mb-0.5">Claude</div>
+          <div className="text-orange-400">
             {formatTokens(claude)}
-            {claudeDiff > 0 && <span className="text-orange-300 ml-1 token-diff">+{formatTokens(claudeDiff)}</span>}
+            {claudeDiff > 0 && <span className="text-orange-300 text-xs ml-1 token-diff">+{formatTokens(claudeDiff)}</span>}
           </div>
         </div>
         <div className="flex-1">
-          <div className="text-emerald-400/50 mb-0.5">Codex</div>
-          <div className="text-emerald-400/80">
+          <div className="text-emerald-400/70 text-xs mb-0.5">Codex</div>
+          <div className="text-emerald-400">
             {formatTokens(codex)}
-            {codexDiff > 0 && <span className="text-emerald-300 ml-1 token-diff">+{formatTokens(codexDiff)}</span>}
+            {codexDiff > 0 && <span className="text-emerald-300 text-xs ml-1 token-diff">+{formatTokens(codexDiff)}</span>}
           </div>
         </div>
       </div>
 
       {/* Milestone */}
       {milestone && (
-        <p className="text-[10px] text-purple-400/40 mt-3 truncate">{milestone}</p>
+        <p className="text-xs text-purple-400/70 mt-3 truncate">{milestone}</p>
       )}
     </motion.div>
   );
@@ -222,13 +251,18 @@ export default function Home() {
         className="mb-10 flex items-start justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight">
             <span className="text-white/90">AI Pioneer</span>{" "}
-            <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            <AnimatedGradientText
+              colorFrom="#a78bfa"
+              colorTo="#22d3ee"
+              speed={1.5}
+              className="text-3xl font-bold"
+            >
               Leaderboard
-            </span>
+            </AnimatedGradientText>
           </h1>
-          <p className="text-white/25 text-xs mt-1.5 tracking-wide">
+          <p className="text-white/50 text-sm mt-1.5 tracking-wide">
             {data ? `${formatNumber(data.total_users)} pioneers competing` : "Connecting..."}
           </p>
         </div>
@@ -236,7 +270,7 @@ export default function Home() {
           {tab === "realtime" && <CountdownRing seconds={countdown} />}
           <button
             onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
-            className="px-2.5 py-1 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer"
+            className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.08] transition-all cursor-pointer"
           >
             {lang === "en" ? "KR" : "EN"}
           </button>
@@ -249,10 +283,10 @@ export default function Home() {
           <button
             key={key}
             onClick={() => { setTab(key); setPage(1); }}
-            className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
               tab === key
                 ? "bg-white/[0.08] text-white shadow-sm"
-                : "text-white/30 hover:text-white/60"
+                : "text-white/50 hover:text-white/80"
             }`}
           >
             {label}
@@ -283,7 +317,7 @@ export default function Home() {
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-white/[0.02] border border-white/[0.06] rounded-md pl-8 pr-3 py-1.5 text-xs w-56 focus:outline-none focus:border-cyan-500/30 text-white/70 placeholder:text-white/15 transition-colors"
+            className="bg-white/[0.02] border border-white/[0.06] rounded-md pl-8 pr-3 py-2 text-sm w-60 focus:outline-none focus:border-cyan-500/30 text-white/70 placeholder:text-white/20 transition-colors"
           />
         </div>
       </div>
@@ -320,20 +354,20 @@ export default function Home() {
 
           {/* Rest of rankings */}
           {rest.length > 0 && (
-            <div className="bg-white/[0.015] rounded-xl border border-white/[0.04] overflow-hidden">
+            <div className="bg-white/[0.025] rounded-xl border border-white/[0.06] overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.04] text-white/20 text-[10px] uppercase tracking-[0.15em]">
-                    <th className="text-left py-2.5 px-4 w-14">#</th>
-                    <th className="text-left py-2.5 px-4">Pioneer</th>
-                    <th className="text-left py-2.5 px-4">Tier</th>
-                    <th className="text-right py-2.5 px-4 hidden sm:table-cell">
-                      <span className="text-orange-400/40">Claude</span>
+                  <tr className="border-b border-white/[0.08] text-white/50 text-xs uppercase tracking-[0.15em]">
+                    <th className="text-left py-3 px-5 w-14">#</th>
+                    <th className="text-left py-3 px-5">Pioneer</th>
+                    <th className="text-left py-3 px-5">Tier</th>
+                    <th className="text-right py-3 px-5 hidden sm:table-cell">
+                      <span className="text-orange-400/80">Claude</span>
                     </th>
-                    <th className="text-right py-2.5 px-4 hidden sm:table-cell">
-                      <span className="text-emerald-400/40">Codex</span>
+                    <th className="text-right py-3 px-5 hidden sm:table-cell">
+                      <span className="text-emerald-400/80">Codex</span>
                     </th>
-                    <th className="text-right py-2.5 px-4">Pts</th>
+                    <th className="text-right py-3 px-5">Pts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -362,17 +396,17 @@ export default function Home() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
+            className="px-4 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-sm disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             Prev
           </button>
-          <span className="px-3 py-1.5 text-xs text-white/20 font-mono">
+          <span className="px-3 py-2 text-sm text-white/30 font-mono">
             {page} / {data.total_pages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
             disabled={page >= data.total_pages}
-            className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
+            className="px-4 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-sm disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             Next
           </button>
@@ -404,50 +438,50 @@ function RankRow({ entry, type, lang, prev, index }: {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2, delay: index * 0.02 }}
-      className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors group"
+      className="border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors group"
     >
-      <td className="py-2.5 px-4">
-        <span className="font-mono text-xs text-white/25">
+      <td className="py-3 px-5">
+        <span className="font-mono text-sm text-white/70">
           {entry.rank}
         </span>
       </td>
-      <td className="py-2.5 px-4">
+      <td className="py-3 px-5">
         <div>
           <a
             href={`/user/${entry.nickname}`}
-            className="text-sm text-white/70 group-hover:text-white transition-colors cursor-pointer"
+            className="text-base text-white/90 group-hover:text-white transition-colors cursor-pointer"
           >
             {entry.nickname}
           </a>
           {milestone && (
-            <p className="text-[10px] text-purple-400/30 mt-0.5">{milestone}</p>
+            <p className="text-xs text-purple-400/70 mt-0.5">{milestone}</p>
           )}
         </div>
       </td>
-      <td className="py-2.5 px-4">
+      <td className="py-3 px-5">
         <div>
           <TierBadge tier={tier} division={division} />
           {message && (
-            <p className="text-[10px] text-white/15 mt-0.5 italic">{message}</p>
+            <p className="text-xs text-white/45 mt-0.5 italic">{message}</p>
           )}
         </div>
       </td>
-      <td className="py-2.5 px-4 text-right font-mono text-xs hidden sm:table-cell">
-        <span className="text-orange-400/50">{formatTokens(claude)}</span>
+      <td className="py-3 px-5 text-right font-mono text-sm hidden sm:table-cell">
+        <span className="text-orange-400">{formatTokens(claude)}</span>
         {claudeDiff > 0 && (
-          <span className="text-orange-300/70 text-[10px] ml-1 token-diff">+{formatTokens(claudeDiff)}</span>
+          <span className="text-orange-300 text-xs ml-1 token-diff">+{formatTokens(claudeDiff)}</span>
         )}
       </td>
-      <td className="py-2.5 px-4 text-right font-mono text-xs hidden sm:table-cell">
-        <span className="text-emerald-400/50">{formatTokens(codex)}</span>
+      <td className="py-3 px-5 text-right font-mono text-sm hidden sm:table-cell">
+        <span className="text-emerald-400">{formatTokens(codex)}</span>
         {codexDiff > 0 && (
-          <span className="text-emerald-300/70 text-[10px] ml-1 token-diff">+{formatTokens(codexDiff)}</span>
+          <span className="text-emerald-300 text-xs ml-1 token-diff">+{formatTokens(codexDiff)}</span>
         )}
       </td>
-      <td className="py-2.5 px-4 text-right font-mono text-xs text-white/50">
+      <td className="py-3 px-5 text-right font-mono text-sm text-white/90">
         {formatNumber(points)}
         {type === "weekly" || type === "monthly" ? (
-          <span className="text-white/15 ml-1 text-[10px]">
+          <span className="text-white/45 ml-1 text-xs">
             ({entry.days_active}d)
           </span>
         ) : null}
