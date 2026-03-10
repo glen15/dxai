@@ -13,19 +13,19 @@ import {
   type LeaderboardResponse,
   type RankEntry,
   type Lang,
-  tierColor,
   formatTokens,
   formatNumber,
   pioneerMessage,
   tokenMilestone,
+  t,
 } from "@/lib/supabase";
 
-const TABS: { key: LeaderboardType; label: string }[] = [
-  { key: "realtime", label: "Live" },
-  { key: "daily", label: "Daily" },
-  { key: "weekly", label: "Weekly" },
-  { key: "monthly", label: "Monthly" },
-  { key: "total", label: "All-time" },
+const TABS: { key: LeaderboardType; ko: string; en: string }[] = [
+  { key: "realtime", ko: "실시간", en: "Live" },
+  { key: "daily", ko: "일간", en: "Daily" },
+  { key: "weekly", ko: "주간", en: "Weekly" },
+  { key: "monthly", ko: "월간", en: "Monthly" },
+  { key: "total", ko: "전체", en: "All-time" },
 ];
 
 // Tier badge colors for backgrounds
@@ -129,7 +129,7 @@ function PodiumCard({ entry, lang, diff }: {
       {/* Points */}
       <div className="font-mono text-xl font-bold tracking-tight mb-2">
         <NumberTicker value={points} className="text-xl font-bold text-white" />{" "}
-        <span className="text-sm font-normal text-white/50">pts</span>
+        <span className="text-sm font-normal text-white/50">{lang === "ko" ? "점" : "pts"}</span>
       </div>
 
       {/* Token bars */}
@@ -163,7 +163,7 @@ export default function Home() {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [dateInput, setDateInput] = useState(todayString());
+  const [dateInput, setDateInput] = useState(yesterdayString());
   const [search, setSearch] = useState("");
   const [lang, setLang] = useState<Lang>("en");
   const [diffs, setDiffs] = useState<Record<string, { claude: number; codex: number }>>({});
@@ -241,7 +241,7 @@ export default function Home() {
             </AnimatedGradientText>
           </h1>
           <p className="text-white/50 text-sm mt-1.5 tracking-wide">
-            {data ? `${formatNumber(data.total_users)} pioneers competing` : "Connecting..."}
+            {data ? `${formatNumber(data.total_users)} ${t("pioneers_competing", lang)}` : t("connecting", lang)}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -256,18 +256,18 @@ export default function Home() {
 
       {/* Tabs */}
       <div className="flex gap-0.5 mb-8 bg-white/[0.02] rounded-lg p-0.5 w-fit border border-white/[0.04]">
-        {TABS.map(({ key, label }) => (
+        {TABS.map((item) => (
           <button
-            key={key}
-            onClick={() => { setTab(key); setPage(1); }}
+            key={item.key}
+            onClick={() => { setTab(item.key); setPage(1); }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
-              tab === key
+              tab === item.key
                 ? "bg-white/[0.08] text-white shadow-sm"
                 : "text-white/50 hover:text-white/80"
             }`}
           >
-            {label}
-            {key === "realtime" && tab === key && (
+            {lang === "ko" ? item.ko : item.en}
+            {item.key === "realtime" && tab === item.key && (
               <span className="ml-1.5 w-1.5 h-1.5 bg-cyan-400 rounded-full inline-block animate-pulse" />
             )}
           </button>
@@ -291,7 +291,7 @@ export default function Home() {
           </svg>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t("search", lang)}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-white/[0.02] border border-white/[0.06] rounded-md pl-8 pr-3 py-2 text-sm w-60 focus:outline-none focus:border-cyan-500/30 text-white/70 placeholder:text-white/20 transition-colors"
@@ -306,12 +306,12 @@ export default function Home() {
               <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
               <path d="M12 2a10 10 0 019.95 9" />
             </svg>
-            Loading...
+            {t("loading", lang)}
           </div>
         </div>
       ) : !filteredRankings?.length ? (
         <div className="flex items-center justify-center py-24 text-white/15 text-sm">
-          No data yet
+          {t("no_data", lang)}
         </div>
       ) : (
         <>
@@ -336,15 +336,15 @@ export default function Home() {
                 <thead>
                   <tr className="border-b border-white/[0.08] text-white/70 text-xs uppercase tracking-[0.15em]">
                     <th className="text-left py-3 px-5 w-14">#</th>
-                    <th className="text-left py-3 px-5">Pioneer</th>
-                    <th className="text-left py-3 px-5">Tier</th>
+                    <th className="text-left py-3 px-5">{lang === "ko" ? "파이오니어" : "Pioneer"}</th>
+                    <th className="text-left py-3 px-5">{t("tier", lang)}</th>
                     <th className="text-right py-3 px-5 hidden sm:table-cell">
                       <span className="text-orange-400/80">Claude</span>
                     </th>
                     <th className="text-right py-3 px-5 hidden sm:table-cell">
                       <span className="text-emerald-400/80">Codex</span>
                     </th>
-                    <th className="text-right py-3 px-5">Pts</th>
+                    <th className="text-right py-3 px-5">{t("pts", lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -375,7 +375,7 @@ export default function Home() {
             disabled={page <= 1}
             className="px-4 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-sm disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
-            Prev
+            {t("prev", lang)}
           </button>
           <span className="px-3 py-2 text-sm text-white/30 font-mono">
             {page} / {data.total_pages}
@@ -385,7 +385,7 @@ export default function Home() {
             disabled={page >= data.total_pages}
             className="px-4 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-sm disabled:opacity-20 hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
-            Next
+            {t("next", lang)}
           </button>
         </div>
       )}
@@ -459,7 +459,7 @@ function RankRow({ entry, type, lang, diff, index }: {
         {formatNumber(points)}
         {type === "weekly" || type === "monthly" ? (
           <span className="text-white/45 ml-1 text-xs">
-            ({entry.days_active}d)
+            ({entry.days_active}{lang === "ko" ? "일" : "d"})
           </span>
         ) : null}
       </td>
@@ -467,7 +467,8 @@ function RankRow({ entry, type, lang, diff, index }: {
   );
 }
 
-function todayString(): string {
+function yesterdayString(): string {
   const d = new Date();
+  d.setDate(d.getDate() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

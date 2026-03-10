@@ -125,6 +125,41 @@ export function tierEmoji(tier: string): string {
 
 export type Lang = "ko" | "en";
 
+const UI_STRINGS: Record<string, [string, string]> = {
+  // [ko, en]
+  "pioneers_competing": ["명의 파이오니어 경쟁 중", "pioneers competing"],
+  "connecting": ["연결 중...", "Connecting..."],
+  "loading": ["불러오는 중...", "Loading..."],
+  "no_data": ["데이터 없음", "No data yet"],
+  "search": ["검색...", "Search..."],
+  "pts": ["점", "pts"],
+  "prev": ["이전", "Prev"],
+  "next": ["다음", "Next"],
+  // Profile
+  "back": ["리더보드", "Leaderboard"],
+  "member_since": ["가입일", "Member since"],
+  "day_streak": ["일 연속", "day streak"],
+  "total_points": ["총 포인트", "Total Points"],
+  "total_coins": ["총 코인", "Total Coins"],
+  "weekly_points": ["주간 포인트", "Weekly Points"],
+  "monthly_points": ["월간 포인트", "Monthly Points"],
+  "weekly_tokens": ["주간 토큰", "Weekly Tokens"],
+  "monthly_tokens": ["월간 토큰", "Monthly Tokens"],
+  "history_30d": ["30일 기록", "30-Day History"],
+  "no_history": ["기록 없음", "No history"],
+  "date": ["날짜", "Date"],
+  "tier": ["등급", "Tier"],
+  "points": ["포인트", "Points"],
+  "d_active": ["일 활동", "d active"],
+  "of_pioneers": ["명 중", "of"],
+  "user_not_found": ["사용자를 찾을 수 없습니다", "User not found"],
+};
+
+export function t(key: string, lang: Lang): string {
+  const pair = UI_STRINGS[key];
+  return pair ? pair[lang === "ko" ? 0 : 1] : key;
+}
+
 const PIONEER_MESSAGES: Record<string, [string, string]> = {
   "Bronze.5":      ["AI와의 첫 대화, 시작이 반입니다",           "First chat with AI"],
   "Bronze.4":      ["호기심이 이끄는 대로",                     "Curiosity leads the way"],

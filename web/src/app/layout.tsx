@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, JetBrains_Mono, Geist } from "next/font/google";
+import { JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ClickSpark } from "@/components/ui/click-spark";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const chakra = Chakra_Petch({
-  variable: "--font-chakra",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 const jetbrains = JetBrains_Mono({
   variable: "--font-geist-mono",
@@ -31,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
       <body
-        className={`${chakra.variable} ${jetbrains.variable} antialiased min-h-screen scanlines`}
+        className={`${jetbrains.variable} antialiased min-h-screen scanlines`}
       >
         <nav className="border-b border-white/[0.04] bg-[#020617]/90 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
