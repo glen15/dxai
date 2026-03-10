@@ -69,6 +69,10 @@ dxai
 - [x] SQLite 데이터 영속화 (DxaiDatabase)
 - [x] 중복 실행 방지 (Bundle ID + PID 체크)
 - [x] 로컬 타임존 기반 날짜 경계 (UTC → TimeZone.current)
+- [x] DXAI Point 시스템 (Pioneer Rank → 포인트 변환, JSON 로컬 누적)
+- [x] 포인트 3단 표시 (오늘·주간·누적) + 리더보드/설정 버튼
+- [x] Settings UI (닉네임, opt-in 토글, 제출 데이터 미리보기)
+- [x] 주간 토큰 누적 히어로 넘버 옆 표시
 
 #### CLI
 - [x] `dxai ai` — 토큰 대시보드 (Claude + Codex)
@@ -97,10 +101,11 @@ dxai
 - [ ] 사용자 확보 (수업 배포, 사내 공유)
 
 #### Phase 2 — DXAI Point & 랭킹 서비스 (핵심 목표)
-- [ ] DXAI Point 시스템 설계 (일일 Pioneer Rank → 포인트 변환)
-- [ ] opt-in 데이터 제출 (닉네임 + 일일 포인트 + 타임스탬프만)
-- [ ] 백엔드 서버 + DB (포인트 수신, 랭킹 집계)
-- [ ] 랭킹 웹사이트 (리더보드, 누적 포인트, 파이오니어 통계)
+- [x] DXAI Point 로컬 시스템 (포인트 공식, JSON 영속화, 3단 표시)
+- [x] Settings UI (닉네임 설정, opt-in 토글, 제출 데이터 미리보기)
+- [ ] Supabase 백엔드 (Edge Functions: submit-daily, leaderboard)
+- [ ] 앱→서버 제출 로직 (URLSession, 실패 시 로컬 큐 재시도)
+- [ ] 랭킹 웹사이트 (Next.js + Tailwind, AWS Amplify 배포)
 
 > **제출 데이터**: 닉네임, 일일 토큰 합계(도구별), 일일 DXAI Point, 누적 포인트, 타임스탬프
 > **수집하지 않는 것**: 프로젝트명, 프롬프트, 파일 경로, 대화 내용
