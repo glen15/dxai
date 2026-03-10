@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchLeaderboard,
+  supabase,
   type LeaderboardType,
   type LeaderboardResponse,
   type RankEntry,
@@ -13,7 +14,7 @@ import {
 } from "@/lib/supabase";
 
 const TABS: { key: LeaderboardType; label: string }[] = [
-  { key: "realtime", label: "Real-time" },
+  { key: "realtime", label: "Live" },
   { key: "daily", label: "Daily" },
   { key: "weekly", label: "Weekly" },
   { key: "monthly", label: "Monthly" },
@@ -27,6 +28,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dateInput, setDateInput] = useState(todayString());
   const [search, setSearch] = useState("");
+  const [countdown, setCountdown] = useState(60);
+  const lastUpdateRef = useRef<Date>(new Date());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,16 +38,40 @@ export default function Home() {
     const result = await fetchLeaderboard(tab, params, page);
     setData(result);
     setLoading(false);
+    lastUpdateRef.current = new Date();
+    setCountdown(60);
   }, [tab, page, dateInput]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // Supabase Realtime: daily_records 변경 시 즉시 리로드
   useEffect(() => {
     if (tab !== "realtime") return;
-    const interval = setInterval(load, 30_000);
-    return () => clearInterval(interval);
+
+    const channel = supabase
+      .channel("leaderboard-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_records" },
+        () => { load(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [tab, load]);
+
+  // 카운트다운 타이머 (1m 탭)
+  useEffect(() => {
+    if (tab !== "realtime") return;
+    const tick = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - lastUpdateRef.current.getTime()) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setCountdown(remaining);
+      if (remaining === 0) load();
+    }, 1000);
+    return () => clearInterval(tick);
   }, [tab, load]);
 
   const filteredRankings = data?.rankings?.filter(
@@ -96,9 +123,11 @@ export default function Home() {
           className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm w-64"
         />
         {tab === "realtime" && (
-          <span className="text-xs text-green-500 flex items-center gap-1">
+          <span className="text-xs text-gray-400 flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Live
+            <span className="font-mono tabular-nums">
+              {countdown > 0 ? `${countdown}s` : "updating..."}
+            </span>
           </span>
         )}
       </div>

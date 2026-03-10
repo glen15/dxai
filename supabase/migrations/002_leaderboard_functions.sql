@@ -37,7 +37,7 @@ AS $$
   JOIN users u ON u.id = dr.user_id
   WHERE dr.date BETWEEN start_date AND end_date
   GROUP BY u.id, u.nickname
-  ORDER BY period_points DESC
+  ORDER BY 2 DESC
   LIMIT page_size
   OFFSET page_offset;
 $$;

@@ -84,11 +84,7 @@ final class DxaiPointService {
 
     // MARK: - Server Config
 
-    #if DEBUG
-    private static let submitURL = "http://localhost:54321/functions/v1/submit-daily"
-    #else
-    private static let submitURL = "https://YOUR_PROJECT.supabase.co/functions/v1/submit-daily"
-    #endif
+    private static let submitURL = "https://ldsqtmirplfgclzessrd.supabase.co/functions/v1/submit-daily"
 
     private init() {
         let base = FileManager.default.homeDirectoryForCurrentUser
@@ -130,25 +126,30 @@ final class DxaiPointService {
         Array(history.suffix(30))
     }
 
-    /// refresh() 시 호출 — 오늘의 최고 Pioneer Rank 기록
+    /// refresh() 시 호출 — 오늘의 Pioneer Rank + 토큰 기록
     func recordDailyBest(tier: String, division: Int?, claudeTokens: Int, codexTokens: Int) {
         let today = Self.todayString()
         let points = Self.calculatePoints(tier: tier, division: division)
+        var changed = false
 
         if let idx = history.firstIndex(where: { $0.date == today }) {
             let existing = history[idx]
-            // 더 높은 포인트일 때만 갱신
-            guard points > existing.dailyPoints else { return }
-            let cumulative = (totalPointsExcluding(today)) + points
+            let newPoints = max(points, existing.dailyPoints)
+            let newTier = points >= existing.dailyPoints ? tier : existing.pioneerTier
+            let newDiv = points >= existing.dailyPoints ? division : existing.pioneerDivision
+            let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
+            guard points > existing.dailyPoints || tokensChanged else { return }
+            let cumulative = totalPointsExcluding(today) + newPoints
             history[idx] = DailyRecord(
                 date: today,
-                pioneerTier: tier,
-                pioneerDivision: division,
-                dailyPoints: points,
+                pioneerTier: newTier,
+                pioneerDivision: newDiv,
+                dailyPoints: newPoints,
                 claudeTokens: claudeTokens,
                 codexTokens: codexTokens,
                 totalPoints: cumulative
             )
+            changed = true
         } else {
             let cumulative = totalPoints + points
             history.append(DailyRecord(
@@ -160,12 +161,13 @@ final class DxaiPointService {
                 codexTokens: codexTokens,
                 totalPoints: cumulative
             ))
+            changed = true
         }
 
+        guard changed else { return }
         config.lastRecordedDate = today
         save()
 
-        // opt-in이면 서버 제출
         if config.optIn && !config.nickname.isEmpty {
             submitToServer(date: today)
         }

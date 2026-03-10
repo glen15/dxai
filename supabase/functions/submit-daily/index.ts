@@ -174,22 +174,27 @@ serve(async (req: Request) => {
   // Upsert daily record (only update if higher points)
   const { data: existingRecord } = await supabase
     .from("daily_records")
-    .select("id, daily_points")
+    .select("id, daily_points, claude_tokens, codex_tokens, pioneer_tier, pioneer_division")
     .eq("user_id", userId)
     .eq("date", date)
     .single();
 
   if (existingRecord) {
-    if (daily_points > existingRecord.daily_points) {
+    const shouldUpdate =
+      daily_points > existingRecord.daily_points ||
+      claude_tokens !== existingRecord.claude_tokens ||
+      codex_tokens !== existingRecord.codex_tokens;
+    if (shouldUpdate) {
+      const newPoints = Math.max(daily_points, existingRecord.daily_points);
       await supabase
         .from("daily_records")
         .update({
-          daily_points,
-          daily_coins: daily_points,
+          daily_points: newPoints,
+          daily_coins: newPoints,
           claude_tokens,
           codex_tokens,
-          pioneer_tier,
-          pioneer_division,
+          pioneer_tier: daily_points >= existingRecord.daily_points ? pioneer_tier : existingRecord.pioneer_tier,
+          pioneer_division: daily_points >= existingRecord.daily_points ? pioneer_division : existingRecord.pioneer_division,
         })
         .eq("id", existingRecord.id);
     }
