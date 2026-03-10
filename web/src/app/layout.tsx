@@ -13,7 +13,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vanguard — AI Developer Ranking",
+  title: "Vanguard — AI Vanguard Ranking",
   description: "Vanguard by DXAI - Track your AI coding journey and compete on the leaderboard",
 };
 
