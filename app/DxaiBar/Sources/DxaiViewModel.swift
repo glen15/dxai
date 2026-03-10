@@ -8,7 +8,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var toolStats: [DxaiDatabase.DailyStats] = []
     @Published var claudeQuota: DxaiDatabase.QuotaInfo?
     @Published var codexQuota: DxaiDatabase.QuotaInfo?
-    @Published var pioneerLevel: PioneerLevel?
+    @Published var vanguardLevel: VanguardLevel?
     @Published var lastUpdated: Date = Date()
     @Published var systemStatus: SystemStatus?
     @Published var scanResult: ScanResult?
@@ -29,7 +29,7 @@ final class DxaiViewModel: ObservableObject {
     }
 
     private var timer: Timer?
-    private var lastNotifiedLevel: PioneerLevel?
+    private var lastNotifiedLevel: VanguardLevel?
     private var lastNotifiedMilestone: Int = 0
     private var milestoneBaselineSet: Bool = false
     private var milestoneDate: String = ""  // "yyyy-MM-dd"
@@ -42,9 +42,9 @@ final class DxaiViewModel: ObservableObject {
     @Published var isJsonTask = false
     private var taskProcess: Process?
 
-    // MARK: - Pioneer Level System
+    // MARK: - Vanguard Level System
 
-    struct PioneerLevel: Equatable {
+    struct VanguardLevel: Equatable {
         let tier: Tier
         let division: Int?   // nil = Challenger (no division)
         let threshold: Int
@@ -59,7 +59,7 @@ final class DxaiViewModel: ObservableObject {
         var emoji: String { tier.emoji }
         var message: String { tier.message(division: division) }
 
-        static func == (lhs: PioneerLevel, rhs: PioneerLevel) -> Bool {
+        static func == (lhs: VanguardLevel, rhs: VanguardLevel) -> Bool {
             lhs.tier == rhs.tier && lhs.division == rhs.division
         }
 
@@ -87,13 +87,13 @@ final class DxaiViewModel: ObservableObject {
             }
 
             func message(division: Int?) -> String {
-                L().pioneerMessage(self.rawValue, division: division)
+                L().vanguardMessage(self.rawValue, division: division)
             }
         }
 
         // All levels sorted by threshold (ascending)
-        static let all: [PioneerLevel] = {
-            var levels: [PioneerLevel] = []
+        static let all: [VanguardLevel] = {
+            var levels: [VanguardLevel] = []
 
             // 기준: 아침 가벼운 사용 ~15M = Gold 중반
             //       하루 풀 작업 ~50M = Platinum 진입
@@ -111,7 +111,7 @@ final class DxaiViewModel: ObservableObject {
 
             for (tier, thresholds) in tiers {
                 for (i, threshold) in thresholds.enumerated() {
-                    levels.append(PioneerLevel(
+                    levels.append(VanguardLevel(
                         tier: tier,
                         division: 5 - i,
                         threshold: threshold
@@ -119,7 +119,7 @@ final class DxaiViewModel: ObservableObject {
                 }
             }
 
-            levels.append(PioneerLevel(
+            levels.append(VanguardLevel(
                 tier: .challenger,
                 division: nil,
                 threshold: 5_000_000_000
@@ -128,8 +128,8 @@ final class DxaiViewModel: ObservableObject {
             return levels
         }()
 
-        static func forTokens(_ tokens: Int) -> PioneerLevel? {
-            var result: PioneerLevel?
+        static func forTokens(_ tokens: Int) -> VanguardLevel? {
+            var result: VanguardLevel?
             for level in all {
                 if tokens >= level.threshold {
                     result = level
@@ -140,7 +140,7 @@ final class DxaiViewModel: ObservableObject {
             return result
         }
 
-        static func nextLevel(after current: PioneerLevel?) -> PioneerLevel? {
+        static func nextLevel(after current: VanguardLevel?) -> VanguardLevel? {
             guard let current else { return all.first }
             guard let idx = all.firstIndex(of: current),
                   idx + 1 < all.count else { return nil }
@@ -180,13 +180,13 @@ final class DxaiViewModel: ObservableObject {
         if let q = db.codexQuota() { codexQuota = q }
         lastUpdated = Date()
 
-        let newLevel = PioneerLevel.forTokens(todayTokens)
+        let newLevel = VanguardLevel.forTokens(todayTokens)
         if let level = newLevel, level != lastNotifiedLevel {
-            pioneerLevel = level
+            vanguardLevel = level
             lastNotifiedLevel = level
-            sendPioneerNotification(level)
+            sendVanguardNotification(level)
         } else {
-            pioneerLevel = newLevel
+            vanguardLevel = newLevel
         }
 
         checkTokenMilestone()
@@ -209,7 +209,7 @@ final class DxaiViewModel: ObservableObject {
         let ps = DxaiPointService.shared
         ps.finalizePreviousDay()
 
-        if let level = pioneerLevel {
+        if let level = vanguardLevel {
             let claudeTokens = toolStats.filter { $0.tool == "claude" }.reduce(0) { $0 + $1.totalTokens }
             let codexTokens = toolStats.filter { $0.tool == "codex" }.reduce(0) { $0 + $1.totalTokens }
             ps.recordDailyBest(
@@ -359,7 +359,7 @@ final class DxaiViewModel: ObservableObject {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    private func sendPioneerNotification(_ level: PioneerLevel) {
+    private func sendVanguardNotification(_ level: VanguardLevel) {
         let title = "\(level.emoji) \(level.displayName)"
         let body = level.message
 
@@ -369,7 +369,7 @@ final class DxaiViewModel: ObservableObject {
             content.body = body
             content.sound = .default
             let request = UNNotificationRequest(
-                identifier: "pioneer-\(level.displayName)",
+                identifier: "vanguard-\(level.displayName)",
                 content: content,
                 trigger: nil
             )

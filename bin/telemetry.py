@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-dxai telemetry - Opt-in 익명 텔레메트리 (Pioneer Telemetry)
+dxai telemetry - Opt-in 익명 텔레메트리 (Vanguard Telemetry)
 
 사용법:
     dxai telemetry on       활성화 (최초 동의 확인)
@@ -190,7 +190,7 @@ def cmd_on():
         print(f"{Colors.GREEN}텔레메트리가 이미 활성화되어 있습니다.{Colors.END}")
         return
 
-    print(f"{Colors.BOLD}dxai Pioneer Telemetry{Colors.END}")
+    print(f"{Colors.BOLD}dxai Vanguard Telemetry{Colors.END}")
     print()
     print("활성화하면 다음 데이터가 익명으로 수집됩니다:")
     print()
@@ -252,7 +252,7 @@ def cmd_status():
     config = load_config()
     enabled = config.get("enabled", False)
 
-    print(f"\n{Colors.BOLD}Pioneer Telemetry 상태{Colors.END}")
+    print(f"\n{Colors.BOLD}Vanguard Telemetry 상태{Colors.END}")
     print()
 
     if enabled:

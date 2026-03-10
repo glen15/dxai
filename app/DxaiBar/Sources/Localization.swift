@@ -247,9 +247,9 @@ struct L {
         }
     }
 
-    // MARK: - Pioneer Level Messages (tier + division)
+    // MARK: - Vanguard Level Messages (tier + division)
 
-    func pioneerMessage(_ tier: String, division: Int?) -> String {
+    func vanguardMessage(_ tier: String, division: Int?) -> String {
         let key = division.map { "\(tier).\($0)" } ?? tier
         if ko {
             switch key {
@@ -265,8 +265,8 @@ struct L {
             case "Silver.3": return "이제 AI 없이는 좀 불편하죠?"
             case "Silver.2": return "이쯤 되면 AI가 동료입니다"
             case "Silver.1": return "Silver 마스터리 달성 직전!"
-            // Gold — 파이오니어, 본격
-            case "Gold.5":   return "AI 시대의 파이오니어"
+            // Gold — 뱅가드, 본격
+            case "Gold.5":   return "AI 시대의 뱅가드"
             case "Gold.4":   return "Context Window가 당신을 환영합니다"
             case "Gold.3":   return "슬슬 API가 긴장하기 시작합니다"
             case "Gold.2":   return "AI와의 시너지가 폭발하고 있어요"
@@ -311,7 +311,7 @@ struct L {
             case "Silver.3": return "Life without AI? Uncomfortable now, right?"
             case "Silver.2": return "At this point, AI is your colleague"
             case "Silver.1": return "Silver mastery almost complete!"
-            case "Gold.5":   return "Pioneer of the AI era"
+            case "Gold.5":   return "Vanguard of the AI era"
             case "Gold.4":   return "Context Window welcomes you"
             case "Gold.3":   return "The API is getting nervous"
             case "Gold.2":   return "AI synergy is off the charts"

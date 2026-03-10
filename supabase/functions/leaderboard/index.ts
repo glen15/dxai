@@ -57,7 +57,7 @@ async function realtimeLeaderboard(supabase: any, page: number) {
 
   const { data, error } = await supabase
     .from("daily_records")
-    .select("daily_points, pioneer_tier, pioneer_division, claude_tokens, codex_tokens, user_id, users!inner(nickname, total_points)")
+    .select("daily_points, vanguard_tier, vanguard_division, claude_tokens, codex_tokens, user_id, users!inner(nickname, total_points)")
     .eq("date", today)
     .order("daily_points", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
@@ -80,8 +80,8 @@ async function realtimeLeaderboard(supabase: any, page: number) {
       rank: (page - 1) * PAGE_SIZE + i + 1,
       nickname: r.users.nickname,
       daily_points: r.daily_points,
-      pioneer_tier: r.pioneer_tier,
-      pioneer_division: r.pioneer_division,
+      vanguard_tier: r.vanguard_tier,
+      vanguard_division: r.vanguard_division,
       total_points: r.users.total_points,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
@@ -100,7 +100,7 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
 
   const { data, error } = await supabase
     .from("daily_records")
-    .select("daily_points, pioneer_tier, pioneer_division, claude_tokens, codex_tokens, users!inner(nickname)")
+    .select("daily_points, vanguard_tier, vanguard_division, claude_tokens, codex_tokens, users!inner(nickname)")
     .eq("date", date)
     .order("daily_points", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
@@ -123,8 +123,8 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
       rank: (page - 1) * PAGE_SIZE + i + 1,
       nickname: r.users.nickname,
       daily_points: r.daily_points,
-      pioneer_tier: r.pioneer_tier,
-      pioneer_division: r.pioneer_division,
+      vanguard_tier: r.vanguard_tier,
+      vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
     })),
@@ -234,7 +234,7 @@ async function getUserProfile(supabase: any, nickname: string) {
   const thirtyDaysAgo = dateOffset(-30);
   const { data: history } = await supabase
     .from("daily_records")
-    .select("date, daily_points, daily_coins, pioneer_tier, pioneer_division, claude_tokens, codex_tokens")
+    .select("date, daily_points, daily_coins, vanguard_tier, vanguard_division, claude_tokens, codex_tokens")
     .eq("user_id", user.id)
     .gte("date", thirtyDaysAgo)
     .order("date", { ascending: false });
@@ -290,8 +290,8 @@ async function getUserProfile(supabase: any, nickname: string) {
       history: (history ?? []).map((r: any) => ({
         date: r.date,
         daily_points: r.daily_points,
-        pioneer_tier: r.pioneer_tier,
-        pioneer_division: r.pioneer_division,
+        vanguard_tier: r.vanguard_tier,
+        vanguard_division: r.vanguard_division,
         claude_tokens: r.claude_tokens,
         codex_tokens: r.codex_tokens,
       })),

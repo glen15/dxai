@@ -15,7 +15,7 @@ import {
   type Lang,
   formatTokens,
   formatNumber,
-  pioneerMessage,
+  vanguardMessage,
   tokenMilestone,
   t,
 } from "@/lib/supabase";
@@ -67,12 +67,12 @@ function PodiumCard({ entry, lang, diff }: {
   lang: Lang;
   diff?: { claude: number; codex: number };
 }) {
-  const tier = entry.pioneer_tier ?? entry.last_tier ?? "";
-  const division = entry.pioneer_division ?? entry.last_division ?? null;
+  const tier = entry.vanguard_tier ?? entry.last_tier ?? "";
+  const division = entry.vanguard_division ?? entry.last_division ?? null;
   const points = entry.daily_points ?? entry.period_points ?? entry.total_points ?? 0;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const message = pioneerMessage(tier, division, lang);
+  const message = vanguardMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;
@@ -121,7 +121,7 @@ function PodiumCard({ entry, lang, diff }: {
         <TierBadge tier={tier} division={division} />
       </div>
 
-      {/* Pioneer message */}
+      {/* Vanguard message */}
       {message && (
         <p className="text-sm text-white/50 italic mb-3 leading-relaxed">{message}</p>
       )}
@@ -230,7 +230,7 @@ export default function Home() {
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-white/90">AI Pioneer</span>{" "}
+            <span className="text-white/90">AI Vanguard</span>{" "}
             <AnimatedGradientText
               colorFrom="#a78bfa"
               colorTo="#22d3ee"
@@ -241,7 +241,7 @@ export default function Home() {
             </AnimatedGradientText>
           </h1>
           <p className="text-white/50 text-sm mt-1.5 tracking-wide">
-            {data ? `${formatNumber(data.total_users)} ${t("pioneers_competing", lang)}` : t("connecting", lang)}
+            {data ? `${formatNumber(data.total_users)} ${t("vanguards_competing", lang)}` : t("connecting", lang)}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -336,7 +336,7 @@ export default function Home() {
                 <thead>
                   <tr className="border-b border-white/[0.08] text-white/70 text-xs uppercase tracking-[0.15em]">
                     <th className="text-left py-3 px-5 w-14">#</th>
-                    <th className="text-left py-3 px-5">{lang === "ko" ? "파이오니어" : "Pioneer"}</th>
+                    <th className="text-left py-3 px-5">Vanguard</th>
                     <th className="text-left py-3 px-5">{t("tier", lang)}</th>
                     <th className="text-right py-3 px-5 hidden sm:table-cell">
                       <span className="text-orange-400/80">Claude</span>
@@ -400,12 +400,12 @@ function RankRow({ entry, type, lang, diff, index }: {
   diff?: { claude: number; codex: number };
   index: number;
 }) {
-  const tier = entry.pioneer_tier ?? entry.best_tier ?? entry.last_tier ?? "";
-  const division = entry.pioneer_division ?? entry.last_division ?? null;
+  const tier = entry.vanguard_tier ?? entry.best_tier ?? entry.last_tier ?? "";
+  const division = entry.vanguard_division ?? entry.last_division ?? null;
   const points = entry.daily_points ?? entry.period_points ?? entry.total_points ?? 0;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const message = pioneerMessage(tier, division, lang);
+  const message = vanguardMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;

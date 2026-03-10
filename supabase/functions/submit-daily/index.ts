@@ -64,8 +64,8 @@ serve(async (req: Request) => {
     total_points,
     claude_tokens,
     codex_tokens,
-    pioneer_tier,
-    pioneer_division,
+    vanguard_tier,
+    vanguard_division,
   } = body;
 
   // --- Validation ---
@@ -94,18 +94,18 @@ serve(async (req: Request) => {
     return json({ ok: false, error: "invalid_daily_points" }, 400);
   }
 
-  if (!VALID_TIERS.includes(pioneer_tier)) {
+  if (!VALID_TIERS.includes(vanguard_tier)) {
     return json({ ok: false, error: "invalid_tier" }, 400);
   }
 
-  if (pioneer_tier !== "Challenger") {
-    if (typeof pioneer_division !== "number" || pioneer_division < 1 || pioneer_division > 5) {
+  if (vanguard_tier !== "Challenger") {
+    if (typeof vanguard_division !== "number" || vanguard_division < 1 || vanguard_division > 5) {
       return json({ ok: false, error: "invalid_division" }, 400);
     }
   }
 
   // Points-tier matching verification
-  const expectedPoints = calculatePoints(pioneer_tier, pioneer_division ?? null);
+  const expectedPoints = calculatePoints(vanguard_tier, vanguard_division ?? null);
   if (daily_points !== expectedPoints) {
     return json({ ok: false, error: "points_mismatch" }, 400);
   }
@@ -144,7 +144,7 @@ serve(async (req: Request) => {
     if (existingUser.nickname !== nickname) {
       const { error: nickErr } = await supabase
         .from("users")
-        .update({ nickname, last_tier: pioneer_tier, last_division: pioneer_division, updated_at: new Date().toISOString() })
+        .update({ nickname, last_tier: vanguard_tier, last_division: vanguard_division, updated_at: new Date().toISOString() })
         .eq("id", userId);
       if (nickErr?.code === "23505") {
         return json({ ok: false, error: "nickname_taken" }, 409);
@@ -152,14 +152,14 @@ serve(async (req: Request) => {
     } else {
       await supabase
         .from("users")
-        .update({ last_tier: pioneer_tier, last_division: pioneer_division, updated_at: new Date().toISOString() })
+        .update({ last_tier: vanguard_tier, last_division: vanguard_division, updated_at: new Date().toISOString() })
         .eq("id", userId);
     }
   } else {
     // New user
     const { data: newUser, error: insertErr } = await supabase
       .from("users")
-      .insert({ device_uuid, nickname, last_tier: pioneer_tier, last_division: pioneer_division })
+      .insert({ device_uuid, nickname, last_tier: vanguard_tier, last_division: vanguard_division })
       .select("id")
       .single();
     if (insertErr?.code === "23505") {
@@ -174,7 +174,7 @@ serve(async (req: Request) => {
   // Upsert daily record (only update if higher points)
   const { data: existingRecord } = await supabase
     .from("daily_records")
-    .select("id, daily_points, claude_tokens, codex_tokens, pioneer_tier, pioneer_division")
+    .select("id, daily_points, claude_tokens, codex_tokens, vanguard_tier, vanguard_division")
     .eq("user_id", userId)
     .eq("date", date)
     .single();
@@ -193,8 +193,8 @@ serve(async (req: Request) => {
           daily_coins: newPoints,
           claude_tokens,
           codex_tokens,
-          pioneer_tier: daily_points >= existingRecord.daily_points ? pioneer_tier : existingRecord.pioneer_tier,
-          pioneer_division: daily_points >= existingRecord.daily_points ? pioneer_division : existingRecord.pioneer_division,
+          vanguard_tier: daily_points >= existingRecord.daily_points ? vanguard_tier : existingRecord.vanguard_tier,
+          vanguard_division: daily_points >= existingRecord.daily_points ? vanguard_division : existingRecord.vanguard_division,
         })
         .eq("id", existingRecord.id);
     }
@@ -208,8 +208,8 @@ serve(async (req: Request) => {
         daily_coins: daily_points,
         claude_tokens,
         codex_tokens,
-        pioneer_tier,
-        pioneer_division,
+        vanguard_tier,
+        vanguard_division,
       });
   }
 

@@ -39,31 +39,31 @@ class Colors:
     DIM = '\033[2m'
 
 
-# ─── Pioneer Alert ────────────────────────────────────────────
+# ─── Vanguard Alert ────────────────────────────────────────────
 
-PIONEER_LEVELS = [
+VANGUARD_LEVELS = [
     (5_000_000, "Diamond", Colors.CYAN,
      "전설의 5M... 당신이 곧 AI 시대입니다"),
     (1_000_000, "Gold", Colors.YELLOW,
      "1M 토큰! 오늘 정말 열심히 했네요"),
     (500_000, "Silver", Colors.BOLD,
-     "당신은 AI 시대의 파이오니어입니다"),
+     "당신은 AI 시대의 뱅가드입니다"),
     (50_000, "Bronze", Colors.GREEN,
      "AI와 함께하는 하루를 시작했군요!"),
 ]
 
 
-def get_pioneer_alert(total_today_tokens):
-    for threshold, level, color, message in PIONEER_LEVELS:
+def get_vanguard_alert(total_today_tokens):
+    for threshold, level, color, message in VANGUARD_LEVELS:
         if total_today_tokens >= threshold:
             return level, color, message
     return None, None, None
 
 
-def show_pioneer_alert(total_today_tokens):
-    level, color, message = get_pioneer_alert(total_today_tokens)
+def show_vanguard_alert(total_today_tokens):
+    level, color, message = get_vanguard_alert(total_today_tokens)
     if level:
-        badge = f"{color}[Pioneer {level}]{Colors.END}"
+        badge = f"{color}[Vanguard {level}]{Colors.END}"
         print(f"\n  {badge} {color}{message}{Colors.END}")
 
 
@@ -625,9 +625,9 @@ def display_summary():
         else:
             print(f" {Colors.RED}(데이터 없음){Colors.END}")
 
-    # Pioneer Alert
+    # Vanguard Alert
     total_today = _get_total_today_tokens()
-    show_pioneer_alert(total_today)
+    show_vanguard_alert(total_today)
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
@@ -782,12 +782,12 @@ def display_token_overview():
         f" | 30일 {format_number(codex_month['total_tokens'])}"
     )
 
-    # Pioneer Alert
+    # Vanguard Alert
     total_today = (
         claude_today['total_tokens']
         + codex_today['total_tokens']
     )
-    show_pioneer_alert(total_today)
+    show_vanguard_alert(total_today)
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
@@ -908,10 +908,10 @@ def display_insights():
         for row in busiest:
             print(f"  {row['date']}    {format_number(row['tokens'])}")
 
-    # Pioneer 등급 판정 (일평균 기준)
-    level, color, message = get_pioneer_alert(int(daily_avg))
+    # Vanguard 등급 판정 (일평균 기준)
+    level, color, message = get_vanguard_alert(int(daily_avg))
     if level:
-        print(f"\n  {color}[Pioneer {level}]{Colors.END} {color}일평균 기준: {message}{Colors.END}")
+        print(f"\n  {color}[Vanguard {level}]{Colors.END} {color}일평균 기준: {message}{Colors.END}")
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
@@ -944,15 +944,15 @@ def main():
                 "week": get_codex_token_stats('week'),
                 "month": get_codex_token_stats('month'),
             },
-            "pioneer": None,
+            "vanguard": None,
         }
         total_today = (
             (data["claude_tokens"]["today"] or {}).get("total_tokens", 0)
             + (data["codex_tokens"]["today"] or {}).get("total_tokens", 0)
         )
-        level, _, message = get_pioneer_alert(total_today)
+        level, _, message = get_vanguard_alert(total_today)
         if level:
-            data["pioneer"] = {"level": level, "message": message, "total_today": total_today}
+            data["vanguard"] = {"level": level, "message": message, "total_today": total_today}
         print(json.dumps(data, indent=2, ensure_ascii=False))
         return
 

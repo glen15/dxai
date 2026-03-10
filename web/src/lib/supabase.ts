@@ -16,8 +16,8 @@ export interface RankEntry {
   period_points?: number;
   total_points?: number;
   total_coins?: number;
-  pioneer_tier?: string;
-  pioneer_division?: number;
+  vanguard_tier?: string;
+  vanguard_division?: number;
   claude_tokens?: number;
   codex_tokens?: number;
   days_active?: number;
@@ -64,8 +64,8 @@ interface PeriodStats {
 interface DayRecord {
   date: string;
   daily_points: number;
-  pioneer_tier: string;
-  pioneer_division: number | null;
+  vanguard_tier: string;
+  vanguard_division: number | null;
   claude_tokens: number;
   codex_tokens: number;
 }
@@ -127,7 +127,7 @@ export type Lang = "ko" | "en";
 
 const UI_STRINGS: Record<string, [string, string]> = {
   // [ko, en]
-  "pioneers_competing": ["명의 파이오니어 경쟁 중", "pioneers competing"],
+  "vanguards_competing": ["명의 Vanguard 경쟁 중", "vanguards competing"],
   "connecting": ["연결 중...", "Connecting..."],
   "loading": ["불러오는 중...", "Loading..."],
   "no_data": ["데이터 없음", "No data yet"],
@@ -151,7 +151,7 @@ const UI_STRINGS: Record<string, [string, string]> = {
   "tier": ["등급", "Tier"],
   "points": ["포인트", "Points"],
   "d_active": ["일 활동", "d active"],
-  "of_pioneers": ["명 중", "of"],
+  "of_vanguards": ["명 중", "of"],
   "user_not_found": ["사용자를 찾을 수 없습니다", "User not found"],
 };
 
@@ -160,7 +160,7 @@ export function t(key: string, lang: Lang): string {
   return pair ? pair[lang === "ko" ? 0 : 1] : key;
 }
 
-const PIONEER_MESSAGES: Record<string, [string, string]> = {
+const VANGUARD_MESSAGES: Record<string, [string, string]> = {
   "Bronze.5":      ["AI와의 첫 대화, 시작이 반입니다",           "First chat with AI"],
   "Bronze.4":      ["호기심이 이끄는 대로",                     "Curiosity leads the way"],
   "Bronze.3":      ["AI가 당신을 기억하기 시작합니다",            "AI is starting to remember you"],
@@ -171,7 +171,7 @@ const PIONEER_MESSAGES: Record<string, [string, string]> = {
   "Silver.3":      ["이제 AI 없이는 좀 불편하죠?",              "Life without AI? Uncomfortable now"],
   "Silver.2":      ["이쯤 되면 AI가 동료입니다",                "AI is your colleague now"],
   "Silver.1":      ["Silver 마스터리 달성 직전!",               "Silver mastery almost complete!"],
-  "Gold.5":        ["AI 시대의 파이오니어",                     "Pioneer of the AI era"],
+  "Gold.5":        ["AI 시대의 뱅가드",                        "Vanguard of the AI era"],
   "Gold.4":        ["Context Window가 당신을 환영합니다",        "Context Window welcomes you"],
   "Gold.3":        ["슬슬 API가 긴장하기 시작합니다",            "The API is getting nervous"],
   "Gold.2":        ["AI와의 시너지가 폭발하고 있어요",            "AI synergy is off the charts"],
@@ -199,9 +199,9 @@ const PIONEER_MESSAGES: Record<string, [string, string]> = {
   "Challenger":    ["당신이 곧 AI 시대입니다",                   "You ARE the AI era"],
 };
 
-export function pioneerMessage(tier: string, division: number | null, lang: Lang = "en"): string {
+export function vanguardMessage(tier: string, division: number | null, lang: Lang = "en"): string {
   const key = division != null ? `${tier}.${division}` : tier;
-  const pair = PIONEER_MESSAGES[key];
+  const pair = VANGUARD_MESSAGES[key];
   return pair ? pair[lang === "ko" ? 0 : 1] : "";
 }
 

@@ -14,7 +14,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "DXAI Leaderboard",
-  description: "AI Developer Pioneer Ranking - Track your AI coding journey",
+  description: "AI Developer Vanguard Ranking - Track your AI coding journey",
 };
 
 export default function RootLayout({

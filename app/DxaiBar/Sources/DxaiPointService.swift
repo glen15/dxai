@@ -1,6 +1,6 @@
 import Foundation
 
-/// DXAI Point 시스템 — 일일 Pioneer Rank를 포인트로 변환, 로컬 누적 저장 + 서버 제출
+/// DXAI Point 시스템 — 일일 Vanguard Rank를 포인트로 변환, 로컬 누적 저장 + 서버 제출
 final class DxaiPointService {
     static let shared = DxaiPointService()
 
@@ -33,8 +33,8 @@ final class DxaiPointService {
 
     struct DailyRecord: Codable {
         let date: String
-        let pioneerTier: String
-        let pioneerDivision: Int?
+        let vanguardTier: String
+        let vanguardDivision: Int?
         let dailyPoints: Int
         let claudeTokens: Int
         let codexTokens: Int
@@ -49,8 +49,8 @@ final class DxaiPointService {
         let total_points: Int
         let claude_tokens: Int
         let codex_tokens: Int
-        let pioneer_tier: String
-        let pioneer_division: Int?
+        let vanguard_tier: String
+        let vanguard_division: Int?
     }
 
     struct SubmissionResponse: Codable {
@@ -126,7 +126,7 @@ final class DxaiPointService {
         Array(history.suffix(30))
     }
 
-    /// refresh() 시 호출 — 오늘의 Pioneer Rank + 토큰 기록
+    /// refresh() 시 호출 — 오늘의 Vanguard Rank + 토큰 기록
     func recordDailyBest(tier: String, division: Int?, claudeTokens: Int, codexTokens: Int) {
         let today = Self.todayString()
         let points = Self.calculatePoints(tier: tier, division: division)
@@ -135,15 +135,15 @@ final class DxaiPointService {
         if let idx = history.firstIndex(where: { $0.date == today }) {
             let existing = history[idx]
             let newPoints = max(points, existing.dailyPoints)
-            let newTier = points >= existing.dailyPoints ? tier : existing.pioneerTier
-            let newDiv = points >= existing.dailyPoints ? division : existing.pioneerDivision
+            let newTier = points >= existing.dailyPoints ? tier : existing.vanguardTier
+            let newDiv = points >= existing.dailyPoints ? division : existing.vanguardDivision
             let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
             guard points > existing.dailyPoints || tokensChanged else { return }
             let cumulative = totalPointsExcluding(today) + newPoints
             history[idx] = DailyRecord(
                 date: today,
-                pioneerTier: newTier,
-                pioneerDivision: newDiv,
+                vanguardTier: newTier,
+                vanguardDivision: newDiv,
                 dailyPoints: newPoints,
                 claudeTokens: claudeTokens,
                 codexTokens: codexTokens,
@@ -154,8 +154,8 @@ final class DxaiPointService {
             let cumulative = totalPoints + points
             history.append(DailyRecord(
                 date: today,
-                pioneerTier: tier,
-                pioneerDivision: division,
+                vanguardTier: tier,
+                vanguardDivision: division,
                 dailyPoints: points,
                 claudeTokens: claudeTokens,
                 codexTokens: codexTokens,
@@ -282,8 +282,8 @@ final class DxaiPointService {
             total_points: record.totalPoints,
             claude_tokens: record.claudeTokens,
             codex_tokens: record.codexTokens,
-            pioneer_tier: record.pioneerTier,
-            pioneer_division: record.pioneerDivision
+            vanguard_tier: record.vanguardTier,
+            vanguard_division: record.vanguardDivision
         )
 
         sendPayload(payload)

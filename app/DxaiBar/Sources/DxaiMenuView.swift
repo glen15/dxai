@@ -172,16 +172,16 @@ struct DxaiMenuView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Pioneer badge + points (1행) + message (2행)
-            if let level = viewModel.pioneerLevel {
+            // Vanguard badge + points (1행) + message (2행)
+            if let level = viewModel.vanguardLevel {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
                         Text("\(level.emoji) \(level.displayName)")
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(pioneerColor(level).opacity(0.12))
-                            .foregroundColor(pioneerColor(level))
+                            .background(vanguardColor(level).opacity(0.12))
+                            .foregroundColor(vanguardColor(level))
                             .cornerRadius(5)
 
                         if viewModel.todayPoints > 0 {
@@ -191,9 +191,9 @@ struct DxaiMenuView: View {
                         }
                     }
 
-                    Text(l.pioneerMessage(level.tier.rawValue, division: level.division))
+                    Text(l.vanguardMessage(level.tier.rawValue, division: level.division))
                         .font(.system(size: 12))
-                        .foregroundColor(pioneerColor(level).opacity(0.7))
+                        .foregroundColor(vanguardColor(level).opacity(0.7))
                         .italic()
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -266,17 +266,17 @@ struct DxaiMenuView: View {
             }
 
             // Progress bar
-            pioneerProgressBar
+            vanguardProgressBar
 
             // (quota is now shown inside each tool card)
         }
         .padding(.horizontal, 16)
     }
 
-    // MARK: - Pioneer Progress
+    // MARK: - Vanguard Progress
 
-    private var pioneerProgressBar: some View {
-        let tiers: [(String, DxaiViewModel.PioneerLevel.Tier, Int)] = [
+    private var vanguardProgressBar: some View {
+        let tiers: [(String, DxaiViewModel.VanguardLevel.Tier, Int)] = [
             ("B",  .bronze,      5_000),
             ("S",  .silver,      75_000),
             ("G",  .gold,        400_000),
@@ -286,9 +286,9 @@ struct DxaiMenuView: View {
             ("GM", .grandmaster, 120_000_000),
             ("C",  .challenger,  500_000_000),
         ]
-        let currentTier = viewModel.pioneerLevel?.tier
+        let currentTier = viewModel.vanguardLevel?.tier
         let currentIdx = tiers.firstIndex(where: { $0.1 == currentTier }) ?? -1
-        let next = DxaiViewModel.PioneerLevel.nextLevel(after: viewModel.pioneerLevel)
+        let next = DxaiViewModel.VanguardLevel.nextLevel(after: viewModel.vanguardLevel)
 
         return VStack(spacing: 6) {
             // Segmented bar
@@ -296,7 +296,7 @@ struct DxaiMenuView: View {
                 ForEach(0..<tiers.count, id: \.self) { i in
                     let isCurrent = i == currentIdx
                     let isPast = i < currentIdx
-                    let tierColor = pioneerTierColor(tiers[i].1)
+                    let tierColor = vanguardTierColor(tiers[i].1)
 
                     VStack(spacing: 3) {
                         // Segment bar
@@ -307,14 +307,14 @@ struct DxaiMenuView: View {
                                         .fill(tierColor.opacity(0.25))
                                     RoundedRectangle(cornerRadius: 3)
                                         .fill(tierColor)
-                                        .frame(width: max(4, geo.size.width * CGFloat(pioneerProgress)))
+                                        .frame(width: max(4, geo.size.width * CGFloat(vanguardProgress)))
                                     // Position indicator
                                     Circle()
                                         .fill(Color.white)
                                         .frame(width: 8, height: 8)
                                         .shadow(color: tierColor, radius: 3)
                                         .position(
-                                            x: max(4, geo.size.width * CGFloat(pioneerProgress)),
+                                            x: max(4, geo.size.width * CGFloat(vanguardProgress)),
                                             y: geo.size.height / 2
                                         )
                                 }
@@ -349,7 +349,7 @@ struct DxaiMenuView: View {
                 } else {
                     Text("MAX RANK")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(pioneerColor(viewModel.pioneerLevel))
+                        .foregroundColor(vanguardColor(viewModel.vanguardLevel))
                     Spacer()
                 }
             }
@@ -363,16 +363,16 @@ struct DxaiMenuView: View {
 
     private var milestoneProgressBar: some View {
         let info = viewModel.currentMilestoneInfo
-        let currentAbbr = pioneerAbbrev(viewModel.pioneerLevel)
-        let nextAbbr = DxaiViewModel.PioneerLevel.nextLevel(after: viewModel.pioneerLevel)
-            .map { pioneerAbbrev($0) } ?? "MAX"
+        let currentAbbr = vanguardAbbrev(viewModel.vanguardLevel)
+        let nextAbbr = DxaiViewModel.VanguardLevel.nextLevel(after: viewModel.vanguardLevel)
+            .map { vanguardAbbrev($0) } ?? "MAX"
 
         return VStack(spacing: 4) {
             // XP bar: P1 [====] D5
             HStack(spacing: 5) {
                 Text(currentAbbr)
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(pioneerColor(viewModel.pioneerLevel))
+                    .foregroundColor(vanguardColor(viewModel.vanguardLevel))
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -413,7 +413,7 @@ struct DxaiMenuView: View {
         }
     }
 
-    private func pioneerAbbrev(_ level: DxaiViewModel.PioneerLevel?) -> String {
+    private func vanguardAbbrev(_ level: DxaiViewModel.VanguardLevel?) -> String {
         guard let level else { return "—" }
         let prefix: String
         switch level.tier {
@@ -432,7 +432,7 @@ struct DxaiMenuView: View {
         return prefix
     }
 
-    private func pioneerTierColor(_ tier: DxaiViewModel.PioneerLevel.Tier) -> Color {
+    private func vanguardTierColor(_ tier: DxaiViewModel.VanguardLevel.Tier) -> Color {
         switch tier {
         case .bronze:      return .orange
         case .silver:      return .gray
@@ -1095,7 +1095,7 @@ struct DxaiMenuView: View {
     }
 
 
-    private func pioneerColor(_ level: DxaiViewModel.PioneerLevel?) -> Color {
+    private func vanguardColor(_ level: DxaiViewModel.VanguardLevel?) -> Color {
         guard let level else { return .purple }
         switch level.tier {
         case .bronze:      return .orange
@@ -1109,18 +1109,18 @@ struct DxaiMenuView: View {
         }
     }
 
-    private var pioneerGradient: LinearGradient {
-        let c = pioneerColor(viewModel.pioneerLevel)
+    private var vanguardGradient: LinearGradient {
+        let c = vanguardColor(viewModel.vanguardLevel)
         return LinearGradient(colors: [c, c.opacity(0.6)],
                               startPoint: .leading, endPoint: .trailing)
     }
 
-    private var pioneerProgress: Double {
+    private var vanguardProgress: Double {
         let tokens = viewModel.todayTokens
-        guard let next = DxaiViewModel.PioneerLevel.nextLevel(after: viewModel.pioneerLevel) else {
+        guard let next = DxaiViewModel.VanguardLevel.nextLevel(after: viewModel.vanguardLevel) else {
             return 1.0
         }
-        let prev = viewModel.pioneerLevel?.threshold ?? 0
+        let prev = viewModel.vanguardLevel?.threshold ?? 0
         guard next.threshold > prev else { return 1.0 }
         return min(1.0, Double(tokens - prev) / Double(next.threshold - prev))
     }

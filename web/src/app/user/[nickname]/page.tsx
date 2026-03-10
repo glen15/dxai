@@ -9,7 +9,7 @@ import {
   type UserProfile,
   formatTokens,
   formatNumber,
-  pioneerMessage,
+  vanguardMessage,
   tokenMilestone,
   t,
   type Lang,
@@ -83,7 +83,7 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
 
   const tier = profile.last_tier ?? "";
   const division = profile.last_division;
-  const message = pioneerMessage(tier, division, lang);
+  const message = vanguardMessage(tier, division, lang);
   const totalTokens = (profile.weekly.claude_tokens ?? 0) + (profile.weekly.codex_tokens ?? 0);
   const milestone = tokenMilestone(totalTokens, lang);
 
@@ -139,7 +139,7 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
             <div className="text-sm text-white/40">
               {lang === "ko"
                 ? `${formatNumber(profile.total_users)}명 중`
-                : `of ${formatNumber(profile.total_users)} pioneers`}
+                : `of ${formatNumber(profile.total_users)} vanguards`}
             </div>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
                   >
                     <td className="py-3 px-5 text-sm text-white/60 font-mono">{day.date}</td>
                     <td className="py-3 px-5">
-                      <TierBadge tier={day.pioneer_tier} division={day.pioneer_division} />
+                      <TierBadge tier={day.vanguard_tier} division={day.vanguard_division} />
                     </td>
                     <td className="py-3 px-5 text-right font-mono text-sm text-white/90">
                       {formatNumber(day.daily_points)}
