@@ -196,6 +196,7 @@ struct DxaiMenuView: View {
                         .foregroundColor(pioneerColor(level).opacity(0.7))
                         .italic()
                         .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
 
