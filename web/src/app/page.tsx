@@ -305,7 +305,13 @@ export default function Home() {
           hasDiff = true;
         }
       }
-      setDiffs(hasDiff ? newDiffs : {});
+      if (hasDiff) {
+        console.log("[Vanguard] diff detected:", newDiffs);
+        setDiffs(newDiffs);
+      }
+      // diff 없으면 기존 diffs 유지 (변경이 감지될 때만 갱신)
+    } else {
+      console.log("[Vanguard] load:", silent ? "realtime" : "initial", "rankings:", result?.rankings?.length ?? 0);
     }
 
     dataRef.current = result;
@@ -325,7 +331,10 @@ export default function Home() {
     if (tab !== "realtime") return;
     const channel = supabase
       .channel("leaderboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "daily_records" }, () => { load(true); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "daily_records" }, (payload) => {
+        console.log("[Vanguard] realtime event:", payload.eventType);
+        load(true);
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [tab, load]);
