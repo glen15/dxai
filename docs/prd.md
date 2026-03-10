@@ -25,7 +25,7 @@ dxai
 ├── 메뉴바 앱 (SwiftUI) — 핵심 제품
 │   ├── 토큰 대시보드     — 오늘 토큰, 도구별 사용량
 │   ├── 쿼터 모니터링     — Claude/Codex 5h/7d 제한 + 리셋 타이머
-│   ├── Pioneer Rank     — 8등급 36레벨 게이미피케이션
+│   ├── Vanguard Rank    — 8등급 36레벨 게이미피케이션
 │   ├── Token Milestone  — 16단계 토큰 마일스톤 알림
 │   ├── Quick Actions    — 시스템 상태, AI 스캔, 정리, 최적화
 │   ├── AI 환경 스캔     — 네이티브 SwiftUI UI
@@ -56,7 +56,7 @@ dxai
 - [x] Claude/Codex 토큰 파싱 (`.jsonl` 로그)
 - [x] Claude 쿼터 API 직접 호출 (`api.anthropic.com/api/oauth/usage`)
 - [x] 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
-- [x] Pioneer Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
+- [x] Vanguard Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
 - [x] Token Milestone 알림 (16단계, AI 테마)
 - [x] Quick Actions (status, scan, clean, optimize)
 - [x] AI 환경 스캔 네이티브 SwiftUI UI (ScanPanelView)
@@ -69,7 +69,7 @@ dxai
 - [x] SQLite 데이터 영속화 (DxaiDatabase)
 - [x] 중복 실행 방지 (Bundle ID + PID 체크)
 - [x] 로컬 타임존 기반 날짜 경계 (UTC → TimeZone.current)
-- [x] DXAI Point 시스템 (Pioneer Rank → 포인트 변환, JSON 로컬 누적)
+- [x] Vanguard Point 시스템 (Vanguard Rank → 포인트 변환, JSON 로컬 누적)
 - [x] 포인트 3단 표시 (오늘·주간·누적) + 리더보드/설정 버튼
 - [x] Settings UI (닉네임, opt-in 토글, 제출 데이터 미리보기)
 - [x] 주간 토큰 누적 히어로 넘버 옆 표시
@@ -100,23 +100,28 @@ dxai
 - [ ] 첫 릴리스 태그 (V1.0.0) 및 Homebrew Tap 레포 생성
 - [ ] 사용자 확보 (수업 배포, 사내 공유)
 
-#### Phase 2 — DXAI Point & 랭킹 서비스 (핵심 목표)
-- [x] DXAI Point 로컬 시스템 (포인트 공식, JSON 영속화, 3단 표시)
+#### Phase 2 — Vanguard 랭킹 서비스 (핵심 목표)
+- [x] Vanguard Point 로컬 시스템 (포인트 공식, JSON 영속화, 3단 표시)
 - [x] Settings UI (닉네임 설정, opt-in 토글, 제출 데이터 미리보기)
-- [ ] Supabase 백엔드 (Edge Functions: submit-daily, leaderboard)
-- [ ] 앱→서버 제출 로직 (URLSession, 실패 시 로컬 큐 재시도)
-- [ ] 랭킹 웹사이트 (Next.js + Tailwind, AWS Amplify 배포)
+- [x] Supabase 백엔드 (Edge Functions: submit-daily, leaderboard)
+- [x] 앱→서버 제출 로직 (URLSession, 실패 시 로컬 큐 재시도)
+- [x] Vanguard 랭킹 웹사이트 (Next.js + Tailwind + Magic UI)
+- [x] Supabase Realtime 실시간 리더보드 (Live 탭)
+- [x] 개인 프로필 페이지 (/user/[nickname])
+- [x] KST 타임존 통일 (Live/Daily/Weekly/Monthly)
+- [x] 한/영 다국어 UI
+- [ ] 웹 배포 (Cloudflare Pages)
 
-> **제출 데이터**: 닉네임, 일일 토큰 합계(도구별), 일일 DXAI Point, 누적 포인트, 타임스탬프
+> **제출 데이터**: 닉네임, 일일 토큰 합계(도구별), 일일 Vanguard Point, 누적 포인트, 타임스탬프
 > **수집하지 않는 것**: 프로젝트명, 프롬프트, 파일 경로, 대화 내용
-> DXAI Point는 AI 활용도를 보여주는 스펙/지표로 활용
+> Vanguard Point는 AI 활용도를 보여주는 스펙/지표로 활용
 
 #### Phase 3 — 확장 (장기)
 - [ ] Homebrew Core 등록
 - [ ] 다국어 확장 (JP, CN 등)
 - [ ] 디스크 부족 알림
 
-## Pioneer Rank 시스템
+## Vanguard Rank 시스템
 
 일일 토큰 사용량 기반 등급. 매일 초기화.
 
@@ -203,6 +208,11 @@ dxai/
 ├── homebrew/
 │   ├── Formula/dxai.rb            # CLI formula
 │   └── Casks/dxaibar.rb           # 메뉴바 앱 cask
+├── web/                           # Vanguard 랭킹 웹사이트 (Next.js)
+│   └── src/app/                   # 페이지 및 컴포넌트
+├── supabase/
+│   ├── functions/                 # Edge Functions (submit-daily, leaderboard)
+│   └── migrations/                # DB 스키마 마이그레이션
 ├── tests/                         # Bats 테스트
 ├── scripts/                       # 빌드/체크 스크립트
 ├── docs/prd.md                    # 이 문서

@@ -19,7 +19,7 @@ SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `co
 Features:
 - Real-time token usage tracking across Claude Code, Codex CLI
 - Quota bars for Claude/Codex 5-hour session and 7-day limits
-- Pioneer Rank system: 8 tiers (Bronze → Challenger), 36 levels with unique messages per division
+- Vanguard Rank system: 8 tiers (Bronze → Challenger), 36 levels with unique messages per division
 - Token Milestone achievement notifications (16 thresholds)
 - Quick Actions: system status, AI env scan, disk cleanup, optimization
 - AI Environment Scan: global/project MCP servers, skills, CLAUDE.md/AGENTS.md detection
@@ -76,6 +76,11 @@ dxai/
 ├── app/DxaiBar/             # macOS menu bar app (SwiftUI)
 │   ├── Sources/             # Swift source files
 │   └── scripts/build-app.sh # App bundle builder
+├── web/                     # Vanguard ranking website (Next.js)
+│   └── src/app/             # Pages and components
+├── supabase/
+│   ├── functions/           # Edge Functions (submit-daily, leaderboard)
+│   └── migrations/          # DB schema migrations
 ├── homebrew/
 │   ├── Formula/dxai.rb      # Homebrew formula (CLI)
 │   └── Casks/dxaibar.rb     # Homebrew cask (GUI app)
@@ -95,7 +100,7 @@ dxai/
 - Claude Code: `~/.claude/projects/*/logs/*.jsonl`
 - Codex CLI: `~/.codex/logs/*.jsonl`
 
-## Pioneer Rank Tiers
+## Vanguard Rank Tiers
 
 | Tier | Entry Threshold | Divisions |
 |------|----------------|-----------|
@@ -108,6 +113,20 @@ dxai/
 | Grandmaster | 1.5B | 5 → 1 |
 | Challenger | 5B | Final |
 
+## Vanguard Ranking Service
+
+Online competitive leaderboard (opt-in). Daily Vanguard Points submitted to Supabase and ranked globally.
+
+- Backend: Supabase Edge Functions (submit-daily, leaderboard)
+- Frontend: Next.js + Tailwind CSS + Magic UI (`web/` directory)
+- Real-time: Supabase Realtime subscriptions for Live tab
+- Tabs: Live (realtime), Daily, Weekly, Monthly, Total
+- Profile: `/user/[nickname]` with 30-day history
+- Timezone: KST (Korea Standard Time)
+- Bilingual: Korean / English toggle
+
+Source: `web/src/`, `supabase/functions/`
+
 ## Key Files
 
 - `app/DxaiBar/Sources/DxaiViewModel.swift` — Core logic, token parsing, rank calculation
@@ -117,6 +136,10 @@ dxai/
 - `app/DxaiBar/Sources/ScanPanelView.swift` — AI environment scan UI
 - `bin/ai.py` — CLI token dashboard
 - `bin/scan.py` — CLI environment scanner
+- `web/src/app/page.tsx` — Vanguard leaderboard main page
+- `web/src/lib/supabase.ts` — API client, types, localization
+- `supabase/functions/submit-daily/index.ts` — Daily submission Edge Function
+- `supabase/functions/leaderboard/index.ts` — Leaderboard query Edge Function
 
 ## Contributing
 

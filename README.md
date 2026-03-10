@@ -25,7 +25,7 @@ The core product. Lives in your menu bar and shows:
 
 - **Today's token count** — total across all AI tools
 - **Quota bars** — Claude/Codex 5-hour session & 7-day limits with reset timers
-- **Pioneer Rank** — gamified tier system (Bronze → Challenger) based on daily usage
+- **Vanguard Rank** — gamified tier system (Bronze → Challenger) based on daily usage
 - **Token Milestones** — achievement notifications as you hit token thresholds
 - **Quick Actions** — system status, AI env scan, disk cleanup, optimization
 - **AI Env Scan** — global/project MCP servers, skills, CLAUDE.md/AGENTS.md detection
@@ -84,7 +84,7 @@ open build/DxaiBar.app
 
 ---
 
-## Pioneer Rank System
+## Vanguard Rank System
 
 Daily token usage determines your rank. Resets each day.
 
@@ -100,6 +100,21 @@ Daily token usage determines your rank. Resets each day.
 | Challenger | 5B | Final rank |
 
 8 tiers, 36 levels. Each division has a unique message. macOS notifications on rank-up and token milestones.
+
+---
+
+## Vanguard — Online Ranking
+
+Opt-in competitive leaderboard powered by Supabase. Your daily Vanguard Points are submitted to the server and ranked globally.
+
+- **Live tab** — real-time leaderboard via Supabase Realtime
+- **Daily / Weekly / Monthly** — period-based rankings (KST timezone)
+- **Profile page** — `/user/[nickname]` with 30-day history
+- **EN/KR** — full bilingual UI
+
+Website: built with Next.js + Tailwind CSS + Magic UI
+
+> Only token counts and points are submitted. No source code, prompts, file paths, or conversation content is ever collected.
 
 ---
 
@@ -136,6 +151,11 @@ dxai/
 │       │   └── Localization.swift
 │       └── scripts/
 │           └── build-app.sh
+├── web/                     # Vanguard ranking website (Next.js)
+│   └── src/app/             # Pages and components
+├── supabase/
+│   ├── functions/           # Edge Functions (submit-daily, leaderboard)
+│   └── migrations/          # DB schema migrations
 ├── homebrew/
 │   ├── Formula/dxai.rb      # Homebrew formula (CLI)
 │   └── Casks/dxaibar.rb     # Homebrew cask (menu bar app)
