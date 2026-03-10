@@ -61,34 +61,11 @@ function TierBadge({ tier, division }: { tier: string; division: number | null }
 }
 
 // Countdown ring SVG
-function CountdownRing({ seconds, total = 60 }: { seconds: number; total?: number }) {
-  const r = 10;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - seconds / total);
-  return (
-    <div className="flex items-center gap-2">
-      <svg width="24" height="24" viewBox="0 0 24 24" className="countdown-ring">
-        <circle cx="12" cy="12" r={r} fill="none" strokeWidth="2" className="countdown-track" />
-        <circle
-          cx="12" cy="12" r={r} fill="none" strokeWidth="2"
-          className="countdown-fill"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="font-mono text-sm tabular-nums text-cyan-400/80">
-        {seconds > 0 ? `${seconds}s` : "..."}
-      </span>
-    </div>
-  );
-}
-
 // Top 3 podium card
-function PodiumCard({ entry, lang, prev }: {
+function PodiumCard({ entry, lang, diff }: {
   entry: RankEntry;
   lang: Lang;
-  prev?: { claude: number; codex: number };
+  diff?: { claude: number; codex: number };
 }) {
   const tier = entry.pioneer_tier ?? entry.last_tier ?? "";
   const division = entry.pioneer_division ?? entry.last_division ?? null;
@@ -97,8 +74,8 @@ function PodiumCard({ entry, lang, prev }: {
   const codex = entry.codex_tokens ?? 0;
   const message = pioneerMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
-  const claudeDiff = prev ? claude - prev.claude : 0;
-  const codexDiff = prev ? codex - prev.codex : 0;
+  const claudeDiff = diff?.claude ?? 0;
+  const codexDiff = diff?.codex ?? 0;
 
   const podiumClass =
     entry.rank === 1 ? "podium-card podium-gold" :
@@ -189,28 +166,39 @@ export default function Home() {
   const [dateInput, setDateInput] = useState(todayString());
   const [search, setSearch] = useState("");
   const [lang, setLang] = useState<Lang>("en");
-  const [countdown, setCountdown] = useState(60);
-  const [prevTokens, setPrevTokens] = useState<Record<string, { claude: number; codex: number }>>({});
-  const lastUpdateRef = useRef<Date>(new Date());
+  const [diffs, setDiffs] = useState<Record<string, { claude: number; codex: number }>>({});
   const dataRef = useRef<LeaderboardResponse | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const params: Record<string, string> = {};
     if (tab === "daily") params.date = dateInput;
     const result = await fetchLeaderboard(tab, params, page);
-    if (dataRef.current?.rankings) {
-      const snapshot: Record<string, { claude: number; codex: number }> = {};
+
+    // diff 계산: 변경분 감지 → 다음 변경까지 유지
+    if (dataRef.current?.rankings && result?.rankings) {
+      const oldMap: Record<string, { claude: number; codex: number }> = {};
       for (const r of dataRef.current.rankings) {
-        snapshot[r.nickname] = { claude: r.claude_tokens ?? 0, codex: r.codex_tokens ?? 0 };
+        oldMap[r.nickname] = { claude: r.claude_tokens ?? 0, codex: r.codex_tokens ?? 0 };
       }
-      setPrevTokens(snapshot);
+      const newDiffs: Record<string, { claude: number; codex: number }> = {};
+      let hasDiff = false;
+      for (const r of result.rankings) {
+        const old = oldMap[r.nickname];
+        if (!old) continue;
+        const cDiff = (r.claude_tokens ?? 0) - old.claude;
+        const xDiff = (r.codex_tokens ?? 0) - old.codex;
+        if (cDiff > 0 || xDiff > 0) {
+          newDiffs[r.nickname] = { claude: cDiff, codex: xDiff };
+          hasDiff = true;
+        }
+      }
+      setDiffs(hasDiff ? newDiffs : {});
     }
+
     dataRef.current = result;
     setData(result);
-    setLoading(false);
-    lastUpdateRef.current = new Date();
-    setCountdown(60);
+    if (!silent) setLoading(false);
   }, [tab, page, dateInput]);
 
   useEffect(() => { load(); }, [load]);
@@ -219,21 +207,11 @@ export default function Home() {
     if (tab !== "realtime") return;
     const channel = supabase
       .channel("leaderboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "daily_records" }, () => { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "daily_records" }, () => { load(true); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [tab, load]);
 
-  useEffect(() => {
-    if (tab !== "realtime") return;
-    const tick = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - lastUpdateRef.current.getTime()) / 1000);
-      const remaining = Math.max(0, 60 - elapsed);
-      setCountdown(remaining);
-      if (remaining === 0) load();
-    }, 1000);
-    return () => clearInterval(tick);
-  }, [tab, load]);
 
   const filteredRankings = data?.rankings?.filter(
     (r) => !search || r.nickname.toLowerCase().includes(search.toLowerCase())
@@ -267,7 +245,6 @@ export default function Home() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {tab === "realtime" && <CountdownRing seconds={countdown} />}
           <button
             onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
             className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.08] transition-all cursor-pointer"
@@ -346,7 +323,7 @@ export default function Home() {
                   key={entry.nickname}
                   entry={entry}
                   lang={lang}
-                  prev={prevTokens[entry.nickname]}
+                  diff={diffs[entry.nickname]}
                 />
               ))}
             </div>
@@ -354,10 +331,10 @@ export default function Home() {
 
           {/* Rest of rankings */}
           {rest.length > 0 && (
-            <div className="bg-white/[0.025] rounded-xl border border-white/[0.06] overflow-hidden">
+            <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.08] text-white/50 text-xs uppercase tracking-[0.15em]">
+                  <tr className="border-b border-white/[0.08] text-white/70 text-xs uppercase tracking-[0.15em]">
                     <th className="text-left py-3 px-5 w-14">#</th>
                     <th className="text-left py-3 px-5">Pioneer</th>
                     <th className="text-left py-3 px-5">Tier</th>
@@ -378,7 +355,7 @@ export default function Home() {
                         entry={entry}
                         type={tab}
                         lang={lang}
-                        prev={prevTokens[entry.nickname]}
+                        diff={diffs[entry.nickname]}
                         index={i}
                       />
                     ))}
@@ -416,11 +393,11 @@ export default function Home() {
   );
 }
 
-function RankRow({ entry, type, lang, prev, index }: {
+function RankRow({ entry, type, lang, diff, index }: {
   entry: RankEntry;
   type: LeaderboardType;
   lang: Lang;
-  prev?: { claude: number; codex: number };
+  diff?: { claude: number; codex: number };
   index: number;
 }) {
   const tier = entry.pioneer_tier ?? entry.best_tier ?? entry.last_tier ?? "";
@@ -430,8 +407,8 @@ function RankRow({ entry, type, lang, prev, index }: {
   const codex = entry.codex_tokens ?? 0;
   const message = pioneerMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
-  const claudeDiff = prev ? claude - prev.claude : 0;
-  const codexDiff = prev ? codex - prev.codex : 0;
+  const claudeDiff = diff?.claude ?? 0;
+  const codexDiff = diff?.codex ?? 0;
 
   return (
     <motion.tr

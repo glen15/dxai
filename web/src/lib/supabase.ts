@@ -81,9 +81,9 @@ export async function fetchLeaderboard(
   params: Record<string, string> = {},
   page = 1
 ): Promise<LeaderboardResponse> {
-  const searchParams = new URLSearchParams({ type, page: String(page), ...params });
+  const searchParams = new URLSearchParams({ type, page: String(page), _t: String(Date.now()), ...params });
   const res = await fetch(`${LEADERBOARD_BASE}?${searchParams}`, {
-    next: { revalidate: type === "realtime" ? 30 : 60 },
+    cache: "no-store",
   });
   return res.json();
 }

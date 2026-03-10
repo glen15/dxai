@@ -302,13 +302,17 @@ async function getUserProfile(supabase: any, nickname: string) {
 // ── Helpers ──
 
 function todayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
+  // KST (UTC+9) 기준 오늘 날짜
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
 }
 
 function dateOffset(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  kst.setDate(kst.getDate() + days);
+  return kst.toISOString().slice(0, 10);
 }
 
 function parsePeriod(period: "weekly" | "monthly", param: string | null) {

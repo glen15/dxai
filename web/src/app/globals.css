@@ -156,15 +156,14 @@ body {
   transition: stroke-dashoffset 1s linear;
 }
 
-/* Token diff */
-@keyframes token-flash {
-  0% { opacity: 0; transform: translateY(4px); }
-  20% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 1; }
-  100% { opacity: 0.6; }
+/* Token diff — 반짝이며 유지 */
+@keyframes token-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 .token-diff {
-  animation: token-flash 1.5s ease-out forwards;
+  animation: token-pulse 1.5s ease-in-out infinite;
+  font-weight: 600;
 }
 
 /* Scanline overlay */
