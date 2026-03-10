@@ -13,8 +13,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DXAI Leaderboard",
-  description: "AI Developer Vanguard Ranking - Track your AI coding journey",
+  title: "Vanguard — AI Developer Ranking",
+  description: "Vanguard by DXAI - Track your AI coding journey and compete on the leaderboard",
 };
 
 export default function RootLayout({
@@ -35,10 +35,10 @@ export default function RootLayout({
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-sm font-semibold tracking-wide text-white/90 group-hover:text-white transition-colors">
-                  DXAI
+                  Vanguard
                 </span>
                 <span className="text-xs text-white/30 font-light tracking-widest uppercase">
-                  Leaderboard
+                  by DXAI
                 </span>
               </div>
             </a>

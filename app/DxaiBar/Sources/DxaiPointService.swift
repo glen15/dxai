@@ -1,6 +1,6 @@
 import Foundation
 
-/// DXAI Point 시스템 — 일일 Vanguard Rank를 포인트로 변환, 로컬 누적 저장 + 서버 제출
+/// Vanguard Point 시스템 — 일일 Vanguard Rank를 포인트로 변환, 로컬 누적 저장 + 서버 제출
 final class DxaiPointService {
     static let shared = DxaiPointService()
 

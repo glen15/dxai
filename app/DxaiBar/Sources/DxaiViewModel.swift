@@ -191,7 +191,7 @@ final class DxaiViewModel: ObservableObject {
 
         checkTokenMilestone()
 
-        // DXAI Point 기록
+        // Vanguard Point 기록
         updatePoints()
 
         // 백그라운드에서 주간 데이터 미리 로드
@@ -203,7 +203,7 @@ final class DxaiViewModel: ObservableObject {
         }
     }
 
-    // MARK: - DXAI Points
+    // MARK: - Vanguard Points
 
     private func updatePoints() {
         let ps = DxaiPointService.shared

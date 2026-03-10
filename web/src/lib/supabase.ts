@@ -136,7 +136,7 @@ const UI_STRINGS: Record<string, [string, string]> = {
   "prev": ["이전", "Prev"],
   "next": ["다음", "Next"],
   // Profile
-  "back": ["리더보드", "Leaderboard"],
+  "back": ["뱅가드", "Vanguard"],
   "member_since": ["가입일", "Member since"],
   "day_streak": ["일 연속", "day streak"],
   "total_points": ["총 포인트", "Total Points"],

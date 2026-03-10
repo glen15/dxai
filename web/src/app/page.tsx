@@ -230,15 +230,15 @@ export default function Home() {
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-white/90">AI Vanguard</span>{" "}
             <AnimatedGradientText
               colorFrom="#a78bfa"
               colorTo="#22d3ee"
               speed={1.5}
               className="text-3xl font-bold"
             >
-              Leaderboard
-            </AnimatedGradientText>
+              Vanguard
+            </AnimatedGradientText>{" "}
+            <span className="text-white/90">Leaderboard</span>
           </h1>
           <p className="text-white/50 text-sm mt-1.5 tracking-wide">
             {data ? `${formatNumber(data.total_users)} ${t("vanguards_competing", lang)}` : t("connecting", lang)}

@@ -200,7 +200,7 @@ struct DxaiMenuView: View {
                 }
             }
 
-            // DXAI Point summary + action buttons
+            // Vanguard Point summary + action buttons
             if viewModel.todayPoints > 0 || viewModel.totalPoints > 0 {
                 VStack(spacing: 6) {
                     // Point stats row
