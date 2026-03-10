@@ -7,10 +7,13 @@ import {
   type LeaderboardType,
   type LeaderboardResponse,
   type RankEntry,
+  type Lang,
   tierEmoji,
   tierColor,
   formatTokens,
   formatNumber,
+  pioneerMessage,
+  tokenMilestone,
 } from "@/lib/supabase";
 
 const TABS: { key: LeaderboardType; label: string }[] = [
@@ -28,14 +31,26 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dateInput, setDateInput] = useState(todayString());
   const [search, setSearch] = useState("");
+  const [lang, setLang] = useState<Lang>("en");
   const [countdown, setCountdown] = useState(60);
+  const [prevTokens, setPrevTokens] = useState<Record<string, { claude: number; codex: number }>>({});
   const lastUpdateRef = useRef<Date>(new Date());
+  const dataRef = useRef<LeaderboardResponse | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     const params: Record<string, string> = {};
     if (tab === "daily") params.date = dateInput;
     const result = await fetchLeaderboard(tab, params, page);
+    // 이전 토큰 스냅샷 저장
+    if (dataRef.current?.rankings) {
+      const snapshot: Record<string, { claude: number; codex: number }> = {};
+      for (const r of dataRef.current.rankings) {
+        snapshot[r.nickname] = { claude: r.claude_tokens ?? 0, codex: r.codex_tokens ?? 0 };
+      }
+      setPrevTokens(snapshot);
+    }
+    dataRef.current = result;
     setData(result);
     setLoading(false);
     lastUpdateRef.current = new Date();
@@ -81,11 +96,19 @@ export default function Home() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Pioneer Leaderboard</h1>
-        <p className="text-gray-500">
-          {data ? `${formatNumber(data.total_users)} pioneers competing` : "Loading..."}
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">AI Pioneer Leaderboard</h1>
+          <p className="text-gray-500">
+            {data ? `${formatNumber(data.total_users)} pioneers competing` : "Loading..."}
+          </p>
+        </div>
+        <button
+          onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
+          className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+        >
+          {lang === "en" ? "KR" : "EN"}
+        </button>
       </div>
 
       {/* Tabs */}
@@ -140,9 +163,13 @@ export default function Home() {
               <th className="text-left py-3 px-4 w-16">#</th>
               <th className="text-left py-3 px-4">Pioneer</th>
               <th className="text-left py-3 px-4">Tier</th>
+              <th className="text-right py-3 px-4 hidden sm:table-cell">
+                <span className="text-orange-400">Claude</span>
+              </th>
+              <th className="text-right py-3 px-4 hidden sm:table-cell">
+                <span className="text-emerald-400">Codex</span>
+              </th>
               <th className="text-right py-3 px-4">Points</th>
-              <th className="text-right py-3 px-4 hidden sm:table-cell">Claude</th>
-              <th className="text-right py-3 px-4 hidden sm:table-cell">Codex</th>
             </tr>
           </thead>
           <tbody>
@@ -160,7 +187,7 @@ export default function Home() {
               </tr>
             ) : (
               filteredRankings.map((entry) => (
-                <RankRow key={entry.nickname} entry={entry} type={tab} />
+                <RankRow key={entry.nickname} entry={entry} type={tab} lang={lang} prev={prevTokens[entry.nickname]} />
               ))
             )}
           </tbody>
@@ -193,12 +220,21 @@ export default function Home() {
   );
 }
 
-function RankRow({ entry, type }: { entry: RankEntry; type: LeaderboardType }) {
+function RankRow({ entry, type, lang, prev }: {
+  entry: RankEntry;
+  type: LeaderboardType;
+  lang: Lang;
+  prev?: { claude: number; codex: number };
+}) {
   const tier = entry.pioneer_tier ?? entry.best_tier ?? entry.last_tier ?? "";
-  const division = entry.pioneer_division ?? entry.last_division;
+  const division = entry.pioneer_division ?? entry.last_division ?? null;
   const points = entry.daily_points ?? entry.period_points ?? entry.total_points ?? 0;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
+  const message = pioneerMessage(tier, division, lang);
+  const milestone = tokenMilestone(claude + codex, lang);
+  const claudeDiff = prev ? claude - prev.claude : 0;
+  const codexDiff = prev ? codex - prev.codex : 0;
 
   return (
     <tr className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
@@ -213,18 +249,40 @@ function RankRow({ entry, type }: { entry: RankEntry; type: LeaderboardType }) {
         </span>
       </td>
       <td className="py-3 px-4">
-        <a
-          href={`/user/${entry.nickname}`}
-          className="font-medium hover:text-purple-400 transition-colors"
-        >
-          {entry.nickname}
-        </a>
+        <div>
+          <a
+            href={`/user/${entry.nickname}`}
+            className="font-medium hover:text-purple-400 transition-colors"
+          >
+            {entry.nickname}
+          </a>
+          {milestone && (
+            <p className="text-xs text-purple-400/60 mt-0.5">{milestone}</p>
+          )}
+        </div>
       </td>
       <td className="py-3 px-4">
-        <span className={tierColor(tier)}>
-          {tierEmoji(tier)} {tier}
-          {division != null && ` ${division}`}
-        </span>
+        <div>
+          <span className={tierColor(tier)}>
+            {tierEmoji(tier)} {tier}
+            {division != null && ` ${division}`}
+          </span>
+          {message && (
+            <p className="text-xs text-gray-400 mt-0.5 italic">{message}</p>
+          )}
+        </div>
+      </td>
+      <td className="py-3 px-4 text-right font-mono text-sm hidden sm:table-cell">
+        <span className="text-orange-400/70">{formatTokens(claude)}</span>
+        {claudeDiff > 0 && (
+          <span className="text-orange-300 text-xs ml-1 animate-pulse">+{formatTokens(claudeDiff)}</span>
+        )}
+      </td>
+      <td className="py-3 px-4 text-right font-mono text-sm hidden sm:table-cell">
+        <span className="text-emerald-400/70">{formatTokens(codex)}</span>
+        {codexDiff > 0 && (
+          <span className="text-emerald-300 text-xs ml-1 animate-pulse">+{formatTokens(codexDiff)}</span>
+        )}
       </td>
       <td className="py-3 px-4 text-right font-mono text-sm">
         {formatNumber(points)}
@@ -233,12 +291,6 @@ function RankRow({ entry, type }: { entry: RankEntry; type: LeaderboardType }) {
             ({entry.days_active}d)
           </span>
         ) : null}
-      </td>
-      <td className="py-3 px-4 text-right font-mono text-sm text-gray-500 hidden sm:table-cell">
-        {formatTokens(claude)}
-      </td>
-      <td className="py-3 px-4 text-right font-mono text-sm text-gray-500 hidden sm:table-cell">
-        {formatTokens(codex)}
       </td>
     </tr>
   );
