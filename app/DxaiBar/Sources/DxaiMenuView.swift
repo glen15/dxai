@@ -172,28 +172,30 @@ struct DxaiMenuView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Pioneer badge + points + message
+            // Pioneer badge + points (1행) + message (2행)
             if let level = viewModel.pioneerLevel {
-                HStack(spacing: 8) {
-                    Text("\(level.emoji) \(level.displayName)")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(pioneerColor(level).opacity(0.12))
-                        .foregroundColor(pioneerColor(level))
-                        .cornerRadius(5)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text("\(level.emoji) \(level.displayName)")
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(pioneerColor(level).opacity(0.12))
+                            .foregroundColor(pioneerColor(level))
+                            .cornerRadius(5)
 
-                    if viewModel.todayPoints > 0 {
-                        Text("+\(viewModel.todayPoints)\(l.pointsLabel)")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(.yellow.opacity(0.9))
+                        if viewModel.todayPoints > 0 {
+                            Text("+\(viewModel.todayPoints)\(l.pointsLabel)")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(.yellow.opacity(0.9))
+                        }
                     }
 
                     Text(l.pioneerMessage(level.tier.rawValue, division: level.division))
                         .font(.system(size: 12))
                         .foregroundColor(pioneerColor(level).opacity(0.7))
                         .italic()
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
             }
 
