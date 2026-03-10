@@ -110,11 +110,60 @@ function TierProgressBar({ totalTokens }: { totalTokens: number }) {
   );
 }
 
+/** 주간: 7도트, 월간+: 미니 바 */
+function ActivityViz({ daysActive, type, points, lang }: {
+  daysActive: number;
+  type: LeaderboardType;
+  points: number;
+  lang: Lang;
+}) {
+  const avg = daysActive > 0 ? Math.round(points / daysActive) : 0;
+  const periodDays = type === "weekly" ? 7 : type === "monthly" ? 30 : null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {/* Dots or bar */}
+      {type === "weekly" ? (
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full ${
+                i < daysActive ? "bg-cyan-400" : "bg-white/[0.06]"
+              }`}
+            />
+          ))}
+          <span className="text-[10px] text-white/40 ml-1">{daysActive}/7</span>
+        </div>
+      ) : periodDays ? (
+        <div className="flex items-center gap-1.5">
+          <div className="w-16 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-cyan-400 transition-all"
+              style={{ width: `${Math.min((daysActive / periodDays) * 100, 100)}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-white/40">{daysActive}/{periodDays}</span>
+        </div>
+      ) : (
+        <span className="text-xs text-white/50">{daysActive}{lang === "ko" ? "일 활동" : "d active"}</span>
+      )}
+      {/* Daily average */}
+      <span className="text-[10px] text-white/30">
+        {lang === "ko" ? `일 평균 ${formatNumber(avg)}pt` : `avg ${formatNumber(avg)}pt/d`}
+      </span>
+    </div>
+  );
+}
+
+const isDailyTab = (type: LeaderboardType) => type === "realtime" || type === "daily";
+
 // Top 3 podium card
-function PodiumCard({ entry, lang, diff }: {
+function PodiumCard({ entry, lang, diff, type }: {
   entry: RankEntry;
   lang: Lang;
   diff?: { claude: number; codex: number };
+  type: LeaderboardType;
 }) {
   const tier = entry.vanguard_tier ?? entry.last_tier ?? "";
   const division = entry.vanguard_division ?? entry.last_division ?? null;
@@ -170,8 +219,8 @@ function PodiumCard({ entry, lang, diff }: {
         <TierBadge tier={tier} division={division} />
       </div>
 
-      {/* Vanguard message */}
-      {message && (
+      {/* Daily tabs: vanguard message + tier progress */}
+      {isDailyTab(type) && message && (
         <p className="text-sm text-white/50 italic mb-3 leading-relaxed">{message}</p>
       )}
 
@@ -186,9 +235,13 @@ function PodiumCard({ entry, lang, diff }: {
         </div>
       </div>
 
-      {/* Tier progress bar */}
+      {/* Daily: tier progress bar / Period: activity viz */}
       <div className="mb-3">
-        <TierProgressBar totalTokens={claude + codex} />
+        {isDailyTab(type) ? (
+          <TierProgressBar totalTokens={claude + codex} />
+        ) : (
+          <ActivityViz daysActive={entry.days_active ?? 0} type={type} points={points} lang={lang} />
+        )}
       </div>
 
       {/* Token bars */}
@@ -259,6 +312,12 @@ export default function Home() {
     setData(result);
     if (!silent) setLoading(false);
   }, [tab, page, dateInput]);
+
+  // 탭 변경 시 이전 데이터·diff 클리어 (탭 간 잘못된 diff 방지)
+  useEffect(() => {
+    dataRef.current = null;
+    setDiffs({});
+  }, [tab]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -333,6 +392,16 @@ export default function Home() {
         ))}
       </div>
 
+      {/* Live tab diff explanation */}
+      {tab === "realtime" && (
+        <p className="text-xs text-white/25 mb-4 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+          {lang === "ko"
+            ? "실시간 토큰 변경 시 상승분이 깜빡이며 표시됩니다"
+            : "Token changes blink in real-time as usage updates"}
+        </p>
+      )}
+
       {/* Controls */}
       <div className="flex gap-3 mb-6 items-center">
         {tab === "daily" && (
@@ -383,6 +452,7 @@ export default function Home() {
                   entry={entry}
                   lang={lang}
                   diff={diffs[entry.nickname]}
+                  type={tab}
                 />
               ))}
             </div>
@@ -396,7 +466,9 @@ export default function Home() {
                   <tr className="border-b border-white/[0.08] text-white/70 text-xs uppercase tracking-[0.15em]">
                     <th className="text-left py-3 px-5 w-14">#</th>
                     <th className="text-left py-3 px-5">Vanguard</th>
-                    <th className="text-left py-3 px-5">{t("tier", lang)}</th>
+                    <th className="text-left py-3 px-5">
+                      {isDailyTab(tab) ? t("tier", lang) : (lang === "ko" ? "활동" : "Activity")}
+                    </th>
                     <th className="text-right py-3 px-5 hidden sm:table-cell">
                       <span className="text-orange-400/80">Claude</span>
                     </th>
@@ -492,18 +564,22 @@ function RankRow({ entry, type, lang, diff, index }: {
             </a>
             <span className="font-mono text-xs text-white/40">{formatHeroTokens(claude + codex, lang)}</span>
           </div>
-          {milestone && (
+          {isDailyTab(type) && milestone && (
             <p className="text-xs text-purple-400/70 mt-0.5">{milestone}</p>
           )}
         </div>
       </td>
       <td className="py-3 px-5">
-        <div>
-          <TierBadge tier={tier} division={division} />
-          <div className="mt-1 w-24">
-            <TierProgressBar totalTokens={claude + codex} />
+        {isDailyTab(type) ? (
+          <div>
+            <TierBadge tier={tier} division={division} />
+            <div className="mt-1 w-24">
+              <TierProgressBar totalTokens={claude + codex} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <ActivityViz daysActive={entry.days_active ?? 0} type={type} points={points} lang={lang} />
+        )}
       </td>
       <td className="py-3 px-5 text-right font-mono text-sm hidden sm:table-cell">
         <span className="text-orange-400">{formatTokens(claude)}</span>
