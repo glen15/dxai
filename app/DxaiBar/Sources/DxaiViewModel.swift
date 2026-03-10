@@ -222,6 +222,9 @@ final class DxaiViewModel: ObservableObject {
         todayPoints = ps.todayPoints
         weeklyPoints = ps.weeklyPoints
         totalPoints = ps.totalPoints
+
+        // 미제출 건 재시도
+        ps.retryPendingSubmissions()
     }
 
     // MARK: - Token Milestones
