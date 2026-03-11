@@ -360,7 +360,7 @@ export default function Home() {
               speed={1.5}
               className="text-3xl font-bold"
             >
-              Vanguard
+              AI Vanguard
             </AnimatedGradientText>{" "}
             <span className="text-white/90">Leaderboard</span>
           </h1>

@@ -13,7 +13,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vanguard — AI Vanguard Ranking",
+  title: "AI Vanguard Leaderboard — DXAI",
   description: "Vanguard by DXAI - Track your AI coding journey and compete on the leaderboard",
 };
 
@@ -29,10 +29,8 @@ export default function RootLayout({
       >
         <nav className="border-b border-white/[0.04] bg-[#020617]/90 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-3 group">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white tracking-tighter">DX</span>
-              </div>
+            <a href="/" className="flex items-center gap-2.5 group">
+              <img src="/logo-512.png" alt="DXAI" className="w-7 h-7 rounded-md" />
               <div className="flex items-baseline gap-2">
                 <span className="text-sm font-semibold tracking-wide text-white/90 group-hover:text-white transition-colors">
                   Vanguard

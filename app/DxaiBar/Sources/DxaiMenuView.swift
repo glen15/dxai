@@ -874,19 +874,17 @@ struct DxaiMenuView: View {
             VStack(spacing: 16) {
                 // App icon + name
                 VStack(spacing: 6) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.purple.opacity(0.3), .blue.opacity(0.2)],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                )
-                            )
+                    if let appIcon = NSImage(named: "AppIcon") {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    } else {
                         Image(systemName: "sparkles")
                             .font(.system(size: 28))
                             .foregroundColor(.purple)
+                            .frame(width: 64, height: 64)
                     }
-                    .frame(width: 56, height: 56)
 
                     Text("Deus eX AI")
                         .font(.system(size: 18, weight: .bold))

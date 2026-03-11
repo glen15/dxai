@@ -10,7 +10,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "DxaiBar",
-            path: "Sources"
+            path: "Sources",
+            resources: [
+                .copy("Assets.xcassets"),
+            ]
         ),
     ]
 )

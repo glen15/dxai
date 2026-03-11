@@ -71,6 +71,8 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
 </dict>
 </plist>
 PLIST
@@ -88,6 +90,30 @@ if [[ -f "$CLI_SCRIPT" ]]; then
         fi
     done
     echo "CLI bundled into app"
+fi
+
+# App icon
+ICONSET_DIR="$PROJECT_DIR/Sources/Assets.xcassets/AppIcon.appiconset"
+if [[ -d "$ICONSET_DIR" ]]; then
+    ICON_1024="$ICONSET_DIR/icon_1024x1024.png"
+    if [[ -f "$ICON_1024" ]]; then
+        ICNS_PATH="$APP_DIR/Contents/Resources/AppIcon.icns"
+        ICONSET_TMP=$(mktemp -d)/AppIcon.iconset
+        mkdir -p "$ICONSET_TMP"
+        sips -z 16 16     "$ICON_1024" --out "$ICONSET_TMP/icon_16x16.png"      > /dev/null 2>&1
+        sips -z 32 32     "$ICON_1024" --out "$ICONSET_TMP/icon_16x16@2x.png"   > /dev/null 2>&1
+        sips -z 32 32     "$ICON_1024" --out "$ICONSET_TMP/icon_32x32.png"      > /dev/null 2>&1
+        sips -z 64 64     "$ICON_1024" --out "$ICONSET_TMP/icon_32x32@2x.png"   > /dev/null 2>&1
+        sips -z 128 128   "$ICON_1024" --out "$ICONSET_TMP/icon_128x128.png"    > /dev/null 2>&1
+        sips -z 256 256   "$ICON_1024" --out "$ICONSET_TMP/icon_128x128@2x.png" > /dev/null 2>&1
+        sips -z 256 256   "$ICON_1024" --out "$ICONSET_TMP/icon_256x256.png"    > /dev/null 2>&1
+        sips -z 512 512   "$ICON_1024" --out "$ICONSET_TMP/icon_256x256@2x.png" > /dev/null 2>&1
+        sips -z 512 512   "$ICON_1024" --out "$ICONSET_TMP/icon_512x512.png"    > /dev/null 2>&1
+        cp "$ICON_1024"                      "$ICONSET_TMP/icon_512x512@2x.png"
+        iconutil -c icns -o "$ICNS_PATH" "$ICONSET_TMP"
+        rm -rf "$(dirname "$ICONSET_TMP")"
+        echo "App icon bundled"
+    fi
 fi
 
 # PkgInfo

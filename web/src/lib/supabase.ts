@@ -127,7 +127,7 @@ export type Lang = "ko" | "en";
 
 const UI_STRINGS: Record<string, [string, string]> = {
   // [ko, en]
-  "vanguards_competing": ["명의 Vanguard 경쟁 중", "vanguards competing"],
+  "vanguards_competing": ["명의 Vanguard가 AI 시대의 길을 여는 중", "vanguards pioneering the AI era"],
   "connecting": ["연결 중...", "Connecting..."],
   "loading": ["불러오는 중...", "Loading..."],
   "no_data": ["데이터 없음", "No data yet"],
