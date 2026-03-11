@@ -7,7 +7,7 @@ const LEADERBOARD_BASE = `${SUPABASE_URL}/functions/v1/leaderboard`;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-export type LeaderboardType = "realtime" | "daily" | "weekly" | "monthly" | "total";
+export type LeaderboardType = "realtime" | "daily" | "weekly" | "monthly" | "total" | "ranking" | "search";
 
 export interface RankEntry {
   rank: number;
@@ -24,6 +24,35 @@ export interface RankEntry {
   best_tier?: string;
   last_tier?: string;
   last_division?: number;
+  // Weekly enhanced
+  streak?: number;
+  prev_week_points?: number;
+  daily_breakdown?: { date: string; points: number }[];
+  // Monthly enhanced
+  best_division?: number;
+  period_days?: number;
+  // Total enhanced
+  total_tokens?: number;
+  total_claude_tokens?: number;
+  total_codex_tokens?: number;
+  total_days_active?: number;
+  member_since?: string;
+  current_streak?: number;
+}
+
+export interface TierDistEntry {
+  tier: string;
+  user_count: number;
+}
+
+export interface SearchResult {
+  nickname: string;
+  total_points: number;
+  last_tier: string;
+  last_division: number | null;
+  total_tokens: number;
+  total_days_active: number;
+  member_since: string;
 }
 
 export interface LeaderboardResponse {
@@ -31,10 +60,14 @@ export interface LeaderboardResponse {
   type: string;
   date?: string;
   label?: string;
+  start_date?: string;
+  end_date?: string;
   page: number;
   total_pages: number;
   total_users: number;
   rankings: RankEntry[];
+  tier_distribution?: TierDistEntry[];
+  results?: SearchResult[];
   error?: string;
 }
 
@@ -83,6 +116,13 @@ export async function fetchLeaderboard(
 ): Promise<LeaderboardResponse> {
   const searchParams = new URLSearchParams({ type, page: String(page), _t: String(Date.now()), ...params });
   const res = await fetch(`${LEADERBOARD_BASE}?${searchParams}`, {
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function fetchSearch(query: string): Promise<{ ok: boolean; results: SearchResult[] }> {
+  const res = await fetch(`${LEADERBOARD_BASE}?type=search&q=${encodeURIComponent(query)}&_t=${Date.now()}`, {
     cache: "no-store",
   });
   return res.json();
@@ -153,6 +193,23 @@ const UI_STRINGS: Record<string, [string, string]> = {
   "d_active": ["일 활동", "d active"],
   "of_vanguards": ["명 중", "of"],
   "user_not_found": ["사용자를 찾을 수 없습니다", "User not found"],
+  // Enhanced leaderboard
+  "streak": ["연속", "streak"],
+  "vs_last_week": ["전주 대비", "vs last week"],
+  "daily_avg": ["일 평균", "daily avg"],
+  "activity_rate": ["활동률", "activity rate"],
+  "tier_distribution": ["등급 분포", "Tier Distribution"],
+  "monthly_mvp": ["이달의 MVP", "Monthly MVP"],
+  "hall_of_fame": ["명예의 전당", "Hall of Fame"],
+  "legend": ["레전드", "Legend"],
+  "total_tokens": ["총 토큰", "Total Tokens"],
+  "days_active_total": ["총 활동일", "Days Active"],
+  "since": ["가입", "Since"],
+  "next_tier": ["다음 등급", "Next Tier"],
+  "no_change": ["변동 없음", "No change"],
+  "up": ["상승", "up"],
+  "down": ["하락", "down"],
+  "active_days": ["활동일", "active days"],
 };
 
 export function t(key: string, lang: Lang): string {
@@ -255,7 +312,38 @@ export function formatHeroTokens(n: number, lang: Lang): string {
   return String(n);
 }
 
-/** 티어 진행 정보 */
+/** 계정 레벨: 누적 토큰 = 경험치, 무한 레벨 */
+const LEVEL_BASE = 1_000_000; // Lv.2 = 1M tokens
+
+export function levelThreshold(level: number): number {
+  if (level <= 1) return 0;
+  return LEVEL_BASE * Math.pow(2, level - 2);
+}
+
+export function calculateLevel(totalTokens: number): {
+  level: number;
+  currentXP: number;
+  nextXP: number;
+  progress: number;
+} {
+  if (totalTokens < LEVEL_BASE) {
+    return { level: 1, currentXP: totalTokens, nextXP: LEVEL_BASE, progress: totalTokens / LEVEL_BASE };
+  }
+  let level = 2;
+  while (levelThreshold(level + 1) <= totalTokens) {
+    level++;
+  }
+  const current = levelThreshold(level);
+  const next = levelThreshold(level + 1);
+  return {
+    level,
+    currentXP: totalTokens - current,
+    nextXP: next - current,
+    progress: (totalTokens - current) / (next - current),
+  };
+}
+
+/** 데일리 티어 진행 정보 */
 export const TIER_THRESHOLDS = [
   { tier: "B", label: "Bronze", min: 10_000 },
   { tier: "S", label: "Silver", min: 500_000 },
@@ -285,4 +373,46 @@ export function tierProgress(totalTokens: number): { index: number; fraction: nu
 
 export function formatNumber(n: number): string {
   return n.toLocaleString();
+}
+
+/** Delta display: "+12%" / "-5%" / "NEW" / "--" */
+export function formatDelta(current: number, previous: number, lang: Lang): string {
+  if (previous === 0 && current === 0) return "--";
+  if (previous === 0) return lang === "ko" ? "NEW" : "NEW";
+
+  const diff = current - previous;
+  const pct = Math.round((diff / previous) * 100);
+
+  if (pct === 0) return t("no_change", lang);
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct}%`;
+}
+
+/** Activity rate as percentage string */
+export function activityRate(daysActive: number, periodDays: number): string {
+  if (periodDays <= 0) return "0%";
+  return `${Math.round((daysActive / periodDays) * 100)}%`;
+}
+
+/** Tier label with localization */
+export function tierLabel(tier: string, lang: Lang): string {
+  const labels: Record<string, [string, string]> = {
+    Bronze: ["브론즈", "Bronze"],
+    Silver: ["실버", "Silver"],
+    Gold: ["골드", "Gold"],
+    Platinum: ["플래티넘", "Platinum"],
+    Diamond: ["다이아몬드", "Diamond"],
+    Master: ["마스터", "Master"],
+    Grandmaster: ["그랜드마스터", "Grandmaster"],
+    Challenger: ["챌린저", "Challenger"],
+  };
+  const pair = labels[tier];
+  return pair ? pair[lang === "ko" ? 0 : 1] : tier;
+}
+
+/** Delta direction indicator */
+export function deltaDirection(current: number, previous: number): "up" | "down" | "same" {
+  if (current > previous) return "up";
+  if (current < previous) return "down";
+  return "same";
 }

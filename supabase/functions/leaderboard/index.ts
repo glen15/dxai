@@ -8,6 +8,7 @@ const CORS_HEADERS = {
 };
 
 const PAGE_SIZE = 50;
+const LIVE_PAGE_SIZE = 20;
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -40,27 +41,30 @@ serve(async (req: Request) => {
     case "daily":
       return await dailyLeaderboard(supabase, url.searchParams.get("date"), page);
     case "weekly":
-      return await periodLeaderboard(supabase, "weekly", url.searchParams.get("week"), page);
+      return await weeklyLeaderboard(supabase, url.searchParams.get("week"), page);
     case "monthly":
-      return await periodLeaderboard(supabase, "monthly", url.searchParams.get("month"), page);
+      return await monthlyLeaderboard(supabase, url.searchParams.get("month"), page);
     case "total":
       return await totalLeaderboard(supabase, page);
+    case "ranking":
+      return await tokenRanking(supabase, page);
+    case "search":
+      return await searchUsers(supabase, url.searchParams.get("q") ?? "");
     default:
       return json({ ok: false, error: "invalid_type" }, 400);
   }
 });
 
-// ── Realtime: today's points ranking ──
+// ── Realtime: today's token ranking ──
 
 async function realtimeLeaderboard(supabase: any, page: number) {
   const today = todayDateString();
 
-  const { data, error } = await supabase
-    .from("daily_records")
-    .select("daily_points, vanguard_tier, vanguard_division, claude_tokens, codex_tokens, user_id, users!inner(nickname, total_points)")
-    .eq("date", today)
-    .order("daily_points", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { data, error } = await supabase.rpc("leaderboard_daily_by_tokens", {
+    p_date: today,
+    p_limit: LIVE_PAGE_SIZE,
+    p_offset: (page - 1) * LIVE_PAGE_SIZE,
+  });
 
   if (error) return json({ ok: false, error: error.message }, 500);
 
@@ -74,15 +78,15 @@ async function realtimeLeaderboard(supabase: any, page: number) {
     type: "realtime",
     date: today,
     page,
-    total_pages: Math.ceil((count ?? 0) / PAGE_SIZE),
+    total_pages: Math.ceil((count ?? 0) / LIVE_PAGE_SIZE),
     total_users: count ?? 0,
     rankings: (data ?? []).map((r: any, i: number) => ({
-      rank: (page - 1) * PAGE_SIZE + i + 1,
-      nickname: r.users.nickname,
+      rank: (page - 1) * LIVE_PAGE_SIZE + i + 1,
+      nickname: r.nickname,
       daily_points: r.daily_points,
       vanguard_tier: r.vanguard_tier,
       vanguard_division: r.vanguard_division,
-      total_points: r.users.total_points,
+      total_points: r.total_points,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
     })),
@@ -98,12 +102,11 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
     return json({ ok: false, error: "invalid_date_format" }, 400);
   }
 
-  const { data, error } = await supabase
-    .from("daily_records")
-    .select("daily_points, vanguard_tier, vanguard_division, claude_tokens, codex_tokens, users!inner(nickname)")
-    .eq("date", date)
-    .order("daily_points", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { data, error } = await supabase.rpc("leaderboard_daily_by_tokens", {
+    p_date: date,
+    p_limit: LIVE_PAGE_SIZE,
+    p_offset: (page - 1) * LIVE_PAGE_SIZE,
+  });
 
   if (error) return json({ ok: false, error: error.message }, 500);
 
@@ -117,11 +120,11 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
     type: "daily",
     date,
     page,
-    total_pages: Math.ceil((count ?? 0) / PAGE_SIZE),
+    total_pages: Math.ceil((count ?? 0) / LIVE_PAGE_SIZE),
     total_users: count ?? 0,
     rankings: (data ?? []).map((r: any, i: number) => ({
-      rank: (page - 1) * PAGE_SIZE + i + 1,
-      nickname: r.users.nickname,
+      rank: (page - 1) * LIVE_PAGE_SIZE + i + 1,
+      nickname: r.nickname,
       daily_points: r.daily_points,
       vanguard_tier: r.vanguard_tier,
       vanguard_division: r.vanguard_division,
@@ -131,21 +134,20 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
   });
 }
 
-// ── Weekly / Monthly: aggregated period ranking ──
+// ── Weekly: enhanced with streak, prev_week, daily_breakdown ──
 
-async function periodLeaderboard(supabase: any, period: "weekly" | "monthly", param: string | null, page: number) {
-  const { startDate, endDate, label } = parsePeriod(period, param);
+async function weeklyLeaderboard(supabase: any, param: string | null, page: number) {
+  const { startDate, endDate, label } = parsePeriod("weekly", param);
 
   if (!startDate) {
-    return json({ ok: false, error: `invalid_${period}_format` }, 400);
+    return json({ ok: false, error: "invalid_weekly_format" }, 400);
   }
 
-  // Use RPC or raw query to aggregate daily_records by user for the period
-  const { data, error } = await supabase.rpc("leaderboard_period", {
-    start_date: startDate,
-    end_date: endDate,
-    page_size: PAGE_SIZE,
-    page_offset: (page - 1) * PAGE_SIZE,
+  const { data, error } = await supabase.rpc("leaderboard_weekly_enhanced", {
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_limit: PAGE_SIZE,
+    p_offset: (page - 1) * PAGE_SIZE,
   });
 
   if (error) return json({ ok: false, error: error.message }, 500);
@@ -157,7 +159,7 @@ async function periodLeaderboard(supabase: any, period: "weekly" | "monthly", pa
 
   return json({
     ok: true,
-    type: period,
+    type: "weekly",
     label,
     start_date: startDate,
     end_date: endDate,
@@ -173,18 +175,81 @@ async function periodLeaderboard(supabase: any, period: "weekly" | "monthly", pa
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
       best_tier: r.best_tier,
+      streak: r.streak,
+      prev_week_points: r.prev_week_points,
+      daily_breakdown: r.daily_breakdown,
     })),
   });
 }
 
-// ── Total: all-time cumulative ranking ──
+// ── Monthly: enhanced with best_division, period_days, tier_distribution ──
+
+async function monthlyLeaderboard(supabase: any, param: string | null, page: number) {
+  const { startDate, endDate, label } = parsePeriod("monthly", param);
+
+  if (!startDate) {
+    return json({ ok: false, error: "invalid_monthly_format" }, 400);
+  }
+
+  const [mainResult, distResult, countResult] = await Promise.all([
+    supabase.rpc("leaderboard_monthly_enhanced", {
+      p_start_date: startDate,
+      p_end_date: endDate,
+      p_limit: PAGE_SIZE,
+      p_offset: (page - 1) * PAGE_SIZE,
+    }),
+    supabase.rpc("tier_distribution", {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    }),
+    supabase.rpc("leaderboard_period_count", {
+      start_date: startDate,
+      end_date: endDate,
+    }),
+  ]);
+
+  if (mainResult.error) return json({ ok: false, error: mainResult.error.message }, 500);
+
+  const data = mainResult.data ?? [];
+  const tierDist = distResult.data ?? [];
+  const count = countResult.count ?? countResult.data ?? 0;
+
+  return json({
+    ok: true,
+    type: "monthly",
+    label,
+    start_date: startDate,
+    end_date: endDate,
+    page,
+    total_pages: Math.ceil((typeof count === "number" ? count : 0) / PAGE_SIZE),
+    total_users: typeof count === "number" ? count : 0,
+    tier_distribution: tierDist.map((r: any) => ({
+      tier: r.tier,
+      user_count: r.user_count,
+    })),
+    rankings: data.map((r: any, i: number) => ({
+      rank: (page - 1) * PAGE_SIZE + i + 1,
+      nickname: r.nickname,
+      period_points: r.period_points,
+      period_coins: r.period_coins,
+      days_active: r.days_active,
+      claude_tokens: r.claude_tokens,
+      codex_tokens: r.codex_tokens,
+      best_tier: r.best_tier,
+      best_division: r.best_division,
+      period_days: r.period_days,
+      daily_breakdown: r.daily_breakdown,
+    })),
+  });
+}
+
+// ── Total: enhanced with token breakdown, days_active, member_since, streak ──
 
 async function totalLeaderboard(supabase: any, page: number) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("nickname, total_points, total_coins, last_tier, last_division")
-    .order("total_points", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { data, error } = await supabase.rpc("leaderboard_total_enhanced", {
+    p_limit: PAGE_SIZE,
+    p_offset: (page - 1) * PAGE_SIZE,
+  });
 
   if (error) return json({ ok: false, error: error.message }, 500);
 
@@ -205,6 +270,75 @@ async function totalLeaderboard(supabase: any, page: number) {
       total_coins: r.total_coins,
       last_tier: r.last_tier,
       last_division: r.last_division,
+      total_claude_tokens: r.total_claude_tokens,
+      total_codex_tokens: r.total_codex_tokens,
+      total_days_active: r.total_days_active,
+      member_since: r.member_since,
+      current_streak: r.current_streak,
+    })),
+  });
+}
+
+// ── Token-based global ranking ──
+
+async function tokenRanking(supabase: any, page: number) {
+  const { data, error } = await supabase.rpc("leaderboard_by_tokens", {
+    p_limit: PAGE_SIZE,
+    p_offset: (page - 1) * PAGE_SIZE,
+  });
+
+  if (error) return json({ ok: false, error: error.message }, 500);
+
+  const { count } = await supabase
+    .from("users")
+    .select("id", { count: "exact", head: true });
+
+  return json({
+    ok: true,
+    type: "ranking",
+    page,
+    total_pages: Math.ceil((count ?? 0) / PAGE_SIZE),
+    total_users: count ?? 0,
+    rankings: (data ?? []).map((r: any, i: number) => ({
+      rank: (page - 1) * PAGE_SIZE + i + 1,
+      nickname: r.nickname,
+      total_tokens: r.total_tokens,
+      total_claude_tokens: r.total_claude_tokens,
+      total_codex_tokens: r.total_codex_tokens,
+      total_points: r.total_points,
+      last_tier: r.last_tier,
+      last_division: r.last_division,
+      total_days_active: r.total_days_active,
+      member_since: r.member_since,
+    })),
+  });
+}
+
+// ── User search ──
+
+async function searchUsers(supabase: any, query: string) {
+  if (!query || query.length < 1) {
+    return json({ ok: true, type: "search", results: [] });
+  }
+
+  const { data, error } = await supabase.rpc("search_users", {
+    p_query: query,
+    p_limit: 20,
+  });
+
+  if (error) return json({ ok: false, error: error.message }, 500);
+
+  return json({
+    ok: true,
+    type: "search",
+    results: (data ?? []).map((r: any) => ({
+      nickname: r.nickname,
+      total_points: r.total_points,
+      last_tier: r.last_tier,
+      last_division: r.last_division,
+      total_tokens: r.total_tokens,
+      total_days_active: r.total_days_active,
+      member_since: r.member_since,
     })),
   });
 }
