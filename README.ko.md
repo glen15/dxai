@@ -11,6 +11,15 @@
   <a href="README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=flat-square" alt="English"></a>
 </p>
 
+<p align="center">
+  <img src="screenshot/kr1.png" width="280" alt="메뉴바 앱 (KR)">
+  <img src="screenshot/egn1.png" width="280" alt="메뉴바 앱 (EN)">
+</p>
+
+<p align="center">
+  <img src="screenshot/vanguard1.png" width="560" alt="Vanguard 리더보드">
+</p>
+
 ---
 
 ## dxai란?
