@@ -5,7 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "routes": [
-    { "pattern": "vanguard.dx-ai.cloud", "zone_name": "dx-ai.cloud" }
+    { "pattern": "vanguard.dx-ai.cloud/*", "zone_id": "34aaa65c7f11765bb45de56c11b249d3" }
   ],
   "assets": {
     "directory": ".open-next/assets",
