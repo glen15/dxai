@@ -25,7 +25,7 @@
 ## 설치
 
 ```bash
-brew tap glen15/dxai && brew install --cask dxai
+brew install --cask glen15/dxai/dxai
 ```
 
 macOS 13 (Ventura) 이상. API 키 불필요.
