@@ -80,8 +80,20 @@ dxai_guidelines.md
 CLAUDE.md
 __pycache__/
 
+# Internal docs (PRD, security audit)
+docs/
+SECURITY_AUDIT.md
+
+# Legacy
+mo
+
+# Supabase CLI temp
+supabase/.temp/
+
 # Swift build artifacts
 app/DxaiBar/.build/
+app/DxaiBar/build/
 *.o
 *.d
 *.swiftdeps
+*.swiftdeps~
