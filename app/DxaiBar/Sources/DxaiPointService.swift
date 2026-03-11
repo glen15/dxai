@@ -230,11 +230,21 @@ final class DxaiPointService {
     func updateNickname(_ name: String) {
         config.nickname = name
         saveConfig()
+        submitCurrentIfReady()
     }
 
     func updateOptIn(_ value: Bool) {
         config.optIn = value
         saveConfig()
+        if value { submitCurrentIfReady() }
+    }
+
+    /// 닉네임/opt-in 변경 시 오늘 데이터가 있으면 즉시 제출
+    private func submitCurrentIfReady() {
+        let today = Self.todayString()
+        guard config.optIn, !config.nickname.isEmpty,
+              history.contains(where: { $0.date == today }) else { return }
+        submitToServer(date: today)
     }
 
     // MARK: - Private
