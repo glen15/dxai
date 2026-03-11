@@ -219,7 +219,7 @@ struct DxaiMenuView: View {
                         Spacer()
 
                         Button(action: {
-                            if let url = URL(string: "https://dxai.dev/ranking") {
+                            if let url = URL(string: "https://vanguard.dx-ai.cloud") {
                                 NSWorkspace.shared.open(url)
                             }
                         }) {
