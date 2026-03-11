@@ -78,11 +78,11 @@ PLIST
 # Bundle CLI + support files
 CLI_SCRIPT="$DXAI_ROOT/dxai"
 if [[ -f "$CLI_SCRIPT" ]]; then
-    mkdir -p "$APP_DIR/Contents/Resources/bin"
-    cp "$CLI_SCRIPT" "$APP_DIR/Contents/Resources/bin/dxai"
-    chmod +x "$APP_DIR/Contents/Resources/bin/dxai"
-    # Copy support files (bin/, conf/)
-    for dir in bin conf; do
+    # CLI entrypoint at Resources root (SCRIPT_DIR = Resources/)
+    cp "$CLI_SCRIPT" "$APP_DIR/Contents/Resources/dxai"
+    chmod +x "$APP_DIR/Contents/Resources/dxai"
+    # Copy support dirs
+    for dir in bin lib conf; do
         if [[ -d "$DXAI_ROOT/$dir" ]]; then
             cp -R "$DXAI_ROOT/$dir" "$APP_DIR/Contents/Resources/$dir"
         fi

@@ -640,8 +640,8 @@ final class DxaiViewModel: ObservableObject {
     }
 
     private nonisolated static func findDxaiPath() -> String {
-        // 1. 앱 번들 내 CLI 우선
-        if let bundled = Bundle.main.path(forResource: "dxai", ofType: nil, inDirectory: "bin") {
+        // 1. 앱 번들 내 CLI 우선 (Resources/dxai)
+        if let bundled = Bundle.main.path(forResource: "dxai", ofType: nil) {
             return bundled
         }
         // 2. Homebrew / 시스템 경로
