@@ -1,6 +1,6 @@
 import Foundation
 
-/// Vanguard Point 시스템 — 일일 Vanguard Rank를 포인트로 변환, 로컬 누적 저장 + 서버 제출
+/// Vanguard Coin 시스템 — 일일 Vanguard Rank를 코인으로 변환, 로컬 누적 저장 + 서버 제출
 final class DxaiPointService {
     static let shared = DxaiPointService()
 
@@ -35,18 +35,17 @@ final class DxaiPointService {
         let date: String
         let vanguardTier: String
         let vanguardDivision: Int?
-        let dailyPoints: Int
+        let dailyCoins: Int
         let claudeTokens: Int
         let codexTokens: Int
-        let totalPoints: Int  // cumulative at end of day
+        let totalCoins: Int  // 누적 코인
     }
 
     struct SubmissionPayload: Codable {
         let device_uuid: String
         let nickname: String
         let date: String
-        let daily_points: Int
-        let total_points: Int
+        let daily_coins: Int
         let claude_tokens: Int
         let codex_tokens: Int
         let vanguard_tier: String
@@ -55,15 +54,14 @@ final class DxaiPointService {
 
     struct SubmissionResponse: Codable {
         let ok: Bool
-        let total_points: Int?
         let total_coins: Int?
         let rank: Int?
         let error: String?
     }
 
-    // MARK: - Point Formula
+    // MARK: - Coin Formula
 
-    private static let pointTable: [(tier: String, base: Int, bonus: Int)] = [
+    private static let coinTable: [(tier: String, base: Int, bonus: Int)] = [
         ("Bronze",      10,   2),
         ("Silver",      25,   5),
         ("Gold",        60,  12),
@@ -73,9 +71,9 @@ final class DxaiPointService {
         ("Grandmaster",1800, 360),
     ]
 
-    static func calculatePoints(tier: String, division: Int?) -> Int {
+    static func calculateCoins(tier: String, division: Int?) -> Int {
         if tier == "Challenger" { return 5000 }
-        guard let entry = pointTable.first(where: { $0.tier == tier }),
+        guard let entry = coinTable.first(where: { $0.tier == tier }),
               let div = division else { return 0 }
         return entry.base + entry.bonus * (5 - div)
     }
@@ -102,16 +100,16 @@ final class DxaiPointService {
 
     // MARK: - Public API
 
-    var totalPoints: Int {
-        history.last?.totalPoints ?? 0
+    var totalCoins: Int {
+        history.last?.totalCoins ?? 0
     }
 
-    var todayPoints: Int {
+    var todayCoins: Int {
         let today = Self.todayString()
-        return history.last(where: { $0.date == today })?.dailyPoints ?? 0
+        return history.last(where: { $0.date == today })?.dailyCoins ?? 0
     }
 
-    var weeklyPoints: Int {
+    var weeklyCoins: Int {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
         let today = cal.startOfDay(for: Date())
@@ -119,7 +117,7 @@ final class DxaiPointService {
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = .current
         let dates = Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
-        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyPoints }
+        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyCoins }
     }
 
     var recentHistory: [DailyRecord] {
@@ -129,37 +127,37 @@ final class DxaiPointService {
     /// refresh() 시 호출 — 오늘의 Vanguard Rank + 토큰 기록
     func recordDailyBest(tier: String, division: Int?, claudeTokens: Int, codexTokens: Int) {
         let today = Self.todayString()
-        let points = Self.calculatePoints(tier: tier, division: division)
+        let points = Self.calculateCoins(tier: tier, division: division)
         var changed = false
 
         if let idx = history.firstIndex(where: { $0.date == today }) {
             let existing = history[idx]
-            let newPoints = max(points, existing.dailyPoints)
-            let newTier = points >= existing.dailyPoints ? tier : existing.vanguardTier
-            let newDiv = points >= existing.dailyPoints ? division : existing.vanguardDivision
+            let newPoints = max(points, existing.dailyCoins)
+            let newTier = points >= existing.dailyCoins ? tier : existing.vanguardTier
+            let newDiv = points >= existing.dailyCoins ? division : existing.vanguardDivision
             let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
-            guard points > existing.dailyPoints || tokensChanged else { return }
-            let cumulative = totalPointsExcluding(today) + newPoints
+            guard points > existing.dailyCoins || tokensChanged else { return }
+            let cumulative = totalCoinsExcluding(today) + newPoints
             history[idx] = DailyRecord(
                 date: today,
                 vanguardTier: newTier,
                 vanguardDivision: newDiv,
-                dailyPoints: newPoints,
+                dailyCoins: newPoints,
                 claudeTokens: claudeTokens,
                 codexTokens: codexTokens,
-                totalPoints: cumulative
+                totalCoins: cumulative
             )
             changed = true
         } else {
-            let cumulative = totalPoints + points
+            let cumulative = totalCoins + points
             history.append(DailyRecord(
                 date: today,
                 vanguardTier: tier,
                 vanguardDivision: division,
-                dailyPoints: points,
+                dailyCoins: points,
                 claudeTokens: claudeTokens,
                 codexTokens: codexTokens,
-                totalPoints: cumulative
+                totalCoins: cumulative
             ))
             changed = true
         }
@@ -249,9 +247,9 @@ final class DxaiPointService {
 
     // MARK: - Private
 
-    private func totalPointsExcluding(_ date: String) -> Int {
-        history.filter { $0.date != date }.last?.totalPoints
-            ?? (history.count > 1 ? history[history.count - 2].totalPoints : 0)
+    private func totalCoinsExcluding(_ date: String) -> Int {
+        history.filter { $0.date != date }.last?.totalCoins
+            ?? (history.count > 1 ? history[history.count - 2].totalCoins : 0)
     }
 
     private func save() {
@@ -288,8 +286,7 @@ final class DxaiPointService {
             device_uuid: config.deviceUUID,
             nickname: config.nickname,
             date: date,
-            daily_points: record.dailyPoints,
-            total_points: record.totalPoints,
+            daily_coins: record.dailyCoins,
             claude_tokens: record.claudeTokens,
             codex_tokens: record.codexTokens,
             vanguard_tier: record.vanguardTier,
@@ -354,7 +351,7 @@ final class DxaiPointService {
 
             // 성공
             if let resp = try? JSONDecoder().decode(SubmissionResponse.self, from: data) {
-                NSLog("[DxaiPoint] Submitted: rank=\(resp.rank ?? 0), total=\(resp.total_points ?? 0)")
+                NSLog("[DxaiPoint] Submitted: rank=\(resp.rank ?? 0), coins=\(resp.total_coins ?? 0)")
             }
         }.resume()
     }

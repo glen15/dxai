@@ -220,12 +220,12 @@ struct L {
         }
     }
 
-    // MARK: - Points & Settings
+    // MARK: - Coins & Settings
 
-    var pointsToday: String { ko ? "오늘" : "today" }
-    var pointsWeekly: String { ko ? "주간" : "week" }
-    var pointsTotal: String { ko ? "누적" : "total" }
-    var pointsLabel: String { "pt" }
+    var coinsToday: String { ko ? "오늘" : "today" }
+    var coinsWeekly: String { ko ? "주간" : "week" }
+    var coinsTotal: String { ko ? "누적" : "total" }
+    var coinsLabel: String { "coin" }
 
     var leaderboard: String { ko ? "리더보드" : "Leaderboard" }
 

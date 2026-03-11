@@ -83,10 +83,9 @@ async function realtimeLeaderboard(supabase: any, page: number) {
     rankings: (data ?? []).map((r: any, i: number) => ({
       rank: (page - 1) * LIVE_PAGE_SIZE + i + 1,
       nickname: r.nickname,
-      daily_points: r.daily_points,
+      daily_coins: r.daily_coins,
       vanguard_tier: r.vanguard_tier,
       vanguard_division: r.vanguard_division,
-      total_points: r.total_points,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
     })),
@@ -125,7 +124,7 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
     rankings: (data ?? []).map((r: any, i: number) => ({
       rank: (page - 1) * LIVE_PAGE_SIZE + i + 1,
       nickname: r.nickname,
-      daily_points: r.daily_points,
+      daily_coins: r.daily_coins,
       vanguard_tier: r.vanguard_tier,
       vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
@@ -169,7 +168,6 @@ async function weeklyLeaderboard(supabase: any, param: string | null, page: numb
     rankings: (data ?? []).map((r: any, i: number) => ({
       rank: (page - 1) * PAGE_SIZE + i + 1,
       nickname: r.nickname,
-      period_points: r.period_points,
       period_coins: r.period_coins,
       days_active: r.days_active,
       claude_tokens: r.claude_tokens,
@@ -230,7 +228,6 @@ async function monthlyLeaderboard(supabase: any, param: string | null, page: num
     rankings: data.map((r: any, i: number) => ({
       rank: (page - 1) * PAGE_SIZE + i + 1,
       nickname: r.nickname,
-      period_points: r.period_points,
       period_coins: r.period_coins,
       days_active: r.days_active,
       claude_tokens: r.claude_tokens,
@@ -266,7 +263,6 @@ async function totalLeaderboard(supabase: any, page: number) {
     rankings: (data ?? []).map((r: any, i: number) => ({
       rank: (page - 1) * PAGE_SIZE + i + 1,
       nickname: r.nickname,
-      total_points: r.total_points,
       total_coins: r.total_coins,
       last_tier: r.last_tier,
       last_division: r.last_division,
@@ -305,7 +301,7 @@ async function tokenRanking(supabase: any, page: number) {
       total_tokens: r.total_tokens,
       total_claude_tokens: r.total_claude_tokens,
       total_codex_tokens: r.total_codex_tokens,
-      total_points: r.total_points,
+      total_coins: r.total_coins,
       last_tier: r.last_tier,
       last_division: r.last_division,
       total_days_active: r.total_days_active,
@@ -333,7 +329,7 @@ async function searchUsers(supabase: any, query: string) {
     type: "search",
     results: (data ?? []).map((r: any) => ({
       nickname: r.nickname,
-      total_points: r.total_points,
+      total_coins: r.total_coins,
       last_tier: r.last_tier,
       last_division: r.last_division,
       total_tokens: r.total_tokens,
@@ -348,7 +344,7 @@ async function searchUsers(supabase: any, query: string) {
 async function getUserProfile(supabase: any, nickname: string) {
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, nickname, total_points, total_coins, last_tier, last_division, created_at")
+    .select("id, nickname, total_coins, last_tier, last_division, created_at")
     .eq("nickname", nickname)
     .single();
 
@@ -360,7 +356,7 @@ async function getUserProfile(supabase: any, nickname: string) {
   const { count: rankAbove } = await supabase
     .from("users")
     .select("id", { count: "exact", head: true })
-    .gt("total_points", user.total_points);
+    .gt("total_coins", user.total_coins);
 
   const rank = (rankAbove ?? 0) + 1;
 
@@ -368,7 +364,7 @@ async function getUserProfile(supabase: any, nickname: string) {
   const thirtyDaysAgo = dateOffset(-30);
   const { data: history } = await supabase
     .from("daily_records")
-    .select("date, daily_points, daily_coins, vanguard_tier, vanguard_division, claude_tokens, codex_tokens")
+    .select("date, daily_coins, vanguard_tier, vanguard_division, claude_tokens, codex_tokens")
     .eq("user_id", user.id)
     .gte("date", thirtyDaysAgo)
     .order("date", { ascending: false });
@@ -376,13 +372,11 @@ async function getUserProfile(supabase: any, nickname: string) {
   // Weekly stats (last 7 days)
   const sevenDaysAgo = dateOffset(-7);
   const weekRecords = (history ?? []).filter((r: any) => r.date >= sevenDaysAgo);
-  const weeklyPoints = weekRecords.reduce((s: number, r: any) => s + r.daily_points, 0);
   const weeklyCoins = weekRecords.reduce((s: number, r: any) => s + r.daily_coins, 0);
   const weeklyClaudeTokens = weekRecords.reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const weeklyCodexTokens = weekRecords.reduce((s: number, r: any) => s + r.codex_tokens, 0);
 
   // Monthly stats (last 30 days)
-  const monthlyPoints = (history ?? []).reduce((s: number, r: any) => s + r.daily_points, 0);
   const monthlyCoins = (history ?? []).reduce((s: number, r: any) => s + r.daily_coins, 0);
   const monthlyClaudeTokens = (history ?? []).reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const monthlyCodexTokens = (history ?? []).reduce((s: number, r: any) => s + r.codex_tokens, 0);
@@ -401,21 +395,18 @@ async function getUserProfile(supabase: any, nickname: string) {
       nickname: user.nickname,
       rank,
       total_users: totalUsers ?? 0,
-      total_points: user.total_points,
       total_coins: user.total_coins,
       last_tier: user.last_tier,
       last_division: user.last_division,
       member_since: user.created_at,
       streak,
       weekly: {
-        points: weeklyPoints,
         coins: weeklyCoins,
         claude_tokens: weeklyClaudeTokens,
         codex_tokens: weeklyCodexTokens,
         days_active: weekRecords.length,
       },
       monthly: {
-        points: monthlyPoints,
         coins: monthlyCoins,
         claude_tokens: monthlyClaudeTokens,
         codex_tokens: monthlyCodexTokens,
@@ -423,7 +414,7 @@ async function getUserProfile(supabase: any, nickname: string) {
       },
       history: (history ?? []).map((r: any) => ({
         date: r.date,
-        daily_points: r.daily_points,
+        daily_coins: r.daily_coins,
         vanguard_tier: r.vanguard_tier,
         vanguard_division: r.vanguard_division,
         claude_tokens: r.claude_tokens,

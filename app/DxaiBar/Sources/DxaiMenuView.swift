@@ -184,8 +184,8 @@ struct DxaiMenuView: View {
                             .foregroundColor(vanguardColor(level))
                             .cornerRadius(5)
 
-                        if viewModel.todayPoints > 0 {
-                            Text("+\(viewModel.todayPoints)\(l.pointsLabel)")
+                        if viewModel.todayCoins > 0 {
+                            Text("+\(viewModel.todayCoins)\(l.coinsLabel)")
                                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                                 .foregroundColor(.yellow.opacity(0.9))
                         }
@@ -200,21 +200,21 @@ struct DxaiMenuView: View {
                 }
             }
 
-            // Vanguard Point summary + action buttons
-            if viewModel.todayPoints > 0 || viewModel.totalPoints > 0 {
+            // Vanguard Coin summary + action buttons
+            if viewModel.todayCoins > 0 || viewModel.totalCoins > 0 {
                 VStack(spacing: 6) {
-                    // Point stats row
+                    // Coin stats row
                     HStack(spacing: 0) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))
                             .foregroundColor(.yellow)
                             .padding(.trailing, 5)
 
-                        pointChip(l.pointsToday, "+\(viewModel.todayPoints)")
+                        pointChip(l.coinsToday, "+\(viewModel.todayCoins)")
                         dotSeparator
-                        pointChip(l.pointsWeekly, "\(viewModel.weeklyPoints)")
+                        pointChip(l.coinsWeekly, "\(viewModel.weeklyCoins)")
                         dotSeparator
-                        pointChip(l.pointsTotal, "\(formatNumber(viewModel.totalPoints))")
+                        pointChip(l.coinsTotal, "\(formatNumber(viewModel.totalCoins))")
 
                         Spacer()
 
@@ -1013,7 +1013,7 @@ struct DxaiMenuView: View {
             Text(label)
                 .font(.system(size: 10))
                 .foregroundColor(.secondary.opacity(0.6))
-            Text("\(value)\(l.pointsLabel)")
+            Text("\(value)\(l.coinsLabel)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundColor(.yellow.opacity(0.9))
         }

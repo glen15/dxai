@@ -12,9 +12,8 @@ export type LeaderboardType = "realtime" | "daily" | "weekly" | "monthly" | "tot
 export interface RankEntry {
   rank: number;
   nickname: string;
-  daily_points?: number;
-  period_points?: number;
-  total_points?: number;
+  daily_coins?: number;
+  period_coins?: number;
   total_coins?: number;
   vanguard_tier?: string;
   vanguard_division?: number;
@@ -24,14 +23,7 @@ export interface RankEntry {
   best_tier?: string;
   last_tier?: string;
   last_division?: number;
-  // Weekly enhanced
   streak?: number;
-  prev_week_points?: number;
-  daily_breakdown?: { date: string; points: number }[];
-  // Monthly enhanced
-  best_division?: number;
-  period_days?: number;
-  // Total enhanced
   total_tokens?: number;
   total_claude_tokens?: number;
   total_codex_tokens?: number;
@@ -47,7 +39,7 @@ export interface TierDistEntry {
 
 export interface SearchResult {
   nickname: string;
-  total_points: number;
+  total_coins: number;
   last_tier: string;
   last_division: number | null;
   total_tokens: number;
@@ -75,7 +67,6 @@ export interface UserProfile {
   nickname: string;
   rank: number;
   total_users: number;
-  total_points: number;
   total_coins: number;
   last_tier: string;
   last_division: number | null;
@@ -87,7 +78,6 @@ export interface UserProfile {
 }
 
 interface PeriodStats {
-  points: number;
   coins: number;
   claude_tokens: number;
   codex_tokens: number;
@@ -96,7 +86,7 @@ interface PeriodStats {
 
 interface DayRecord {
   date: string;
-  daily_points: number;
+  daily_coins: number;
   vanguard_tier: string;
   vanguard_division: number | null;
   claude_tokens: number;
@@ -179,10 +169,7 @@ const UI_STRINGS: Record<string, [string, string]> = {
   "back": ["뱅가드", "Vanguard"],
   "member_since": ["가입일", "Member since"],
   "day_streak": ["일 연속", "day streak"],
-  "total_points": ["총 포인트", "Total Points"],
   "total_coins": ["총 코인", "Total Coins"],
-  "weekly_points": ["주간 포인트", "Weekly Points"],
-  "monthly_points": ["월간 포인트", "Monthly Points"],
   "weekly_tokens": ["주간 토큰", "Weekly Tokens"],
   "monthly_tokens": ["월간 토큰", "Monthly Tokens"],
   "history_30d": ["30일 기록", "30-Day History"],

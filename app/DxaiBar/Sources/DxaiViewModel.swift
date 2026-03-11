@@ -13,9 +13,9 @@ final class DxaiViewModel: ObservableObject {
     @Published var systemStatus: SystemStatus?
     @Published var scanResult: ScanResult?
     @Published var weeklyStats: [DxaiDatabase.DailyStats] = []
-    @Published var todayPoints: Int = 0
-    @Published var weeklyPoints: Int = 0
-    @Published var totalPoints: Int = 0
+    @Published var todayCoins: Int = 0
+    @Published var weeklyCoins: Int = 0
+    @Published var totalCoins: Int = 0
 
     var weeklyTokenTotal: Int {
         var cal = Calendar(identifier: .gregorian)
@@ -191,8 +191,8 @@ final class DxaiViewModel: ObservableObject {
 
         checkTokenMilestone()
 
-        // Vanguard Point 기록
-        updatePoints()
+        // Vanguard Coin 기록
+        updateCoins()
 
         // 백그라운드에서 주간 데이터 미리 로드
         Task.detached {
@@ -203,9 +203,9 @@ final class DxaiViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Vanguard Points
+    // MARK: - Vanguard Coins
 
-    private func updatePoints() {
+    private func updateCoins() {
         let ps = DxaiPointService.shared
         ps.finalizePreviousDay()
 
@@ -220,9 +220,9 @@ final class DxaiViewModel: ObservableObject {
             )
         }
 
-        todayPoints = ps.todayPoints
-        weeklyPoints = ps.weeklyPoints
-        totalPoints = ps.totalPoints
+        todayCoins = ps.todayCoins
+        weeklyCoins = ps.weeklyCoins
+        totalCoins = ps.totalCoins
 
         // 미제출 건 재시도
         ps.retryPendingSubmissions()

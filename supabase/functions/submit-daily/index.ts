@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const POINT_TABLE: Record<string, { base: number; bonus: number }> = {
+const COIN_TABLE: Record<string, { base: number; bonus: number }> = {
   Bronze:      { base: 10,   bonus: 2 },
   Silver:      { base: 25,   bonus: 5 },
   Gold:        { base: 60,   bonus: 12 },
@@ -11,11 +11,11 @@ const POINT_TABLE: Record<string, { base: number; bonus: number }> = {
   Grandmaster: { base: 1800, bonus: 360 },
 };
 
-const VALID_TIERS = [...Object.keys(POINT_TABLE), "Challenger"];
+const VALID_TIERS = [...Object.keys(COIN_TABLE), "Challenger"];
 
-function calculatePoints(tier: string, division: number | null): number {
+function calculateCoins(tier: string, division: number | null): number {
   if (tier === "Challenger") return 5000;
-  const entry = POINT_TABLE[tier];
+  const entry = COIN_TABLE[tier];
   if (!entry || division === null || division < 1 || division > 5) return 0;
   return entry.base + entry.bonus * (5 - division);
 }
@@ -60,13 +60,17 @@ serve(async (req: Request) => {
     device_uuid,
     nickname,
     date,
-    daily_points,
-    total_points,
+    daily_coins: clientCoins,
+    // backward compat: accept daily_points from old app versions
+    daily_points: legacyPoints,
     claude_tokens,
     codex_tokens,
     vanguard_tier,
     vanguard_division,
   } = body;
+
+  // Use daily_coins if present, fall back to daily_points for old clients
+  const daily_coins = clientCoins ?? legacyPoints;
 
   // --- Validation ---
 
@@ -90,8 +94,8 @@ serve(async (req: Request) => {
     return json({ ok: false, error: "date_out_of_range" }, 400);
   }
 
-  if (typeof daily_points !== "number" || daily_points < 0 || daily_points > 5000) {
-    return json({ ok: false, error: "invalid_daily_points" }, 400);
+  if (typeof daily_coins !== "number" || daily_coins < 0 || daily_coins > 5000) {
+    return json({ ok: false, error: "invalid_daily_coins" }, 400);
   }
 
   if (!VALID_TIERS.includes(vanguard_tier)) {
@@ -104,10 +108,10 @@ serve(async (req: Request) => {
     }
   }
 
-  // Points-tier matching verification
-  const expectedPoints = calculatePoints(vanguard_tier, vanguard_division ?? null);
-  if (daily_points !== expectedPoints) {
-    return json({ ok: false, error: "points_mismatch" }, 400);
+  // Coins-tier matching verification
+  const expectedCoins = calculateCoins(vanguard_tier, vanguard_division ?? null);
+  if (daily_coins !== expectedCoins) {
+    return json({ ok: false, error: "coins_mismatch" }, 400);
   }
 
   if (typeof claude_tokens !== "number" || claude_tokens < 0) {
@@ -140,7 +144,6 @@ serve(async (req: Request) => {
 
   if (existingUser) {
     userId = existingUser.id;
-    // Update nickname if changed (check uniqueness)
     if (existingUser.nickname !== nickname) {
       const { error: nickErr } = await supabase
         .from("users")
@@ -156,7 +159,6 @@ serve(async (req: Request) => {
         .eq("id", userId);
     }
   } else {
-    // New user
     const { data: newUser, error: insertErr } = await supabase
       .from("users")
       .insert({ device_uuid, nickname, last_tier: vanguard_tier, last_division: vanguard_division })
@@ -171,30 +173,29 @@ serve(async (req: Request) => {
     userId = newUser.id;
   }
 
-  // Upsert daily record (only update if higher points)
+  // Upsert daily record (only update if higher coins or changed tokens)
   const { data: existingRecord } = await supabase
     .from("daily_records")
-    .select("id, daily_points, claude_tokens, codex_tokens, vanguard_tier, vanguard_division")
+    .select("id, daily_coins, claude_tokens, codex_tokens, vanguard_tier, vanguard_division")
     .eq("user_id", userId)
     .eq("date", date)
     .single();
 
   if (existingRecord) {
     const shouldUpdate =
-      daily_points > existingRecord.daily_points ||
+      daily_coins > existingRecord.daily_coins ||
       claude_tokens !== existingRecord.claude_tokens ||
       codex_tokens !== existingRecord.codex_tokens;
     if (shouldUpdate) {
-      const newPoints = Math.max(daily_points, existingRecord.daily_points);
+      const newCoins = Math.max(daily_coins, existingRecord.daily_coins);
       await supabase
         .from("daily_records")
         .update({
-          daily_points: newPoints,
-          daily_coins: newPoints,
+          daily_coins: newCoins,
           claude_tokens,
           codex_tokens,
-          vanguard_tier: daily_points >= existingRecord.daily_points ? vanguard_tier : existingRecord.vanguard_tier,
-          vanguard_division: daily_points >= existingRecord.daily_points ? vanguard_division : existingRecord.vanguard_division,
+          vanguard_tier: daily_coins >= existingRecord.daily_coins ? vanguard_tier : existingRecord.vanguard_tier,
+          vanguard_division: daily_coins >= existingRecord.daily_coins ? vanguard_division : existingRecord.vanguard_division,
         })
         .eq("id", existingRecord.id);
     }
@@ -204,8 +205,7 @@ serve(async (req: Request) => {
       .insert({
         user_id: userId,
         date,
-        daily_points,
-        daily_coins: daily_points,
+        daily_coins,
         claude_tokens,
         codex_tokens,
         vanguard_tier,
@@ -213,29 +213,28 @@ serve(async (req: Request) => {
       });
   }
 
-  // Recalculate total_points and total_coins from daily_records
+  // Recalculate total_coins from daily_records
   const { data: sums } = await supabase
     .from("daily_records")
-    .select("daily_points, daily_coins")
+    .select("daily_coins")
     .eq("user_id", userId);
 
-  const totalPts = sums?.reduce((s, r) => s + r.daily_points, 0) ?? 0;
-  const totalCoins = sums?.reduce((s, r) => s + r.daily_coins, 0) ?? 0;
+  const totalCoins = sums?.reduce((s: any, r: any) => s + r.daily_coins, 0) ?? 0;
 
   await supabase
     .from("users")
-    .update({ total_points: totalPts, total_coins: totalCoins })
+    .update({ total_coins: totalCoins })
     .eq("id", userId);
 
-  // Get rank
+  // Get rank (by total_coins)
   const { count } = await supabase
     .from("users")
     .select("id", { count: "exact", head: true })
-    .gt("total_points", totalPts);
+    .gt("total_coins", totalCoins);
 
   const rank = (count ?? 0) + 1;
 
-  return json({ ok: true, total_points: totalPts, total_coins: totalCoins, rank });
+  return json({ ok: true, total_coins: totalCoins, rank });
 });
 
 function json(data: any, status = 200) {
