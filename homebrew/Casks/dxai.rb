@@ -1,4 +1,4 @@
-cask "dxaibar" do
+cask "dxai" do
   version :latest
   sha256 :no_check
 
@@ -18,5 +18,6 @@ cask "dxaibar" do
   zap trash: [
     "~/Library/Preferences/com.dxai.DxaiBar.plist",
     "~/Library/Caches/com.dxai.DxaiBar",
+    "~/.config/dxai",
   ]
 end

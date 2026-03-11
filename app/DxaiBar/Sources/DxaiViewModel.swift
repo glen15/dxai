@@ -640,6 +640,11 @@ final class DxaiViewModel: ObservableObject {
     }
 
     private nonisolated static func findDxaiPath() -> String {
+        // 1. 앱 번들 내 CLI 우선
+        if let bundled = Bundle.main.path(forResource: "dxai", ofType: nil, inDirectory: "bin") {
+            return bundled
+        }
+        // 2. Homebrew / 시스템 경로
         let candidates = [
             "/opt/homebrew/bin/dxai",
             "/usr/local/bin/dxai",
@@ -649,6 +654,7 @@ final class DxaiViewModel: ObservableObject {
                 return path
             }
         }
+        // 3. 개발 경로
         let devPath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Desktop/work/dxai/dxai").path
         if FileManager.default.fileExists(atPath: devPath) {
