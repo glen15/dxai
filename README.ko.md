@@ -51,27 +51,15 @@ dxai uninstall         # 숨김 파일 포함 전체 앱 제거
 
 ## 설치
 
-### 메뉴바 앱 (권장)
-
 ```bash
-brew tap glen15/dxai
-brew install --cask dxaibar
+brew tap glen15/dxai && brew install --cask dxai
 ```
 
-### CLI만 설치
-
-```bash
-brew tap glen15/dxai
-brew install dxai
-```
+메뉴바 앱 + CLI가 함께 설치됩니다.
 
 ### 소스에서 빌드
 
 ```bash
-# CLI
-curl -fsSL https://raw.githubusercontent.com/glen15/dxai/main/install.sh | bash
-
-# 메뉴바 앱
 cd app/DxaiBar
 ./scripts/build-app.sh release
 open build/DxaiBar.app
@@ -138,7 +126,7 @@ dxai/
 │           └── build-app.sh
 ├── homebrew/
 │   ├── Formula/dxai.rb      # Homebrew formula (CLI)
-│   └── Casks/dxaibar.rb     # Homebrew cask (메뉴바 앱)
+│   └── Casks/dxai.rb        # Homebrew cask (메뉴바 앱 + CLI 번들)
 └── .github/workflows/
     └── release.yml           # CI/CD: 빌드 + 릴리스 + Homebrew 업데이트
 ```
