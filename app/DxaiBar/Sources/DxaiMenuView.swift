@@ -1113,14 +1113,26 @@ struct DxaiMenuView: View {
                               startPoint: .leading, endPoint: .trailing)
     }
 
+    /// 현재 티어 내 전체 진행률 (div5=0%~div1=80%~다음티어=100%)
     private var vanguardProgress: Double {
         let tokens = viewModel.todayTokens
-        guard let next = DxaiViewModel.VanguardLevel.nextLevel(after: viewModel.vanguardLevel) else {
+        guard let current = viewModel.vanguardLevel else { return 0 }
+        let allLevels = DxaiViewModel.VanguardLevel.all
+        let currentTier = current.tier
+
+        // 같은 티어의 첫 레벨(div5)과 다음 티어 첫 레벨 찾기
+        guard let tierStart = allLevels.first(where: { $0.tier == currentTier }) else { return 0 }
+        let tierEnd: Int
+        if let nextTierLevel = allLevels.first(where: { $0.tier != currentTier && $0.threshold > tierStart.threshold }) {
+            tierEnd = nextTierLevel.threshold
+        } else {
+            // Challenger — 최고 티어
             return 1.0
         }
-        let prev = viewModel.vanguardLevel?.threshold ?? 0
-        guard next.threshold > prev else { return 1.0 }
-        return min(1.0, Double(tokens - prev) / Double(next.threshold - prev))
+
+        let range = tierEnd - tierStart.threshold
+        guard range > 0 else { return 1.0 }
+        return min(1.0, max(0, Double(tokens - tierStart.threshold) / Double(range)))
     }
 
     private func quotaColor(_ pct: Int) -> Color {
