@@ -20,6 +20,7 @@ import {
   vanguardMessage,
   tokenMilestone,
   tierProgress,
+  calculateLevel,
   TIER_THRESHOLDS,
   t,
 } from "@/lib/supabase";
@@ -70,6 +71,7 @@ function PodiumCard({ entry, lang, diff, type }: {
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
+  const { level } = calculateLevel(claude + codex);
   const message = vanguardMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
@@ -109,12 +111,15 @@ function PodiumCard({ entry, lang, diff, type }: {
           <span className={`font-mono text-3xl font-bold ${rankColors[entry.rank - 1]}`}>
             {rankLabels[entry.rank - 1]}
           </span>
-          <a
-            href={`/user/${entry.nickname}`}
-            className="block text-base font-semibold mt-1 hover:text-purple-400 transition-colors cursor-pointer"
-          >
-            {entry.nickname}
-          </a>
+          <div className="flex items-center gap-2 mt-1">
+            <a
+              href={`/user/${entry.nickname}`}
+              className="text-base font-semibold hover:text-purple-400 transition-colors cursor-pointer"
+            >
+              {entry.nickname}
+            </a>
+            <span className="font-mono text-xs text-violet-400/80 bg-violet-400/10 px-1.5 py-0.5 rounded">Lv.{level}</span>
+          </div>
         </div>
         <TierBadge tier={tier} division={division} />
       </div>
@@ -172,6 +177,7 @@ function RankRow({ entry, lang, diff, index }: {
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
+  const { level } = calculateLevel(claude + codex);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;
@@ -188,13 +194,14 @@ function RankRow({ entry, lang, diff, index }: {
       </td>
       <td className="py-3 px-5">
         <div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
             <a
               href={`/user/${entry.nickname}`}
               className="text-base text-white/90 group-hover:text-white transition-colors cursor-pointer"
             >
               {entry.nickname}
             </a>
+            <span className="font-mono text-[10px] text-violet-400/80 bg-violet-400/10 px-1 py-0.5 rounded">Lv.{level}</span>
             <span className="font-mono text-xs text-white/40">{formatHeroTokens(claude + codex, lang)}</span>
           </div>
           {milestone && (
