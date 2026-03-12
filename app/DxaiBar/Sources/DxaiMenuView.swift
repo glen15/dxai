@@ -210,8 +210,6 @@ struct DxaiMenuView: View {
                             .foregroundColor(.yellow)
                             .padding(.trailing, 5)
 
-                        pointChip(l.coinsToday, "+\(viewModel.todayCoins)")
-                        dotSeparator
                         pointChip(l.coinsWeekly, "\(viewModel.weeklyCoins)")
                         dotSeparator
                         pointChip(l.coinsTotal, "\(formatNumber(viewModel.totalCoins))")
