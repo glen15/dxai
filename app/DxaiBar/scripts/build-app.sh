@@ -119,8 +119,50 @@ fi
 # PkgInfo
 printf "APPL????" > "$APP_DIR/Contents/PkgInfo"
 
-# Ad-hoc code sign
-codesign -s - --force --deep "$APP_DIR" 2> /dev/null || true
+# Code signing
+SIGN_IDENTITY="Developer ID Application: JEONGHUN LEE (Y6DMY4SBGN)"
+TEAM_ID="Y6DMY4SBGN"
+
+# Entitlements for hardened runtime
+ENTITLEMENTS="$PROJECT_DIR/build/entitlements.plist"
+cat > "$ENTITLEMENTS" << 'ENTPLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>
+ENTPLIST
+
+if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
+    echo "Signing with Developer ID..."
+    # Sign all embedded binaries first (inside-out)
+    find "$APP_DIR/Contents/Resources" -type f -perm +111 | while read -r bin; do
+        if file "$bin" | grep -q "Mach-O"; then
+            echo "  Signing: $(basename "$bin")"
+            codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+                --sign "$SIGN_IDENTITY" --timestamp "$bin"
+        fi
+    done
+    # Sign main executable
+    codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+        --sign "$SIGN_IDENTITY" --timestamp \
+        "$APP_DIR/Contents/MacOS/$APP_NAME"
+    # Sign the app bundle
+    codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+        --sign "$SIGN_IDENTITY" --timestamp \
+        "$APP_DIR"
+    codesign --verify --deep --strict "$APP_DIR"
+    echo "Code signing verified"
+else
+    echo "Developer ID not found, using ad-hoc signing..."
+    codesign -s - --force --deep "$APP_DIR" 2> /dev/null || true
+fi
+rm -f "$ENTITLEMENTS"
 
 echo ""
 echo "Built: $APP_DIR"
@@ -141,3 +183,23 @@ rm -f "$ZIP_PATH"
 cd "$PROJECT_DIR/build"
 ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME.zip"
 echo "Zip: $ZIP_PATH ($(du -sh "$ZIP_PATH" | cut -f1))"
+
+# Notarization
+if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
+    echo ""
+    echo "Submitting for notarization..."
+    if xcrun notarytool submit "$ZIP_PATH" \
+        --apple-id "glen15@naver.com" \
+        --team-id "$TEAM_ID" \
+        --keychain-profile "dxai-notary" \
+        --wait; then
+        echo "Notarization succeeded, stapling..."
+        xcrun stapler staple "$APP_DIR"
+        # Re-create zip with stapled app
+        rm -f "$ZIP_PATH"
+        ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME.zip"
+        echo "Stapled zip: $ZIP_PATH ($(du -sh "$ZIP_PATH" | cut -f1))"
+    else
+        echo "Warning: Notarization failed. App is signed but not notarized."
+    fi
+fi
