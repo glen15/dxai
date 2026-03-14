@@ -17,6 +17,9 @@ final class DxaiViewModel: ObservableObject {
     @Published var weeklyCoins: Int = 0
     @Published var totalCoins: Int = 0
 
+    private var isLoadingWeekly = false
+    private var lastWeeklyRefresh: Date = .distantPast
+
     var weeklyTokenTotal: Int {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
@@ -194,11 +197,17 @@ final class DxaiViewModel: ObservableObject {
         // Vanguard Coin 기록
         updateCoins()
 
-        // 백그라운드에서 주간 데이터 미리 로드
-        Task.detached {
-            let weekly = db.weeklyStats()
-            await MainActor.run { [weak self] in
-                self?.weeklyStats = weekly
+        // 백그라운드에서 주간 데이터 로드 (5분 간격, 중복 실행 방지)
+        let now = Date()
+        if !isLoadingWeekly && now.timeIntervalSince(lastWeeklyRefresh) >= 300 {
+            isLoadingWeekly = true
+            Task.detached {
+                let weekly = db.weeklyStats()
+                await MainActor.run { [weak self] in
+                    self?.weeklyStats = weekly
+                    self?.isLoadingWeekly = false
+                    self?.lastWeeklyRefresh = Date()
+                }
             }
         }
     }

@@ -6,6 +6,10 @@ final class DxaiDatabase {
 
     private let home = FileManager.default.homeDirectoryForCurrentUser
 
+    // Weekly stats 캐시 — 파일 변경 없으면 재파싱 안 함
+    private var weeklyCache: [DailyStats]?
+    private var weeklyCacheFingerprint: String?
+
     struct DailyStats {
         let date: String
         let tool: String
@@ -191,6 +195,12 @@ final class DxaiDatabase {
         cal.timeZone = .current
         let endDate = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date()))!
 
+        // 파일 변경 감지 — jsonl 파일 수 + 최신 수정 시간으로 핑거프린트
+        let fingerprint = jsonlFingerprint()
+        if let cached = weeklyCache, weeklyCacheFingerprint == fingerprint {
+            return cached
+        }
+
         let claudeByDate = parseClaude(from: startDate, to: endDate)
         let codexByDate = parseCodex(from: startDate, to: endDate)
 
@@ -215,7 +225,37 @@ final class DxaiDatabase {
                 requests: x.requests
             ))
         }
+
+        weeklyCache = results
+        weeklyCacheFingerprint = fingerprint
         return results
+    }
+
+    /// jsonl 파일들의 수 + 최신 수정시간으로 변경 여부 판단
+    private func jsonlFingerprint() -> String {
+        var count = 0
+        var latestMod: TimeInterval = 0
+
+        let dirs = [
+            home.appendingPathComponent(".claude/projects"),
+            home.appendingPathComponent(".codex/sessions"),
+        ]
+        for dir in dirs {
+            guard let enumerator = FileManager.default.enumerator(
+                at: dir,
+                includingPropertiesForKeys: [.contentModificationDateKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for case let url as URL in enumerator {
+                guard url.pathExtension == "jsonl" else { continue }
+                count += 1
+                if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+                   let mdate = vals.contentModificationDate {
+                    latestMod = max(latestMod, mdate.timeIntervalSince1970)
+                }
+            }
+        }
+        return "\(count)-\(latestMod)"
     }
 
     private func parseClaude(from startDate: Date, to endDate: Date) -> [String: TokenAccum] {
