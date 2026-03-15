@@ -153,7 +153,9 @@ struct ScanResult {
 struct ScanPanelView: View {
     let scan: ScanResult
     @AppStorage("appLanguage") private var lang = "en"
+    @Environment(\.colorScheme) private var scheme
     private var l: L { L(lang) }
+    private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
     var body: some View {
         ScrollView {
@@ -187,7 +189,7 @@ struct ScanPanelView: View {
         HStack(alignment: .center, spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.purple.opacity(0.1))
+                    .fill(Color.purple.opacity(colors.bgChip))
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundColor(.purple)
@@ -201,7 +203,7 @@ struct ScanPanelView: View {
                 HStack(spacing: 10) {
                     summaryChip(icon: "star.fill",
                                 text: l.skillChip(scan.global.skills.count),
-                                color: .yellow)
+                                color: colors.accent)
                     summaryChip(icon: "server.rack",
                                 text: l.mcpChip(scan.global.mcpServers.count),
                                 color: .blue)
@@ -232,7 +234,7 @@ struct ScanPanelView: View {
             Text(text)
         }
         .font(.system(size: 12))
-        .foregroundColor(color.opacity(0.8))
+        .foregroundColor(color)
     }
 
     // MARK: - Global Setup
@@ -246,13 +248,13 @@ struct ScanPanelView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "doc.text")
                         .font(.system(size: 12))
-                        .foregroundColor(.purple.opacity(0.7))
+                        .foregroundColor(.purple.opacity(colors.textCaption))
                         .frame(width: 16)
                     Text("CLAUDE.md")
                         .font(.system(size: 13, weight: .medium, design: .monospaced))
                     Text(l.globalDirectives)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary.opacity(0.5))
+                        .foregroundColor(.secondary.opacity(colors.textSub))
                     Spacer()
                     Text(l.nLines(scan.global.claudeMdLines))
                         .font(.system(size: 12, design: .monospaced))
@@ -266,13 +268,13 @@ struct ScanPanelView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 12))
-                            .foregroundColor(.yellow.opacity(0.8))
+                            .foregroundColor(colors.accent)
                             .frame(width: 16)
                         Text(l.skills)
                             .font(.system(size: 13, weight: .medium))
                         Text(l.slashExtensions)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(colors.textSub))
                         Spacer()
                         Text(l.nItems(scan.global.skills.count))
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -288,13 +290,13 @@ struct ScanPanelView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "server.rack")
                             .font(.system(size: 12))
-                            .foregroundColor(.blue.opacity(0.8))
+                            .foregroundColor(.blue)
                             .frame(width: 16)
                         Text(l.mcpServers)
                             .font(.system(size: 13, weight: .medium))
                         Text(l.externalTools)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(colors.textSub))
                         Spacer()
                         Text(l.nItems(scan.global.mcpServers.count))
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -310,13 +312,13 @@ struct ScanPanelView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "command")
                             .font(.system(size: 12))
-                            .foregroundColor(.green.opacity(0.8))
+                            .foregroundColor(.green)
                             .frame(width: 16)
                         Text(l.customCommands)
                             .font(.system(size: 13, weight: .medium))
                         Text(l.automationCmds)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(colors.textSub))
                         Spacer()
                         Text(l.nItems(scan.global.commands.count))
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -344,8 +346,8 @@ struct ScanPanelView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(Color.yellow.opacity(0.08))
-                .foregroundColor(.yellow.opacity(0.9))
+                .background(colors.accent.opacity(colors.bgSubtle))
+                .foregroundColor(colors.accentText)
                 .cornerRadius(4)
             }
         }
@@ -359,8 +361,8 @@ struct ScanPanelView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color.blue.opacity(0.08))
-                    .foregroundColor(.blue.opacity(0.9))
+                    .background(Color.blue.opacity(colors.bgSubtle))
+                    .foregroundColor(.blue)
                     .cornerRadius(4)
             }
         }
@@ -374,8 +376,8 @@ struct ScanPanelView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color.green.opacity(0.08))
-                    .foregroundColor(.green.opacity(0.9))
+                    .background(Color.green.opacity(colors.bgSubtle))
+                    .foregroundColor(.green)
                     .cornerRadius(4)
             }
         }
@@ -394,7 +396,7 @@ struct ScanPanelView: View {
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(sessionColor(session.tool).opacity(0.12))
+                        .background(sessionColor(session.tool).opacity(colors.bgCard))
                         .foregroundColor(sessionColor(session.tool))
                         .cornerRadius(4)
 
@@ -406,7 +408,7 @@ struct ScanPanelView: View {
 
                     Text("PID \(session.pid)")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.5))
+                        .foregroundColor(.secondary.opacity(colors.textSub))
                 }
             }
         }
@@ -436,7 +438,7 @@ struct ScanPanelView: View {
                         if let repo = project.gitRepo {
                             Text(repo)
                                 .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.secondary.opacity(0.5))
+                                .foregroundColor(.secondary.opacity(colors.textSub))
                                 .lineLimit(1)
                         }
                     }
@@ -446,12 +448,12 @@ struct ScanPanelView: View {
                         HStack(spacing: 6) {
                             Text(project.gitLastTime ?? "")
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.secondary.opacity(0.4))
+                                .foregroundColor(.secondary.opacity(colors.textMuted))
                                 .frame(minWidth: 50, alignment: .leading)
 
                             Text(commit)
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary.opacity(0.6))
+                                .foregroundColor(.secondary.opacity(colors.textDim))
                                 .lineLimit(1)
                         }
                         .padding(.leading, 20)
@@ -463,7 +465,7 @@ struct ScanPanelView: View {
                         HStack(spacing: 5) {
                             Text(l.configLabel)
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary.opacity(0.4))
+                                .foregroundColor(.secondary.opacity(colors.textMuted))
                             ForEach(badges, id: \.text) { badge in
                                 HStack(spacing: 3) {
                                     Image(systemName: badge.icon)
@@ -471,10 +473,10 @@ struct ScanPanelView: View {
                                     Text(badge.text)
                                         .font(.system(size: 10))
                                 }
-                                .foregroundColor(badge.color.opacity(0.8))
+                                .foregroundColor(badge.color)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(badge.color.opacity(0.08))
+                                .background(badge.color.opacity(colors.bgSubtle))
                                 .cornerRadius(3)
                             }
                         }
@@ -487,7 +489,7 @@ struct ScanPanelView: View {
             if scan.projects.count > 10 {
                 Text(l.moreProjects(scan.projects.count - 10))
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .foregroundColor(.secondary.opacity(colors.textMuted))
                     .padding(.leading, 20)
             }
         }
@@ -530,7 +532,7 @@ struct ScanPanelView: View {
             badges.append(Badge(
                 icon: "star.fill",
                 text: "\(l.skills) \(l.nItems(project.skills.count))",
-                color: .yellow
+                color: colors.accent
             ))
         }
 
@@ -557,14 +559,14 @@ struct ScanPanelView: View {
 
                     Text(projectName(port.cwd))
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.6))
+                        .foregroundColor(.secondary.opacity(colors.textDim))
                         .lineLimit(1)
 
                     Spacer()
 
                     Text("PID \(port.pid)")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundColor(.secondary.opacity(colors.textMuted))
                 }
             }
         }
@@ -575,7 +577,7 @@ struct ScanPanelView: View {
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
             .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(.secondary.opacity(0.6))
+            .foregroundColor(.secondary.opacity(colors.textDim))
     }
 
     private func sessionColor(_ tool: String) -> Color {
