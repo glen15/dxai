@@ -4,7 +4,9 @@ import UserNotifications
 struct SettingsView: View {
     @ObservedObject var viewModel: DxaiViewModel
     @AppStorage("appLanguage") private var lang = "en"
+    @Environment(\.colorScheme) private var scheme
     private var l: L { L(lang) }
+    private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
     @State private var nickname: String = DxaiPointService.shared.config.nickname
     @State private var optIn: Bool = DxaiPointService.shared.config.optIn
@@ -98,8 +100,8 @@ struct SettingsView: View {
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color.yellow.opacity(0.1))
-                        .foregroundColor(.yellow)
+                        .background(colors.accent.opacity(colors.bgChip))
+                        .foregroundColor(colors.accent)
                         .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
@@ -135,13 +137,13 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(l.settingsNotCollected)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.red.opacity(0.7))
+                    .foregroundColor(.red.opacity(colors.textCaption))
 
                 ForEach(l.settingsNotCollectedItems, id: \.self) { item in
                     HStack(spacing: 4) {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.red.opacity(0.5))
+                            .foregroundColor(.red.opacity(colors.textSub))
                         Text(item)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
