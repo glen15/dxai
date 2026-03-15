@@ -134,34 +134,36 @@ struct SettingsView: View {
                 Divider()
             }
 
-            // Updates
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Toggle(isOn: Binding(
-                        get: { updaterManager.automaticallyChecksForUpdates },
-                        set: { updaterManager.automaticallyChecksForUpdates = $0 }
-                    )) {
-                        Text(lang == "ko" ? "자동 업데이트 확인" : "Check for updates automatically")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .toggleStyle(.switch)
-                }
-
-                HStack(spacing: 8) {
-                    Button(action: { updaterManager.checkForUpdates() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 10))
-                            Text(lang == "ko" ? "업데이트 확인" : "Check Now")
-                                .font(.system(size: 12, weight: .medium))
+            // Updates (릴리스 빌드에서만 표시)
+            if updaterManager.isAvailable {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Toggle(isOn: Binding(
+                            get: { updaterManager.automaticallyChecksForUpdates },
+                            set: { updaterManager.automaticallyChecksForUpdates = $0 }
+                        )) {
+                            Text(lang == "ko" ? "자동 업데이트 확인" : "Check for updates automatically")
+                                .font(.system(size: 13, weight: .semibold))
                         }
+                        .toggleStyle(.switch)
                     }
-                    .disabled(!updaterManager.canCheckForUpdates)
 
-                    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-                        Text("v\(version)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary)
+                    HStack(spacing: 8) {
+                        Button(action: { updaterManager.checkForUpdates() }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 10))
+                                Text(lang == "ko" ? "업데이트 확인" : "Check Now")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                        }
+                        .disabled(!updaterManager.canCheckForUpdates)
+
+                        if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+                            Text("v\(version)")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }
