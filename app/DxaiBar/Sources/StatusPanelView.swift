@@ -140,6 +140,8 @@ struct SystemStatus {
 
 struct StatusPanelView: View {
     let status: SystemStatus
+    @Environment(\.colorScheme) private var scheme
+    private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
     var body: some View {
         ScrollView {
@@ -171,7 +173,7 @@ struct StatusPanelView: View {
         HStack(alignment: .center, spacing: 14) {
             ZStack {
                 Circle()
-                    .stroke(healthColor.opacity(0.15), lineWidth: 5)
+                    .stroke(healthColor.opacity(colors.bgTrack), lineWidth: 5)
                 Circle()
                     .trim(from: 0, to: CGFloat(status.healthScore) / 100)
                     .stroke(healthColor,
@@ -217,7 +219,7 @@ struct StatusPanelView: View {
             Text(text)
         }
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.7))
+        .foregroundColor(.secondary.opacity(colors.textCaption))
     }
 
     // MARK: - Metrics
@@ -269,7 +271,7 @@ struct StatusPanelView: View {
                     }
                     if status.eCoreCount > 0 {
                         Rectangle()
-                            .fill(Color.secondary.opacity(0.2))
+                            .fill(Color.secondary.opacity(colors.bgTrack))
                             .frame(width: 1, height: 18)
                             .padding(.horizontal, 4)
                     }
@@ -298,14 +300,14 @@ struct StatusPanelView: View {
                 HStack(spacing: 6) {
                     if status.pCoreCount > 0 {
                         HStack(spacing: 2) {
-                            Circle().fill(Color.blue.opacity(0.6))
+                            Circle().fill(Color.blue.opacity(colors.textDim))
                                 .frame(width: 5, height: 5)
                             Text("P")
                         }
                     }
                     if status.eCoreCount > 0 {
                         HStack(spacing: 2) {
-                            Circle().fill(Color.teal.opacity(0.6))
+                            Circle().fill(Color.teal.opacity(colors.textDim))
                                 .frame(width: 5, height: 5)
                             Text("E")
                         }
@@ -339,10 +341,10 @@ struct StatusPanelView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(color.opacity(0.12))
+                        .fill(color.opacity(colors.bgCard))
                     RoundedRectangle(cornerRadius: 3)
                         .fill(LinearGradient(
-                            colors: [color.opacity(0.7), color],
+                            colors: [color.opacity(colors.textCaption), color],
                             startPoint: .leading, endPoint: .trailing))
                         .frame(width: max(pct > 0 ? 2 : 0,
                                           geo.size.width * CGFloat(min(pct, 100)) / 100))
@@ -369,13 +371,13 @@ struct StatusPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("NETWORK")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundColor(.secondary.opacity(colors.textSub))
 
             ForEach(status.networks) { net in
                 HStack(spacing: 0) {
                     Image(systemName: "network")
                         .font(.system(size: 10))
-                        .foregroundColor(.blue.opacity(0.7))
+                        .foregroundColor(.blue.opacity(colors.textCaption))
                         .frame(width: 16)
                     Text(net.name)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -411,7 +413,7 @@ struct StatusPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("TOP PROCESSES")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundColor(.secondary.opacity(colors.textSub))
 
             let maxCPU = max(status.topProcesses.map(\.cpu).max() ?? 1, 1)
 
@@ -424,7 +426,7 @@ struct StatusPanelView: View {
                     GeometryReader { geo in
                         RoundedRectangle(cornerRadius: 2)
                             .fill(LinearGradient(
-                                colors: [.purple.opacity(0.4), .purple.opacity(0.7)],
+                                colors: [.purple.opacity(colors.textMuted), .purple.opacity(colors.textCaption)],
                                 startPoint: .leading, endPoint: .trailing))
                             .frame(width: max(2, geo.size.width * CGFloat(proc.cpu / maxCPU)))
                     }
@@ -447,40 +449,40 @@ struct StatusPanelView: View {
                     .font(.system(size: 9))
                 Text("Up \(status.uptime)")
             }
-            Text("\u{00B7}").foregroundColor(.secondary.opacity(0.3))
+            Text("\u{00B7}").foregroundColor(.secondary.opacity(colors.textFaint))
             HStack(spacing: 4) {
                 Image(systemName: "gearshape.2")
                     .font(.system(size: 9))
                 Text("\(status.processCount) procs")
             }
             if !status.refreshRate.isEmpty {
-                Text("\u{00B7}").foregroundColor(.secondary.opacity(0.3))
+                Text("\u{00B7}").foregroundColor(.secondary.opacity(colors.textFaint))
                 Text(status.refreshRate)
             }
             Spacer()
         }
         .font(.system(size: 10, design: .monospaced))
-        .foregroundColor(.secondary.opacity(0.5))
+        .foregroundColor(.secondary.opacity(colors.textSub))
     }
 
     // MARK: - Helpers
 
     private var healthColor: Color {
         if status.healthScore >= 80 { return .green }
-        if status.healthScore >= 50 { return .yellow }
+        if status.healthScore >= 50 { return colors.warning }
         if status.healthScore >= 30 { return .orange }
         return .red
     }
 
     private var memoryColor: Color {
         if status.memPercent >= 85 { return .red }
-        if status.memPercent >= 70 { return .yellow }
+        if status.memPercent >= 70 { return colors.warning }
         return .green
     }
 
     private var batteryColor: Color {
         if status.batteryPercent >= 50 { return .green }
-        if status.batteryPercent >= 20 { return .yellow }
+        if status.batteryPercent >= 20 { return colors.warning }
         return .red
     }
 
