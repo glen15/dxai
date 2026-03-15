@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import Sparkle
 
 @main
 struct DxaiBarApp: App {
     @StateObject private var viewModel = DxaiViewModel()
+    @StateObject private var updaterManager = UpdaterManager()
 
     init() {
         // 첫 실행 시 자동시작 등록
@@ -35,7 +37,7 @@ struct DxaiBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            DxaiMenuView(viewModel: viewModel)
+            DxaiMenuView(viewModel: viewModel, updaterManager: updaterManager)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "sparkles")

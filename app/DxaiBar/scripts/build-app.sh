@@ -73,6 +73,10 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <true/>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>SUFeedURL</key>
+    <string>https://glen15.github.io/dxai/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>wZ77Vb+gcsLFFNNumqor98VzKd7tFODOzfLU64IcptI=</string>
 </dict>
 </plist>
 PLIST
@@ -116,6 +120,24 @@ if [[ -d "$ICONSET_DIR" ]]; then
     fi
 fi
 
+# Bundle Sparkle.framework
+BIN_PATH="$(swift build $BUILD_FLAGS --show-bin-path)"
+SPARKLE_FRAMEWORK="$BIN_PATH/Sparkle.framework"
+if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
+    mkdir -p "$APP_DIR/Contents/Frameworks"
+    cp -R "$SPARKLE_FRAMEWORK" "$APP_DIR/Contents/Frameworks/"
+    echo "Sparkle.framework bundled"
+else
+    echo "Warning: Sparkle.framework not found at $SPARKLE_FRAMEWORK"
+    # Try xcframework artifact path
+    ALT_SPARKLE="$PROJECT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+    if [[ -d "$ALT_SPARKLE" ]]; then
+        mkdir -p "$APP_DIR/Contents/Frameworks"
+        cp -R "$ALT_SPARKLE" "$APP_DIR/Contents/Frameworks/"
+        echo "Sparkle.framework bundled (alt path)"
+    fi
+fi
+
 # PkgInfo
 printf "APPL????" > "$APP_DIR/Contents/PkgInfo"
 
@@ -140,7 +162,27 @@ ENTPLIST
 
 if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
     echo "Signing with Developer ID..."
-    # Sign all embedded binaries first (inside-out)
+    # Sign Sparkle frameworks first (inside-out)
+    if [[ -d "$APP_DIR/Contents/Frameworks/Sparkle.framework" ]]; then
+        # Sign XPC services inside Sparkle
+        find "$APP_DIR/Contents/Frameworks/Sparkle.framework" -name "*.xpc" -type d | while read -r xpc; do
+            echo "  Signing XPC: $(basename "$xpc")"
+            codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+                --sign "$SIGN_IDENTITY" --timestamp "$xpc"
+        done
+        # Sign Sparkle Autoupdate app
+        find "$APP_DIR/Contents/Frameworks/Sparkle.framework" -name "*.app" -type d | while read -r app; do
+            echo "  Signing: $(basename "$app")"
+            codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+                --sign "$SIGN_IDENTITY" --timestamp "$app"
+        done
+        # Sign the framework itself
+        echo "  Signing: Sparkle.framework"
+        codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+            --sign "$SIGN_IDENTITY" --timestamp \
+            "$APP_DIR/Contents/Frameworks/Sparkle.framework"
+    fi
+    # Sign all embedded binaries (inside-out)
     find "$APP_DIR/Contents/Resources" -type f -perm +111 | while read -r bin; do
         if file "$bin" | grep -q "Mach-O"; then
             echo "  Signing: $(basename "$bin")"

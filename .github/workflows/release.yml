@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   build:
@@ -58,6 +59,9 @@ jobs:
     name: Build DxaiBar.app
     needs: [build]
     runs-on: macos-15
+    outputs:
+      ed_signature: ${{ steps.sparkle_sign.outputs.ed_signature }}
+      zip_length: ${{ steps.sparkle_sign.outputs.length }}
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -128,6 +132,24 @@ jobs:
           cd app/DxaiBar
           DXAI_VERSION=${{ steps.version.outputs.version }} ./scripts/build-app.sh release
 
+      - name: Sign zip with Sparkle EdDSA
+        id: sparkle_sign
+        env:
+          SPARKLE_EDDSA_KEY: ${{ secrets.SPARKLE_EDDSA_KEY }}
+        run: |
+          brew install sparkle
+          xattr -cr "$(brew --prefix)/Caskroom/sparkle/*/bin/"* 2>/dev/null || true
+          SIGN_UPDATE="$(find "$(brew --prefix)/Caskroom/sparkle" -name sign_update -type f | head -1)"
+          echo "$SPARKLE_EDDSA_KEY" > "$RUNNER_TEMP/sparkle_key"
+          SIGN_OUTPUT=$("$SIGN_UPDATE" app/DxaiBar/build/DxaiBar.zip -f "$RUNNER_TEMP/sparkle_key")
+          rm -f "$RUNNER_TEMP/sparkle_key"
+          ED_SIG=$(echo "$SIGN_OUTPUT" | sed -n 's/.*edSignature="\([^"]*\)".*/\1/p')
+          LENGTH=$(echo "$SIGN_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+          echo "ed_signature=$ED_SIG" >> $GITHUB_OUTPUT
+          echo "length=$LENGTH" >> $GITHUB_OUTPUT
+          echo "EdDSA signature: $ED_SIG"
+          echo "Length: $LENGTH"
+
       - name: Clean up keychain
         if: always()
         run: |
@@ -173,6 +195,66 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+  update-appcast:
+    name: Update Sparkle Appcast
+    needs: [build-app, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+        with:
+          ref: gh-pages
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#V}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate appcast.xml
+        env:
+          ED_SIGNATURE: ${{ needs.build-app.outputs.ed_signature }}
+          ZIP_LENGTH: ${{ needs.build-app.outputs.zip_length }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          DOWNLOAD_URL="https://github.com/glen15/dxai/releases/download/${TAG}/DxaiBar.zip"
+          PUB_DATE=$(date -u '+%a, %d %b %Y %H:%M:%S %z')
+          cat > appcast.xml << APPCAST_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>DxaiBar Updates</title>
+              <link>https://glen15.github.io/dxai/appcast.xml</link>
+              <language>en</language>
+              <item>
+                <title>Version ${VERSION}</title>
+                <pubDate>${PUB_DATE}</pubDate>
+                <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+                <enclosure
+                  url="${DOWNLOAD_URL}"
+                  sparkle:version="${VERSION}"
+                  sparkle:shortVersionString="${VERSION}"
+                  sparkle:edSignature="${ED_SIGNATURE}"
+                  length="${ZIP_LENGTH}"
+                  type="application/octet-stream" />
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+          echo "Generated appcast.xml for version ${VERSION}"
+          cat appcast.xml
+
+      - name: Commit and push appcast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git commit -m "chore: appcast.xml 업데이트 v${VERSION}" || echo "No changes to commit"
+          git push
 
   update-formula:
     runs-on: ubuntu-latest

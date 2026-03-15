@@ -56,6 +56,7 @@ enum ToolTheme {
 
 struct DxaiMenuView: View {
     @ObservedObject var viewModel: DxaiViewModel
+    @ObservedObject var updaterManager: UpdaterManager
     @State private var hoveredAction: String?
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showAbout = false
@@ -1069,7 +1070,7 @@ struct DxaiMenuView: View {
 
             Divider()
 
-            SettingsView(viewModel: viewModel)
+            SettingsView(viewModel: viewModel, updaterManager: updaterManager)
 
             Divider()
 
