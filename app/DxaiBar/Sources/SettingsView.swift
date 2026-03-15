@@ -90,10 +90,19 @@ struct SettingsView: View {
                             NSWorkspace.shared.open(url)
                         }
                     }) {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 12))
+                        HStack(spacing: 3) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 9))
+                            Text(l.leaderboard)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.yellow.opacity(0.1))
+                        .foregroundColor(.yellow)
+                        .cornerRadius(4)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.plain)
                     .help(lang == "ko" ? "랭킹 페이지 열기" : "Open ranking page")
                 }
             }

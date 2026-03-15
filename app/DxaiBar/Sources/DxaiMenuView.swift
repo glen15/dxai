@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import UserNotifications
 
 // MARK: - Theme
 
@@ -60,6 +61,7 @@ struct DxaiMenuView: View {
     @State private var showAbout = false
     @State private var showInsights = false
     @State private var showSettings = false
+    @State private var showNotifOffWarning = false
     @AppStorage("appLanguage") private var lang = "en"
     private var l: L { L(lang) }
 
@@ -396,7 +398,17 @@ struct DxaiMenuView: View {
                     .lineLimit(1)
                 Spacer()
                 Button {
-                    viewModel.resendLastMilestone()
+                    UNUserNotificationCenter.current().getNotificationSettings { settings in
+                        DispatchQueue.main.async {
+                            if settings.authorizationStatus == UNAuthorizationStatus.authorized {
+                                showNotifOffWarning = false
+                                viewModel.resendLastMilestone()
+                            } else {
+                                showNotifOffWarning = true
+                                viewModel.resendLastMilestone()
+                            }
+                        }
+                    }
                 } label: {
                     Text(l.testAlert)
                         .font(.system(size: 10))
@@ -407,6 +419,25 @@ struct DxaiMenuView: View {
                         .cornerRadius(3)
                 }
                 .buttonStyle(.plain)
+            }
+
+            if showNotifOffWarning {
+                HStack(spacing: 4) {
+                    Image(systemName: "bell.slash.fill")
+                        .font(.system(size: 9))
+                        .foregroundColor(.orange)
+                    Text(lang == "ko" ? "시스템 알림이 꺼져 있습니다" : "System notifications are off")
+                        .font(.system(size: 10))
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Button(lang == "ko" ? "설정" : "Settings") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .font(.system(size: 10))
+                    .buttonStyle(.borderless)
+                }
             }
         }
     }
