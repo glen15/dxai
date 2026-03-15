@@ -213,13 +213,16 @@ serve(async (req: Request) => {
       });
   }
 
-  // Recalculate total_coins from daily_records
+  // Recalculate total_coins and total_tokens from daily_records
   const { data: sums } = await supabase
     .from("daily_records")
-    .select("daily_coins")
+    .select("daily_coins, claude_tokens, codex_tokens")
     .eq("user_id", userId);
 
   const totalCoins = sums?.reduce((s: any, r: any) => s + r.daily_coins, 0) ?? 0;
+  const totalTokens = sums?.reduce(
+    (s: any, r: any) => s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0), 0
+  ) ?? 0;
 
   await supabase
     .from("users")
@@ -234,7 +237,7 @@ serve(async (req: Request) => {
 
   const rank = (count ?? 0) + 1;
 
-  return json({ ok: true, total_coins: totalCoins, rank });
+  return json({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank });
 });
 
 function json(data: any, status = 200) {

@@ -55,6 +55,7 @@ final class DxaiPointService {
     struct SubmissionResponse: Codable {
         let ok: Bool
         let total_coins: Int?
+        let total_tokens: Int?
         let rank: Int?
         let error: String?
     }
@@ -99,6 +100,9 @@ final class DxaiPointService {
     }
 
     // MARK: - Public API
+
+    /// 서버에서 받은 누적 토큰 (레벨 계산용)
+    private(set) var serverTotalTokens: Int = 0
 
     var totalCoins: Int {
         history.last?.totalCoins ?? 0
@@ -351,7 +355,10 @@ final class DxaiPointService {
 
             // 성공
             if let resp = try? JSONDecoder().decode(SubmissionResponse.self, from: data) {
-                NSLog("[DxaiPoint] Submitted: rank=\(resp.rank ?? 0), coins=\(resp.total_coins ?? 0)")
+                if let tokens = resp.total_tokens {
+                    self?.serverTotalTokens = tokens
+                }
+                NSLog("[DxaiPoint] Submitted: rank=\(resp.rank ?? 0), coins=\(resp.total_coins ?? 0), tokens=\(resp.total_tokens ?? 0)")
             }
         }.resume()
     }

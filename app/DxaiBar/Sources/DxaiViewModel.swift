@@ -21,8 +21,6 @@ final class DxaiViewModel: ObservableObject {
 
     private var isLoadingWeekly = false
     private var lastWeeklyRefresh: Date = .distantPast
-    private var isLoadingAllTime = false
-    private var lastAllTimeRefresh: Date = .distantPast
 
     var weeklyTokenTotal: Int {
         var cal = Calendar(identifier: .gregorian)
@@ -233,20 +231,6 @@ final class DxaiViewModel: ObservableObject {
             }
         }
 
-        // 백그라운드에서 누적 토큰 로드 (5분 간격)
-        if !isLoadingAllTime && now.timeIntervalSince(lastAllTimeRefresh) >= 300 {
-            isLoadingAllTime = true
-            Task.detached {
-                let total = db.allTimeTotalTokens()
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    self.allTimeTokens = total
-                    self.accountLevel = DxaiViewModel.calculateLevel(total)
-                    self.isLoadingAllTime = false
-                    self.lastAllTimeRefresh = Date()
-                }
-            }
-        }
     }
 
     // MARK: - Vanguard Coins
@@ -269,6 +253,13 @@ final class DxaiViewModel: ObservableObject {
         todayCoins = ps.todayCoins
         weeklyCoins = ps.weeklyCoins
         totalCoins = ps.totalCoins
+
+        // 서버에서 받은 누적 토큰으로 레벨 계산
+        let serverTokens = ps.serverTotalTokens
+        if serverTokens > 0 {
+            allTimeTokens = serverTokens
+            accountLevel = DxaiViewModel.calculateLevel(serverTokens)
+        }
 
         // 미제출 건 재시도
         ps.retryPendingSubmissions()

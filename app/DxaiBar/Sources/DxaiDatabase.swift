@@ -231,21 +231,6 @@ final class DxaiDatabase {
         return results
     }
 
-    /// 전체 누적 토큰 합계 (레벨 계산용)
-    func allTimeTotalTokens() -> Int {
-        let veryPast = Date(timeIntervalSince1970: 0)
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = .current
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date()))!
-
-        let claude = parseClaude(from: veryPast, to: tomorrow)
-        let codex = parseCodex(from: veryPast, to: tomorrow)
-
-        let claudeTotal = claude.values.reduce(0) { $0 + $1.totalTokens }
-        let codexTotal = codex.values.reduce(0) { $0 + $1.totalTokens }
-        return claudeTotal + codexTotal
-    }
-
     /// jsonl 파일들의 수 + 최신 수정시간으로 변경 여부 판단
     private func jsonlFingerprint() -> String {
         var count = 0
