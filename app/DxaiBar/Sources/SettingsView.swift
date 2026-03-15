@@ -23,6 +23,10 @@ struct SettingsView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.secondary)
 
+                Text(l.settingsNicknamePrivacy)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.7))
+
                 HStack(spacing: 8) {
                     TextField(l.settingsNicknamePlaceholder, text: $nickname)
                         .textFieldStyle(.roundedBorder)
