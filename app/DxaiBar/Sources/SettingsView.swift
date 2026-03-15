@@ -24,8 +24,8 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
 
                 Text(l.settingsNicknamePrivacy)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.7))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
 
                 HStack(spacing: 8) {
                     TextField(l.settingsNicknamePlaceholder, text: $nickname)
@@ -66,20 +66,33 @@ struct SettingsView: View {
 
             Divider()
 
-            // Opt-in toggle
+            // Opt-in toggle + Ranking link
             VStack(alignment: .leading, spacing: 6) {
-                Toggle(isOn: $optIn) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(l.settingsOptIn)
-                            .font(.system(size: 13, weight: .semibold))
-                        Text(l.settingsOptInDesc)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                HStack {
+                    Toggle(isOn: $optIn) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(l.settingsOptIn)
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(l.settingsOptInDesc)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
                     }
-                }
-                .toggleStyle(.switch)
-                .onChange(of: optIn) { newValue in
-                    DxaiPointService.shared.updateOptIn(newValue)
+                    .toggleStyle(.switch)
+                    .onChange(of: optIn) { newValue in
+                        DxaiPointService.shared.updateOptIn(newValue)
+                    }
+
+                    Button(action: {
+                        if let url = URL(string: "https://vanguard.dx-ai.cloud") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.borderless)
+                    .help(lang == "ko" ? "랭킹 페이지 열기" : "Open ranking page")
                 }
             }
 
