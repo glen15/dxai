@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @ObservedObject var viewModel: DxaiViewModel
@@ -10,6 +11,7 @@ struct SettingsView: View {
     @State private var nicknameError: String?
     @State private var nicknameSuccess: String?
     @State private var isSaving = false
+    @State private var notificationsEnabled = true
 
     private var nicknameChanged: Bool {
         nickname.trimmingCharacters(in: .whitespaces) != DxaiPointService.shared.config.nickname
@@ -98,6 +100,28 @@ struct SettingsView: View {
 
             Divider()
 
+            // Notification status
+            if !notificationsEnabled {
+                HStack(spacing: 6) {
+                    Image(systemName: "bell.slash.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    Text(lang == "ko" ? "알림이 꺼져 있습니다" : "Notifications are off")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Button(lang == "ko" ? "설정 열기" : "Open Settings") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .font(.system(size: 11))
+                    .buttonStyle(.borderless)
+                }
+
+                Divider()
+            }
+
             // Not collected
             VStack(alignment: .leading, spacing: 4) {
                 Text(l.settingsNotCollected)
@@ -118,6 +142,15 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .onAppear { checkNotificationStatus() }
+    }
+
+    private func checkNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                notificationsEnabled = settings.authorizationStatus == .authorized
+            }
+        }
     }
 
     private func saveNickname() {
