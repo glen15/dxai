@@ -63,7 +63,9 @@ struct DxaiMenuView: View {
     @State private var showSettings = false
     @State private var showNotifOffWarning = false
     @AppStorage("appLanguage") private var lang = "en"
+    @Environment(\.colorScheme) private var scheme
     private var l: L { L(lang) }
+    private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -120,7 +122,7 @@ struct DxaiMenuView: View {
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.purple.opacity(0.1))
+                    .background(Color.purple.opacity(colors.bgChip))
                     .foregroundColor(.purple)
                     .cornerRadius(4)
             }
@@ -131,7 +133,7 @@ struct DxaiMenuView: View {
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.1))
+                    .background(Color.secondary.opacity(colors.bgChip))
                     .cornerRadius(3)
             }
             .buttonStyle(.plain)
@@ -166,7 +168,7 @@ struct DxaiMenuView: View {
                     if viewModel.weeklyTokenTotal > viewModel.todayTokens {
                         Text(l.weeklyShort(viewModel.weeklyTokenTotal))
                             .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary.opacity(0.6))
+                            .foregroundColor(.secondary.opacity(colors.textDim))
                     }
                 }
                 Text(l.tokensToday)
@@ -182,20 +184,20 @@ struct DxaiMenuView: View {
                             .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(vanguardColor(level).opacity(0.12))
-                            .foregroundColor(vanguardColor(level))
+                            .background(colors.levelColor(level).opacity(colors.bgCard))
+                            .foregroundColor(colors.levelColor(level))
                             .cornerRadius(5)
 
                         if viewModel.todayCoins > 0 {
                             Text("+\(viewModel.todayCoins)\(l.coinsLabel)")
                                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(.yellow.opacity(0.9))
+                                .foregroundColor(colors.accentText)
                         }
                     }
 
                     Text(l.vanguardMessage(level.tier.rawValue, division: level.division))
                         .font(.system(size: 12))
-                        .foregroundColor(vanguardColor(level).opacity(0.7))
+                        .foregroundColor(colors.levelColor(level).opacity(colors.textCaption))
                         .italic()
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -209,7 +211,7 @@ struct DxaiMenuView: View {
                     HStack(spacing: 0) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(colors.accent)
                             .padding(.trailing, 5)
 
                         pointChip(l.coinsWeekly, "\(viewModel.weeklyCoins)")
@@ -231,8 +233,8 @@ struct DxaiMenuView: View {
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(Color.yellow.opacity(0.1))
-                            .foregroundColor(.yellow)
+                            .background(colors.accent.opacity(colors.bgChip))
+                            .foregroundColor(colors.accent)
                             .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
@@ -252,8 +254,8 @@ struct DxaiMenuView: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(DxaiPointService.shared.config.nickname.isEmpty
-                                ? Color.purple.opacity(0.15)
-                                : Color.secondary.opacity(0.08))
+                                ? Color.purple.opacity(colors.bgCard)
+                                : Color.secondary.opacity(colors.bgSubtle))
                             .foregroundColor(DxaiPointService.shared.config.nickname.isEmpty
                                 ? .purple
                                 : .secondary)
@@ -296,7 +298,7 @@ struct DxaiMenuView: View {
                 ForEach(0..<tiers.count, id: \.self) { i in
                     let isCurrent = i == currentIdx
                     let isPast = i < currentIdx
-                    let tierColor = vanguardTierColor(tiers[i].1)
+                    let tierColor = colors.tierColor(tiers[i].1)
 
                     VStack(spacing: 3) {
                         // Segment bar
@@ -304,7 +306,7 @@ struct DxaiMenuView: View {
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(tierColor.opacity(0.25))
+                                        .fill(tierColor.opacity(colors.bgTrack))
                                     RoundedRectangle(cornerRadius: 3)
                                         .fill(tierColor)
                                         .frame(width: max(4, geo.size.width * CGFloat(vanguardProgress)))
@@ -322,7 +324,7 @@ struct DxaiMenuView: View {
                             .frame(height: 10)
                         } else {
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(isPast ? tierColor : Color.secondary.opacity(0.12))
+                                .fill(isPast ? tierColor : Color.secondary.opacity(colors.bgCard))
                                 .frame(height: isPast ? 6 : 5)
                         }
 
@@ -331,7 +333,7 @@ struct DxaiMenuView: View {
                             .font(.system(size: isCurrent ? 9 : 8,
                                           weight: isCurrent ? .bold : .regular,
                                           design: .monospaced))
-                            .foregroundColor(isPast || isCurrent ? tierColor : .secondary.opacity(0.3))
+                            .foregroundColor(isPast || isCurrent ? tierColor : .secondary.opacity(colors.textFaint))
                     }
                 }
             }
@@ -349,7 +351,7 @@ struct DxaiMenuView: View {
                 } else {
                     Text("MAX RANK")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(vanguardColor(viewModel.vanguardLevel))
+                        .foregroundColor(colors.levelColor(viewModel.vanguardLevel))
                     Spacer()
                 }
             }
@@ -372,14 +374,14 @@ struct DxaiMenuView: View {
             HStack(spacing: 5) {
                 Text(currentAbbr)
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(vanguardColor(viewModel.vanguardLevel))
+                    .foregroundColor(colors.levelColor(viewModel.vanguardLevel))
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.red.opacity(0.15))
+                            .fill(Color.red.opacity(colors.bgTrack))
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.red.opacity(0.7))
+                            .fill(Color.red.opacity(colors.textCaption))
                             .frame(width: max(2, geo.size.width * CGFloat(info.progress)))
                     }
                 }
@@ -387,14 +389,14 @@ struct DxaiMenuView: View {
 
                 Text(nextAbbr)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundColor(.secondary.opacity(colors.textSub))
             }
 
             // Milestone title + resend button
             HStack(spacing: 4) {
                 Text("\u{2694}\u{FE0F} \(info.currentBody)")
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.6))
+                    .foregroundColor(.secondary.opacity(colors.textDim))
                     .lineLimit(1)
                 Spacer()
                 Button {
@@ -412,10 +414,10 @@ struct DxaiMenuView: View {
                 } label: {
                     Text(l.testAlert)
                         .font(.system(size: 10))
-                        .foregroundColor(.secondary.opacity(0.7))
+                        .foregroundColor(.secondary.opacity(colors.textCaption))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.1))
+                        .background(Color.secondary.opacity(colors.bgChip))
                         .cornerRadius(3)
                 }
                 .buttonStyle(.plain)
@@ -461,19 +463,6 @@ struct DxaiMenuView: View {
         return prefix
     }
 
-    private func vanguardTierColor(_ tier: DxaiViewModel.VanguardLevel.Tier) -> Color {
-        switch tier {
-        case .bronze:      return .orange
-        case .silver:      return .gray
-        case .gold:        return .yellow
-        case .platinum:    return .teal
-        case .diamond:     return .cyan
-        case .master:      return .purple
-        case .grandmaster: return .red
-        case .challenger:  return Color(red: 1.0, green: 0.84, blue: 0.0)
-        }
-    }
-
     // MARK: - Tool Cards (Claude + Codex only)
 
     private var toolCardsSection: some View {
@@ -494,7 +483,7 @@ struct DxaiMenuView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
-                .background(Color.purple.opacity(0.08))
+                .background(Color.purple.opacity(colors.bgSubtle))
                 .foregroundColor(.purple)
                 .cornerRadius(6)
             }
@@ -507,13 +496,13 @@ struct DxaiMenuView: View {
                     VStack(spacing: 6) {
                         Image(systemName: "tray")
                             .font(.system(size: 20))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(colors.textSub))
                         Text(l.noDataYet)
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                         Text(l.autoCollect)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary.opacity(0.6))
+                            .foregroundColor(.secondary.opacity(colors.textDim))
                     }
                     .padding(.vertical, 12)
                     Spacer()
@@ -564,14 +553,14 @@ struct DxaiMenuView: View {
                     .font(.system(size: 13, design: .monospaced))
                     .foregroundColor(.secondary)
                 Text("\u{00B7}")
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .foregroundColor(.secondary.opacity(colors.textMuted))
                 Text("\(stat.requests) req")
                     .font(.system(size: 13, design: .monospaced))
                     .foregroundColor(.secondary)
                 Spacer()
                 Text(l.today)
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundColor(.secondary.opacity(colors.textSub))
             }
         }
         .padding(.vertical, 10)
@@ -594,7 +583,7 @@ struct DxaiMenuView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.secondary.opacity(0.15))
+                        .fill(Color.secondary.opacity(colors.bgTrack))
                     if let pct {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(pct >= 80 ? Color.red : color)
@@ -608,7 +597,7 @@ struct DxaiMenuView: View {
             if let reset {
                 Text("Resets \(formatResetDate(reset))")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundColor(.secondary.opacity(colors.textSub))
             }
         }
     }
@@ -789,28 +778,28 @@ struct DxaiMenuView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.1))
+                    .background(Color.orange.opacity(colors.bgChip))
                     .cornerRadius(4)
                 } else if viewModel.isTaskRunning {
                     Text(l.waiting)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary.opacity(0.4))
+                        .foregroundColor(.secondary.opacity(colors.textMuted))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                 } else {
                     Text("Start")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(color.opacity(0.7))
+                        .foregroundColor(color.opacity(colors.textCaption))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(color.opacity(0.1))
+                        .background(color.opacity(colors.bgChip))
                         .cornerRadius(4)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(hoveredAction == command
-                        ? color.opacity(0.08) : .clear)
+                        ? color.opacity(colors.bgHover) : .clear)
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
@@ -859,7 +848,7 @@ struct DxaiMenuView: View {
             .foregroundColor(.secondary)
 
             Text("\u{00B7}")
-                .foregroundColor(.secondary.opacity(0.3))
+                .foregroundColor(.secondary.opacity(colors.textFaint))
 
             Button(action: { NSApplication.shared.terminate(nil) }) {
                 Text(l.quit)
@@ -938,7 +927,7 @@ struct DxaiMenuView: View {
                                  text: lang == "ko" ? "AI 쿼터 모니터링" : "AI quota monitoring")
                     aboutFeature(icon: "bolt.fill", color: .orange,
                                  text: lang == "ko" ? "원클릭 시스템 관리" : "One-click system management")
-                    aboutFeature(icon: "trophy.fill", color: .yellow,
+                    aboutFeature(icon: "trophy.fill", color: colors.accent,
                                  text: lang == "ko" ? "게이미피케이션 랭크 시스템" : "Gamified rank system")
                 }
 
@@ -951,16 +940,16 @@ struct DxaiMenuView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 11))
-                            .foregroundColor(.yellow)
+                            .foregroundColor(colors.accent)
                         Text("Star on GitHub")
                             .font(.system(size: 12, weight: .medium))
                         Text("glen15/dxai")
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(colors.textSub))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.secondary.opacity(0.08))
+                    .background(Color.secondary.opacity(colors.bgSubtle))
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
@@ -1041,17 +1030,17 @@ struct DxaiMenuView: View {
         HStack(spacing: 3) {
             Text(label)
                 .font(.system(size: 10))
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundColor(.secondary.opacity(colors.textDim))
             Text("\(value)\(l.coinsLabel)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundColor(.yellow.opacity(0.9))
+                .foregroundColor(colors.accentText)
         }
     }
 
     private var dotSeparator: some View {
         Text("\u{00B7}")
             .font(.system(size: 10))
-            .foregroundColor(.secondary.opacity(0.3))
+            .foregroundColor(.secondary.opacity(colors.textFaint))
             .padding(.horizontal, 4)
     }
 
@@ -1122,22 +1111,8 @@ struct DxaiMenuView: View {
     }
 
 
-    private func vanguardColor(_ level: DxaiViewModel.VanguardLevel?) -> Color {
-        guard let level else { return .purple }
-        switch level.tier {
-        case .bronze:      return .orange
-        case .silver:      return .gray
-        case .gold:        return .yellow
-        case .platinum:    return .teal
-        case .diamond:     return .cyan
-        case .master:      return .purple
-        case .grandmaster: return .red
-        case .challenger:  return Color(red: 1.0, green: 0.84, blue: 0.0)
-        }
-    }
-
     private var vanguardGradient: LinearGradient {
-        let c = vanguardColor(viewModel.vanguardLevel)
+        let c = colors.levelColor(viewModel.vanguardLevel)
         return LinearGradient(colors: [c, c.opacity(0.6)],
                               startPoint: .leading, endPoint: .trailing)
     }
@@ -1166,7 +1141,7 @@ struct DxaiMenuView: View {
 
     private func quotaColor(_ pct: Int) -> Color {
         if pct >= 80 { return .red }
-        if pct >= 50 { return .yellow }
+        if pct >= 50 { return colors.warning }
         return .green
     }
 
