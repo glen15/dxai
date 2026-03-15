@@ -3,7 +3,9 @@ import SwiftUI
 struct InsightsView: View {
     let stats: [DxaiDatabase.DailyStats]
     @AppStorage("appLanguage") private var lang = "en"
+    @Environment(\.colorScheme) private var scheme
     private var l: L { L(lang) }
+    private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
     // MARK: - Week Split (calendar-based 7-day windows)
 
@@ -105,7 +107,7 @@ struct InsightsView: View {
                 Spacer()
                 Image(systemName: "chart.bar")
                     .font(.system(size: 28))
-                    .foregroundColor(.secondary.opacity(0.4))
+                    .foregroundColor(.secondary.opacity(colors.textMuted))
                 Text(l.insightsNoData)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
@@ -167,11 +169,11 @@ struct InsightsView: View {
                 .foregroundColor(.secondary)
             Text(sub ?? " ")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(sub != nil ? (subColor ?? .secondary.opacity(0.6)) : .clear)
+                .foregroundColor(sub != nil ? (subColor ?? .secondary.opacity(colors.textDim)) : .clear)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
-        .background(accent.opacity(0.08))
+        .background(accent.opacity(colors.bgSubtle))
         .cornerRadius(8)
     }
 
@@ -183,7 +185,7 @@ struct InsightsView: View {
                 HStack(alignment: .top, spacing: 6) {
                     Text("\u{2022}")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.purple.opacity(0.6))
+                        .foregroundColor(.purple.opacity(colors.textDim))
                     Text(bullet)
                         .font(.system(size: 12.5))
                         .foregroundColor(.primary.opacity(0.85))
@@ -193,7 +195,7 @@ struct InsightsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color.purple.opacity(0.04))
+        .background(Color.purple.opacity(colors.bgSubtle))
         .cornerRadius(8)
     }
 
@@ -212,7 +214,7 @@ struct InsightsView: View {
                 VStack(spacing: 2) {
                     Text(formatCompact(day.total))
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.6))
+                        .foregroundColor(.secondary.opacity(colors.textDim))
 
                     VStack(spacing: 0) {
                         if codexH > 0 {
@@ -320,7 +322,7 @@ struct InsightsView: View {
             .frame(height: 12)
             Text("\(Int(pct * 100))%")
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundColor(.secondary.opacity(colors.textDim))
                 .frame(width: 30, alignment: .trailing)
         }
     }
