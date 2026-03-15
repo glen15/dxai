@@ -138,16 +138,15 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
   const division = profile.last_division;
   const message = vanguardMessage(tier, division, lang);
 
-  // Total tokens from all history
-  const totalClaudeAll = profile.monthly.claude_tokens + (profile.weekly.claude_tokens ?? 0);
-  const totalCodexAll = profile.monthly.codex_tokens + (profile.weekly.codex_tokens ?? 0);
-  // Use monthly as the primary (covers last 30 days)
+  // Monthly tokens (last 30 days)
   const monthlyClaudeTokens = profile.monthly.claude_tokens;
   const monthlyCodexTokens = profile.monthly.codex_tokens;
   const monthlyTotalTokens = monthlyClaudeTokens + monthlyCodexTokens;
+  // All-time cumulative tokens (for level calculation)
+  const allTimeTotalTokens = profile.total_tokens ?? monthlyTotalTokens;
 
-  const milestone = tokenMilestone(monthlyTotalTokens, lang);
-  const { level, progress, currentXP, nextXP } = calculateLevel(monthlyTotalTokens);
+  const milestone = tokenMilestone(allTimeTotalTokens, lang);
+  const { level, progress, currentXP, nextXP } = calculateLevel(allTimeTotalTokens);
 
   return (
     <motion.div
@@ -218,7 +217,7 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
         <div className="mt-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] text-white/40 font-mono">
-              {formatHeroTokens(monthlyTotalTokens, lang)} {lang === "ko" ? "토큰" : "tokens"}
+              {formatHeroTokens(allTimeTotalTokens, lang)} {lang === "ko" ? "토큰" : "tokens"}
             </span>
             <span className="text-[11px] text-white/40 font-mono">
               Lv.{level + 1} {lang === "ko" ? "까지" : "next"} {formatHeroTokens(nextXP - currentXP, lang)}
@@ -249,8 +248,8 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
         />
         <StatCard
           label={lang === "ko" ? "총 토큰" : "Total Tokens"}
-          value={monthlyTotalTokens}
-          sub={formatHeroTokens(monthlyTotalTokens, lang)}
+          value={allTimeTotalTokens}
+          sub={formatHeroTokens(allTimeTotalTokens, lang)}
         />
         <StatCard
           label={lang === "ko" ? "코인" : "Coins"}

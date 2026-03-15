@@ -16,9 +16,13 @@ final class DxaiViewModel: ObservableObject {
     @Published var todayCoins: Int = 0
     @Published var weeklyCoins: Int = 0
     @Published var totalCoins: Int = 0
+    @Published var allTimeTokens: Int = 0
+    @Published var accountLevel: Int = 1
 
     private var isLoadingWeekly = false
     private var lastWeeklyRefresh: Date = .distantPast
+    private var isLoadingAllTime = false
+    private var lastAllTimeRefresh: Date = .distantPast
 
     var weeklyTokenTotal: Int {
         var cal = Calendar(identifier: .gregorian)
@@ -151,6 +155,24 @@ final class DxaiViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Account Level (누적 토큰 기반)
+
+    private static let levelBase = 1_000_000 // Lv.2 = 1M tokens
+
+    static func levelThreshold(_ level: Int) -> Int {
+        if level <= 1 { return 0 }
+        return levelBase * (1 << (level - 2)) // 2^(level-2)
+    }
+
+    static func calculateLevel(_ totalTokens: Int) -> Int {
+        if totalTokens < levelBase { return 1 }
+        var level = 2
+        while levelThreshold(level + 1) <= totalTokens {
+            level += 1
+        }
+        return level
+    }
+
     var menuBarLabel: String {
         formatTokens(todayTokens)
     }
@@ -207,6 +229,21 @@ final class DxaiViewModel: ObservableObject {
                     self?.weeklyStats = weekly
                     self?.isLoadingWeekly = false
                     self?.lastWeeklyRefresh = Date()
+                }
+            }
+        }
+
+        // 백그라운드에서 누적 토큰 로드 (5분 간격)
+        if !isLoadingAllTime && now.timeIntervalSince(lastAllTimeRefresh) >= 300 {
+            isLoadingAllTime = true
+            Task.detached {
+                let total = db.allTimeTotalTokens()
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.allTimeTokens = total
+                    self.accountLevel = DxaiViewModel.calculateLevel(total)
+                    self.isLoadingAllTime = false
+                    self.lastAllTimeRefresh = Date()
                 }
             }
         }

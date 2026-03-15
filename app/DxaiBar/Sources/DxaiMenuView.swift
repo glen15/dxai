@@ -171,6 +171,14 @@ struct DxaiMenuView: View {
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary.opacity(colors.textDim))
                     }
+                    Spacer()
+                    Text("Lv.\(viewModel.accountLevel)")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(.purple)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.purple.opacity(colors.bgCard))
+                        .cornerRadius(4)
                 }
                 Text(l.tokensToday)
                     .font(.system(size: 13))

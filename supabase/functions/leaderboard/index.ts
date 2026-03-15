@@ -88,6 +88,7 @@ async function realtimeLeaderboard(supabase: any, page: number) {
       vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      total_tokens: r.total_tokens,
     })),
   });
 }
@@ -129,6 +130,7 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
       vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      total_tokens: r.total_tokens,
     })),
   });
 }
@@ -381,6 +383,15 @@ async function getUserProfile(supabase: any, nickname: string) {
   const monthlyClaudeTokens = (history ?? []).reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const monthlyCodexTokens = (history ?? []).reduce((s: number, r: any) => s + r.codex_tokens, 0);
 
+  // Total tokens (all-time cumulative)
+  const { data: allRecords } = await supabase
+    .from("daily_records")
+    .select("claude_tokens, codex_tokens")
+    .eq("user_id", user.id);
+  const totalTokens = (allRecords ?? []).reduce(
+    (s: number, r: any) => s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0), 0
+  );
+
   // Active streak
   const streak = calculateStreak(history ?? []);
 
@@ -396,6 +407,7 @@ async function getUserProfile(supabase: any, nickname: string) {
       rank,
       total_users: totalUsers ?? 0,
       total_coins: user.total_coins,
+      total_tokens: totalTokens,
       last_tier: user.last_tier,
       last_division: user.last_division,
       member_since: user.created_at,

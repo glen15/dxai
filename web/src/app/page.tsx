@@ -71,7 +71,7 @@ function PodiumCard({ entry, lang, diff, type }: {
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const { level } = calculateLevel(claude + codex);
+  const { level } = calculateLevel(entry.total_tokens ?? claude + codex);
   const message = vanguardMessage(tier, division, lang);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
@@ -177,7 +177,7 @@ function RankRow({ entry, lang, diff, index }: {
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const { level } = calculateLevel(claude + codex);
+  const { level } = calculateLevel(entry.total_tokens ?? claude + codex);
   const milestone = tokenMilestone(claude + codex, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;

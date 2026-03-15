@@ -68,6 +68,7 @@ export interface UserProfile {
   rank: number;
   total_users: number;
   total_coins: number;
+  total_tokens: number;
   last_tier: string;
   last_division: number | null;
   member_since: string;
