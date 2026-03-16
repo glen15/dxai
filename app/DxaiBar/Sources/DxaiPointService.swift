@@ -120,14 +120,26 @@ final class DxaiPointService {
     }
 
     var weeklyCoins: Int {
+        let dates = Self.thisWeekDates()
+        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyCoins }
+    }
+
+    /// 이번 주 월~일 날짜 집합 (월요일 시작)
+    static func thisWeekDates() -> Set<String> {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
+        cal.firstWeekday = 2 // 월요일
         let today = cal.startOfDay(for: Date())
+        let weekday = cal.component(.weekday, from: today)
+        let daysFromMonday = (weekday + 5) % 7 // 월=0, 화=1, ..., 일=6
+        let monday = cal.date(byAdding: .day, value: -daysFromMonday, to: today)!
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = .current
-        let dates = Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
-        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyCoins }
+        return Set((0...6).compactMap {
+            let d = cal.date(byAdding: .day, value: $0, to: monday)!
+            return d <= today ? fmt.string(from: d) : nil
+        })
     }
 
     var recentHistory: [DailyRecord] {
@@ -283,11 +295,15 @@ final class DxaiPointService {
         Self.write(history, to: historyURL)
     }
 
-    private static func todayString() -> String {
+    private static let dateFormatter: DateFormatter = {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = .current
-        return fmt.string(from: Date())
+        return fmt
+    }()
+
+    private static func todayString() -> String {
+        dateFormatter.string(from: Date())
     }
 
     // MARK: - Server Submission

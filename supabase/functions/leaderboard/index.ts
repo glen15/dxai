@@ -11,17 +11,20 @@ const PAGE_SIZE = 50;
 const LIVE_PAGE_SIZE = 20;
 
 // #8: IP 기반 rate limit (분당 60회)
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 60;
+
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const entry = rateLimits.get(ip);
   if (!entry || now > entry.resetAt) {
-    rateLimits.set(ip, { count: 1, resetAt: now + 60_000 });
+    rateLimits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
   entry.count++;
-  return entry.count <= 60;
+  return entry.count <= RATE_LIMIT_MAX_REQUESTS;
 }
 
 serve(async (req: Request) => {

@@ -10,13 +10,7 @@ struct InsightsView: View {
     // MARK: - Week Split (calendar-based 7-day windows)
 
     private var thisWeekDates: Set<String> {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = .current
-        let today = cal.startOfDay(for: Date())
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = .current
-        return Set((0...6).map { fmt.string(from: cal.date(byAdding: .day, value: -$0, to: today)!) })
+        DxaiPointService.thisWeekDates()
     }
 
     private var thisWeekStats: [DxaiDatabase.DailyStats] {

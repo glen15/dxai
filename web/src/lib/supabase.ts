@@ -109,6 +109,9 @@ export async function fetchLeaderboard(
   const res = await fetch(`${LEADERBOARD_BASE}?${searchParams}`, {
     cache: "no-store",
   });
+  if (!res.ok) {
+    return { ok: false, type, page, total_pages: 0, total_users: 0, rankings: [], error: `HTTP ${res.status}` };
+  }
   return res.json();
 }
 
@@ -116,6 +119,9 @@ export async function fetchSearch(query: string): Promise<{ ok: boolean; results
   const res = await fetch(`${LEADERBOARD_BASE}?type=search&q=${encodeURIComponent(query)}&_t=${Date.now()}`, {
     cache: "no-store",
   });
+  if (!res.ok) {
+    return { ok: false, results: [] };
+  }
   return res.json();
 }
 
@@ -123,6 +129,9 @@ export async function fetchUserProfile(nickname: string): Promise<ProfileRespons
   const res = await fetch(`${LEADERBOARD_BASE}?user=${encodeURIComponent(nickname)}`, {
     next: { revalidate: 60 },
   });
+  if (!res.ok) {
+    return { ok: false, error: `HTTP ${res.status}` };
+  }
   return res.json();
 }
 

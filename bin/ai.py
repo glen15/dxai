@@ -42,13 +42,21 @@ class Colors:
 # ─── Vanguard Alert ────────────────────────────────────────────
 
 VANGUARD_LEVELS = [
-    (5_000_000, "Diamond", Colors.CYAN,
-     "전설의 5M... 당신이 곧 AI 시대입니다"),
-    (1_000_000, "Gold", Colors.YELLOW,
-     "1M 토큰! 오늘 정말 열심히 했네요"),
+    (5_000_000_000, "Challenger", Colors.RED,
+     "당신이 곧 AI 시대입니다"),
+    (1_500_000_000, "Grandmaster", Colors.RED,
+     "전설의 영역에 진입"),
+    (620_000_000, "Master", Colors.YELLOW,
+     "AI 마스터의 경지에 진입"),
+    (220_000_000, "Diamond", Colors.CYAN,
+     "진정한 AI 네이티브의 영역"),
+    (50_000_000, "Platinum", Colors.BLUE,
+     "AI와 하나가 되어가고 있습니다"),
+    (8_000_000, "Gold", Colors.YELLOW,
+     "AI 시대의 뱅가드"),
     (500_000, "Silver", Colors.BOLD,
-     "당신은 AI 시대의 뱅가드입니다"),
-    (50_000, "Bronze", Colors.GREEN,
+     "AI 활용에 익숙해지고 있군요"),
+    (10_000, "Bronze", Colors.GREEN,
      "AI와 함께하는 하루를 시작했군요!"),
 ]
 

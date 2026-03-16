@@ -12,9 +12,13 @@ const COIN_TABLE: Record<string, { base: number; bonus: number }> = {
 };
 
 const VALID_TIERS = [...Object.keys(COIN_TABLE), "Challenger"];
+const CHALLENGER_COINS = 5000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const DAY_MS = 86_400_000;
 
 function calculateCoins(tier: string, division: number | null): number {
-  if (tier === "Challenger") return 5000;
+  if (tier === "Challenger") return CHALLENGER_COINS;
   const entry = COIN_TABLE[tier];
   if (!entry || division === null || division < 1 || division > 5) return 0;
   return entry.base + entry.bonus * (5 - division);
@@ -27,11 +31,11 @@ function checkRateLimit(deviceUUID: string): boolean {
   const now = Date.now();
   const entry = rateLimits.get(deviceUUID);
   if (!entry || now > entry.resetAt) {
-    rateLimits.set(deviceUUID, { count: 1, resetAt: now + 60_000 });
+    rateLimits.set(deviceUUID, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
   entry.count++;
-  return entry.count <= 10;
+  return entry.count <= RATE_LIMIT_MAX_REQUESTS;
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -109,12 +113,12 @@ serve(async (req: Request) => {
   // Reject future dates or dates older than 7 days
   const submittedDate = new Date(date + "T00:00:00Z");
   const now = new Date();
-  const daysDiff = (now.getTime() - submittedDate.getTime()) / 86_400_000;
+  const daysDiff = (now.getTime() - submittedDate.getTime()) / DAY_MS;
   if (daysDiff < -1 || daysDiff > 7) {
     return respond({ ok: false, error: "date_out_of_range" }, 400);
   }
 
-  if (typeof daily_coins !== "number" || daily_coins < 0 || daily_coins > 5000) {
+  if (typeof daily_coins !== "number" || daily_coins < 0 || daily_coins > CHALLENGER_COINS) {
     return respond({ ok: false, error: "invalid_daily_coins" }, 400);
   }
 

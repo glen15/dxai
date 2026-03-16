@@ -396,11 +396,15 @@ final class DxaiDatabase {
 
     // MARK: - Helpers
 
-    private static func todayString() -> String {
+    private static let dateFormatter: DateFormatter = {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         fmt.timeZone = .current
-        return fmt.string(from: Date())
+        return fmt
+    }()
+
+    private static func todayString() -> String {
+        dateFormatter.string(from: Date())
     }
 
     private static func startOfToday() -> Date {
@@ -417,10 +421,7 @@ final class DxaiDatabase {
     }
 
     private static func dateString(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = .current
-        return fmt.string(from: date)
+        dateFormatter.string(from: date)
     }
 
     private static func parseISO8601(_ str: String) -> Date? {
