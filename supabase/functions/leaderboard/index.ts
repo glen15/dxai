@@ -354,14 +354,6 @@ async function getUserProfile(supabase: any, nickname: string) {
     return json({ ok: false, error: "user_not_found" }, 404);
   }
 
-  // Global rank
-  const { count: rankAbove } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .gt("total_coins", user.total_coins);
-
-  const rank = (rankAbove ?? 0) + 1;
-
   // Last 30 days history
   const thirtyDaysAgo = dateOffset(-30);
   const { data: history } = await supabase
@@ -391,6 +383,13 @@ async function getUserProfile(supabase: any, nickname: string) {
   const totalTokens = (allRecords ?? []).reduce(
     (s: number, r: any) => s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0), 0
   );
+
+  // Global rank — 랭킹 탭과 동일하게 토큰 기반으로 계산
+  const { data: allUsers } = await supabase.rpc("leaderboard_by_tokens", {
+    p_limit: 1000,
+    p_offset: 0,
+  });
+  const rank = ((allUsers ?? []).findIndex((r: any) => r.nickname === nickname) + 1) || 1;
 
   // Active streak
   const streak = calculateStreak(history ?? []);
