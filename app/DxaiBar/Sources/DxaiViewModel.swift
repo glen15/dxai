@@ -249,11 +249,13 @@ final class DxaiViewModel: ObservableObject {
         weeklyCoins = ps.weeklyCoins
         totalCoins = ps.totalCoins
 
-        // 서버에서 받은 누적 토큰으로 레벨 계산
+        // 누적 토큰 → 레벨 계산 (서버 값 우선, 로컬 히스토리 fallback)
         let serverTokens = ps.serverTotalTokens
-        if serverTokens > 0 {
-            allTimeTokens = serverTokens
-            accountLevel = DxaiViewModel.calculateLevel(serverTokens)
+        let localTokens = ps.history.reduce(0) { $0 + $1.claudeTokens + $1.codexTokens }
+        let bestTokens = max(serverTokens, localTokens)
+        if bestTokens > 0 {
+            allTimeTokens = bestTokens
+            accountLevel = DxaiViewModel.calculateLevel(bestTokens)
         }
 
         // 라이브 순위

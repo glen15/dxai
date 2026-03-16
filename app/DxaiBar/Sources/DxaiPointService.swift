@@ -20,6 +20,8 @@ final class DxaiPointService {
         var optIn: Bool
         var deviceUUID: String
         var lastRecordedDate: String  // "yyyy-MM-dd"
+        var cachedTotalTokens: Int?
+        var cachedLiveRank: Int?
 
         static var `default`: PointConfig {
             PointConfig(
@@ -100,15 +102,31 @@ final class DxaiPointService {
         config = Self.load(configURL) ?? .default
         history = Self.load(historyURL) ?? []
         pendingQueue = Self.load(pendingURL) ?? []
+
+        // 영속화된 서버 데이터 복원
+        serverTotalTokens = config.cachedTotalTokens ?? 0
+        serverLiveRank = config.cachedLiveRank ?? 0
     }
 
     // MARK: - Public API
 
-    /// 서버에서 받은 누적 토큰 (레벨 계산용)
-    private(set) var serverTotalTokens: Int = 0
+    /// 서버에서 받은 누적 토큰 (레벨 계산용, config에 영속화)
+    private(set) var serverTotalTokens: Int = 0 {
+        didSet {
+            guard serverTotalTokens != oldValue else { return }
+            config.cachedTotalTokens = serverTotalTokens
+            saveConfig()
+        }
+    }
 
-    /// 서버에서 받은 라이브 순위 (오늘 토큰 기준)
-    private(set) var serverLiveRank: Int = 0
+    /// 서버에서 받은 라이브 순위 (오늘 토큰 기준, config에 영속화)
+    private(set) var serverLiveRank: Int = 0 {
+        didSet {
+            guard serverLiveRank != oldValue else { return }
+            config.cachedLiveRank = serverLiveRank
+            saveConfig()
+        }
+    }
 
     var totalCoins: Int {
         history.last?.totalCoins ?? 0
