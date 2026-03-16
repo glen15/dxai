@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DXAI_ROOT="$(dirname "$(dirname "$PROJECT_DIR")")"
 
-BUILD_CONFIG="${1:-release}"
+BUILD_CONFIG="${1:-debug}"
 APP_NAME="DxaiBar"
 BUNDLE_ID="com.dxai.DxaiBar"
 VERSION="${DXAI_VERSION:-1.0.0}"
@@ -43,6 +43,10 @@ mkdir -p "$APP_DIR/Contents/Resources"
 # Copy executable
 cp "$EXEC_PATH" "$APP_DIR/Contents/MacOS/$APP_NAME"
 
+# Sparkle rpath 설정 (Frameworks 디렉토리 참조)
+install_name_tool -add_rpath @executable_path/../Frameworks \
+    "$APP_DIR/Contents/MacOS/$APP_NAME" 2>/dev/null || true
+
 # Generate Info.plist with current version
 cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -73,10 +77,13 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <true/>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+$(if [[ "$BUILD_CONFIG" == "release" ]]; then cat << 'SPARKLE'
     <key>SUFeedURL</key>
     <string>https://glen15.github.io/dxai/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>wZ77Vb+gcsLFFNNumqor98VzKd7tFODOzfLU64IcptI=</string>
+SPARKLE
+fi)
 </dict>
 </plist>
 PLIST
@@ -226,8 +233,8 @@ cd "$PROJECT_DIR/build"
 ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME.zip"
 echo "Zip: $ZIP_PATH ($(du -sh "$ZIP_PATH" | cut -f1))"
 
-# Notarization
-if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
+# Notarization (release 빌드만)
+if [[ "$BUILD_CONFIG" == "release" ]] && security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
     echo ""
     echo "Submitting for notarization..."
     if xcrun notarytool submit "$ZIP_PATH" \

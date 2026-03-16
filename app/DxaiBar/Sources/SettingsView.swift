@@ -194,6 +194,10 @@ struct SettingsView: View {
     }
 
     private func checkNotificationStatus() {
+        guard Bundle.main.bundleIdentifier != nil else {
+            notificationsEnabled = true  // 번들 없는 개발 환경에서는 경고 숨김
+            return
+        }
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 notificationsEnabled = settings.authorizationStatus == .authorized
