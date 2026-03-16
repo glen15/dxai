@@ -160,14 +160,16 @@ serve(async (req: Request) => {
   // Upsert user
   const { data: existingUser } = await supabase
     .from("users")
-    .select("id, nickname")
+    .select("id, nickname, secret_token")
     .eq("device_uuid", device_uuid)
     .single();
 
   let userId: string;
+  let secretToken: string | null = null;
 
   if (existingUser) {
     userId = existingUser.id;
+    secretToken = existingUser.secret_token;
     if (existingUser.nickname !== nickname) {
       const { error: nickErr } = await supabase
         .from("users")
@@ -186,7 +188,7 @@ serve(async (req: Request) => {
     const { data: newUser, error: insertErr } = await supabase
       .from("users")
       .insert({ device_uuid, nickname, last_tier: vanguard_tier, last_division: vanguard_division })
-      .select("id")
+      .select("id, secret_token")
       .single();
     if (insertErr?.code === "23505") {
       return respond({ ok: false, error: "nickname_taken" }, 409);
@@ -195,6 +197,7 @@ serve(async (req: Request) => {
       return respond({ ok: false, error: "user_creation_failed" }, 500);
     }
     userId = newUser.id;
+    secretToken = newUser.secret_token;
   }
 
   // Upsert daily record (only update if higher coins or changed tokens)
@@ -272,7 +275,7 @@ serve(async (req: Request) => {
     (r: any) => (r.claude_tokens + r.codex_tokens) > todayTotalTokens
   ).length + 1;
 
-  return respond({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank });
+  return respond({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank, secret_token: secretToken });
 });
 
 function json(data: any, status = 200, origin = "") {

@@ -60,6 +60,7 @@ final class DxaiPointService {
         let total_tokens: Int?
         let rank: Int?
         let live_rank: Int?
+        let secret_token: String?
         let error: String?
     }
 
@@ -408,6 +409,9 @@ final class DxaiPointService {
                 if let liveRank = resp.live_rank {
                     self?.serverLiveRank = liveRank
                 }
+                if let token = resp.secret_token {
+                    Self.saveSecretToken(token)
+                }
                 NSLog("[DxaiPoint] Submitted: rank=\(resp.rank ?? 0), live_rank=\(resp.live_rank ?? 0), coins=\(resp.total_coins ?? 0), tokens=\(resp.total_tokens ?? 0)")
             }
         }.resume()
@@ -426,6 +430,38 @@ final class DxaiPointService {
 
     private func savePending() {
         Self.write(pendingQueue, to: pendingURL)
+    }
+
+    // MARK: - Keychain (Secret Token)
+
+    private static let keychainService = "com.dxai.vanguard"
+    private static let keychainAccount = "secret_token"
+
+    static func saveSecretToken(_ token: String) {
+        guard let data = token.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount,
+        ]
+        SecItemDelete(query as CFDictionary)
+        var add = query
+        add[kSecValueData as String] = data
+        SecItemAdd(add as CFDictionary, nil)
+    }
+
+    static func loadSecretToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     // MARK: - Persistence Helpers
