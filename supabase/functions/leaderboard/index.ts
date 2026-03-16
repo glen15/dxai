@@ -26,7 +26,7 @@ serve(async (req: Request) => {
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get("SUPABASE_ANON_KEY")!
   );
 
   // --- Personal profile ---
@@ -66,7 +66,7 @@ async function realtimeLeaderboard(supabase: any, page: number) {
     p_offset: (page - 1) * LIVE_PAGE_SIZE,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   const { count } = await supabase
     .from("daily_records")
@@ -108,7 +108,7 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
     p_offset: (page - 1) * LIVE_PAGE_SIZE,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   const { count } = await supabase
     .from("daily_records")
@@ -151,7 +151,7 @@ async function weeklyLeaderboard(supabase: any, param: string | null, page: numb
     p_offset: (page - 1) * PAGE_SIZE,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   const { count } = await supabase.rpc("leaderboard_period_count", {
     start_date: startDate,
@@ -208,7 +208,7 @@ async function monthlyLeaderboard(supabase: any, param: string | null, page: num
     }),
   ]);
 
-  if (mainResult.error) return json({ ok: false, error: mainResult.error.message }, 500);
+  if (mainResult.error) return json({ ok: false, error: "internal_error" }, 500);
 
   const data = mainResult.data ?? [];
   const tierDist = distResult.data ?? [];
@@ -250,7 +250,7 @@ async function totalLeaderboard(supabase: any, page: number) {
     p_offset: (page - 1) * PAGE_SIZE,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   const { count } = await supabase
     .from("users")
@@ -285,7 +285,7 @@ async function tokenRanking(supabase: any, page: number) {
     p_offset: (page - 1) * PAGE_SIZE,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   const { count } = await supabase
     .from("users")
@@ -324,7 +324,7 @@ async function searchUsers(supabase: any, query: string) {
     p_limit: 20,
   });
 
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
 
   return json({
     ok: true,
@@ -375,21 +375,12 @@ async function getUserProfile(supabase: any, nickname: string) {
   const monthlyClaudeTokens = (history ?? []).reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const monthlyCodexTokens = (history ?? []).reduce((s: number, r: any) => s + r.codex_tokens, 0);
 
-  // Total tokens (all-time cumulative)
-  const { data: allRecords } = await supabase
-    .from("daily_records")
-    .select("claude_tokens, codex_tokens")
-    .eq("user_id", user.id);
-  const totalTokens = (allRecords ?? []).reduce(
-    (s: number, r: any) => s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0), 0
-  );
-
-  // Global rank — 랭킹 탭과 동일하게 토큰 기반으로 계산
-  const { data: allUsers } = await supabase.rpc("leaderboard_by_tokens", {
-    p_limit: 1000,
-    p_offset: 0,
+  // Global rank + total tokens — DB에서 RANK() OVER로 효율적 계산
+  const { data: rankData } = await supabase.rpc("user_token_rank", {
+    p_nickname: nickname,
   });
-  const rank = ((allUsers ?? []).findIndex((r: any) => r.nickname === nickname) + 1) || 1;
+  const rank = rankData?.[0]?.rank ?? 1;
+  const totalTokens = Number(rankData?.[0]?.total_tokens ?? 0);
 
   // Active streak
   const streak = calculateStreak(history ?? []);

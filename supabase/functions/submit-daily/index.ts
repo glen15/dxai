@@ -34,11 +34,24 @@ function checkRateLimit(deviceUUID: string): boolean {
   return entry.count <= 10;
 }
 
+const ALLOWED_ORIGINS = new Set([
+  "https://vanguard.dx-ai.cloud",
+  "http://localhost:3000",
+]);
+
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.has(origin) ? origin : "";
+}
+
 serve(async (req: Request) => {
+  const corsOrigin = getCorsOrigin(req);
+  const respond = (data: any, status = 200) => json(data, status, corsOrigin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
@@ -46,14 +59,14 @@ serve(async (req: Request) => {
   }
 
   if (req.method !== "POST") {
-    return json({ ok: false, error: "method_not_allowed" }, 405);
+    return respond({ ok: false, error: "method_not_allowed" }, 405);
   }
 
   let body: any;
   try {
     body = await req.json();
   } catch {
-    return json({ ok: false, error: "invalid_json" }, 400);
+    return respond({ ok: false, error: "invalid_json" }, 400);
   }
 
   const {
@@ -75,15 +88,15 @@ serve(async (req: Request) => {
   // --- Validation ---
 
   if (!device_uuid || typeof device_uuid !== "string") {
-    return json({ ok: false, error: "invalid_device_uuid" }, 400);
+    return respond({ ok: false, error: "invalid_device_uuid" }, 400);
   }
 
   if (!nickname || !/^[a-zA-Z0-9_]{2,16}$/.test(nickname)) {
-    return json({ ok: false, error: "invalid_nickname" }, 400);
+    return respond({ ok: false, error: "invalid_nickname" }, 400);
   }
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return json({ ok: false, error: "invalid_date" }, 400);
+    return respond({ ok: false, error: "invalid_date" }, 400);
   }
 
   // Reject future dates or dates older than 7 days
@@ -91,39 +104,39 @@ serve(async (req: Request) => {
   const now = new Date();
   const daysDiff = (now.getTime() - submittedDate.getTime()) / 86_400_000;
   if (daysDiff < -1 || daysDiff > 7) {
-    return json({ ok: false, error: "date_out_of_range" }, 400);
+    return respond({ ok: false, error: "date_out_of_range" }, 400);
   }
 
   if (typeof daily_coins !== "number" || daily_coins < 0 || daily_coins > 5000) {
-    return json({ ok: false, error: "invalid_daily_coins" }, 400);
+    return respond({ ok: false, error: "invalid_daily_coins" }, 400);
   }
 
   if (!VALID_TIERS.includes(vanguard_tier)) {
-    return json({ ok: false, error: "invalid_tier" }, 400);
+    return respond({ ok: false, error: "invalid_tier" }, 400);
   }
 
   if (vanguard_tier !== "Challenger") {
     if (typeof vanguard_division !== "number" || vanguard_division < 1 || vanguard_division > 5) {
-      return json({ ok: false, error: "invalid_division" }, 400);
+      return respond({ ok: false, error: "invalid_division" }, 400);
     }
   }
 
   // Coins-tier matching verification
   const expectedCoins = calculateCoins(vanguard_tier, vanguard_division ?? null);
   if (daily_coins !== expectedCoins) {
-    return json({ ok: false, error: "coins_mismatch" }, 400);
+    return respond({ ok: false, error: "coins_mismatch" }, 400);
   }
 
   if (typeof claude_tokens !== "number" || claude_tokens < 0) {
-    return json({ ok: false, error: "invalid_claude_tokens" }, 400);
+    return respond({ ok: false, error: "invalid_claude_tokens" }, 400);
   }
   if (typeof codex_tokens !== "number" || codex_tokens < 0) {
-    return json({ ok: false, error: "invalid_codex_tokens" }, 400);
+    return respond({ ok: false, error: "invalid_codex_tokens" }, 400);
   }
 
   // Rate limit
   if (!checkRateLimit(device_uuid)) {
-    return json({ ok: false, error: "rate_limited" }, 429);
+    return respond({ ok: false, error: "rate_limited" }, 429);
   }
 
   // --- DB Operations ---
@@ -150,7 +163,7 @@ serve(async (req: Request) => {
         .update({ nickname, last_tier: vanguard_tier, last_division: vanguard_division, updated_at: new Date().toISOString() })
         .eq("id", userId);
       if (nickErr?.code === "23505") {
-        return json({ ok: false, error: "nickname_taken" }, 409);
+        return respond({ ok: false, error: "nickname_taken" }, 409);
       }
     } else {
       await supabase
@@ -165,10 +178,10 @@ serve(async (req: Request) => {
       .select("id")
       .single();
     if (insertErr?.code === "23505") {
-      return json({ ok: false, error: "nickname_taken" }, 409);
+      return respond({ ok: false, error: "nickname_taken" }, 409);
     }
     if (insertErr || !newUser) {
-      return json({ ok: false, error: "user_creation_failed" }, 500);
+      return respond({ ok: false, error: "user_creation_failed" }, 500);
     }
     userId = newUser.id;
   }
@@ -248,15 +261,15 @@ serve(async (req: Request) => {
     (r: any) => (r.claude_tokens + r.codex_tokens) > todayTotalTokens
   ).length + 1;
 
-  return json({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank });
+  return respond({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank });
 });
 
-function json(data: any, status = 200) {
+function json(data: any, status = 200, origin = "") {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      ...(origin ? { "Access-Control-Allow-Origin": origin } : {}),
     },
   });
 }
