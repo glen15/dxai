@@ -237,7 +237,18 @@ serve(async (req: Request) => {
 
   const rank = (count ?? 0) + 1;
 
-  return json({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank });
+  // Live rank: 오늘 토큰 기준 순위
+  const todayTotalTokens = claude_tokens + codex_tokens;
+  const { data: todayRecords } = await supabase
+    .from("daily_records")
+    .select("claude_tokens, codex_tokens")
+    .eq("date", date);
+
+  const liveRank = (todayRecords ?? []).filter(
+    (r: any) => (r.claude_tokens + r.codex_tokens) > todayTotalTokens
+  ).length + 1;
+
+  return json({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank });
 });
 
 function json(data: any, status = 200) {

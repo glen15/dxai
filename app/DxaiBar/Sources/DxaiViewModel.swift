@@ -18,6 +18,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var totalCoins: Int = 0
     @Published var allTimeTokens: Int = 0
     @Published var accountLevel: Int = 1
+    @Published var liveRank: Int = 0
 
     private var isLoadingWeekly = false
     private var lastWeeklyRefresh: Date = .distantPast
@@ -260,6 +261,9 @@ final class DxaiViewModel: ObservableObject {
             allTimeTokens = serverTokens
             accountLevel = DxaiViewModel.calculateLevel(serverTokens)
         }
+
+        // 라이브 순위
+        liveRank = ps.serverLiveRank
 
         // 미제출 건 재시도
         ps.retryPendingSubmissions()

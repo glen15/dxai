@@ -172,6 +172,15 @@ struct DxaiMenuView: View {
                             .foregroundColor(.secondary.opacity(colors.textDim))
                     }
                     Spacer()
+                    if viewModel.liveRank > 0 {
+                        Text("#\(viewModel.liveRank)")
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(colors.bgCard))
+                            .cornerRadius(4)
+                    }
                     Text("Lv.\(viewModel.accountLevel)")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundColor(.purple)
