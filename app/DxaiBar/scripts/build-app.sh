@@ -236,7 +236,19 @@ if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
         --keychain-profile "dxai-notary" \
         --wait; then
         echo "Notarization succeeded, stapling..."
-        xcrun stapler staple "$APP_DIR"
+        # CloudKit 전파 지연 대비 재시도 (최대 5회, 15초 간격)
+        STAPLE_OK=false
+        for i in 1 2 3 4 5; do
+            if xcrun stapler staple "$APP_DIR" 2>&1; then
+                STAPLE_OK=true
+                break
+            fi
+            echo "Staple attempt $i failed, retrying in 15s..."
+            sleep 15
+        done
+        if [[ "$STAPLE_OK" != "true" ]]; then
+            echo "Warning: Stapling failed after 5 attempts. App is notarized but not stapled."
+        fi
         # Re-create zip with stapled app
         rm -f "$ZIP_PATH"
         ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME.zip"
