@@ -166,7 +166,7 @@ struct DxaiMenuView: View {
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    if viewModel.weeklyTokenTotal > viewModel.todayTokens {
+                    if viewModel.weeklyTokenTotal > 0 {
                         Text(l.weeklyShort(viewModel.weeklyTokenTotal))
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary.opacity(colors.textDim))
