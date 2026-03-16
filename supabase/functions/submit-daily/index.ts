@@ -53,13 +53,20 @@ serve(async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
       },
     });
   }
 
   if (req.method !== "POST") {
     return respond({ ok: false, error: "method_not_allowed" }, 405);
+  }
+
+  // #5: API key 검증
+  const apiKey = req.headers.get("x-api-key") ?? "";
+  const expectedKey = Deno.env.get("SUBMIT_API_KEY") ?? "";
+  if (!expectedKey || apiKey !== expectedKey) {
+    return respond({ ok: false, error: "unauthorized" }, 401);
   }
 
   let body: any;

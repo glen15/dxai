@@ -10,6 +10,20 @@ const CORS_HEADERS = {
 const PAGE_SIZE = 50;
 const LIVE_PAGE_SIZE = 20;
 
+// #8: IP 기반 rate limit (분당 60회)
+const rateLimits = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimits.set(ip, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= 60;
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
@@ -19,15 +33,29 @@ serve(async (req: Request) => {
     return json({ ok: false, error: "method_not_allowed" }, 405);
   }
 
+  // #8: Rate limit
+  const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(clientIP)) {
+    return json({ ok: false, error: "rate_limited" }, 429);
+  }
+
   const url = new URL(req.url);
   const type = url.searchParams.get("type") ?? "realtime";
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
   const nickname = url.searchParams.get("user");
 
+  // #6: SERVICE_ROLE_KEY — Edge Function은 서버 코드, anon 직접 테이블 접근은 RLS로 차단
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
+  // --- Nickname availability check (앱에서 REST API 대신 이 엔드포인트 사용) ---
+  const checkNick = url.searchParams.get("check_nickname");
+  if (checkNick) {
+    const deviceUUID = url.searchParams.get("device_uuid") ?? "";
+    return await checkNicknameAvailability(supabase, checkNick, deviceUUID);
+  }
 
   // --- Personal profile ---
   if (nickname) {
@@ -339,6 +367,26 @@ async function searchUsers(supabase: any, query: string) {
       member_since: r.member_since,
     })),
   });
+}
+
+// ── Nickname check (앱의 REST API 직접 호출 대체) ──
+
+async function checkNicknameAvailability(supabase: any, nickname: string, deviceUUID: string) {
+  if (!nickname || nickname.length < 2 || nickname.length > 16) {
+    return json({ ok: true, available: false });
+  }
+
+  let query = supabase
+    .from("users")
+    .select("id", { count: "exact", head: true })
+    .eq("nickname", nickname);
+
+  if (deviceUUID) {
+    query = query.neq("device_uuid", deviceUUID);
+  }
+
+  const { count } = await query;
+  return json({ ok: true, available: (count ?? 0) === 0 });
 }
 
 // ── User profile ──

@@ -85,6 +85,8 @@ final class DxaiPointService {
     // MARK: - Server Config
 
     private static let submitURL = "https://ldsqtmirplfgclzessrd.supabase.co/functions/v1/submit-daily"
+    private static let leaderboardURL = "https://ldsqtmirplfgclzessrd.supabase.co/functions/v1/leaderboard"
+    private static let submitAPIKey: String = Bundle.main.infoDictionary?["SubmitAPIKey"] as? String ?? ""
 
     private init() {
         let base = FileManager.default.homeDirectoryForCurrentUser
@@ -197,25 +199,15 @@ final class DxaiPointService {
         case error(String)
     }
 
-    /// 서버에서 닉네임 중복 확인 (자기 device_uuid 제외)
+    /// 서버에서 닉네임 중복 확인 (Edge Function 경유, REST API 직접 접근 제거)
     func checkNickname(_ name: String, completion: @escaping (NicknameResult) -> Void) {
-        let urlStr = Self.submitURL.replacingOccurrences(of: "submit-daily", with: "leaderboard")
-            + "?check_nickname=\(name)&device_uuid=\(config.deviceUUID)"
-        guard let url = URL(string: urlStr) else {
-            completion(.error("Invalid URL"))
-            return
-        }
-
-        // 간단하게: Supabase REST로 직접 조회
-        let restURL = "https://ldsqtmirplfgclzessrd.supabase.co/rest/v1/users?nickname=eq.\(name)&device_uuid=neq.\(config.deviceUUID)&select=id"
-        guard let checkURL = URL(string: restURL) else {
+        let urlStr = Self.leaderboardURL + "?check_nickname=\(name)&device_uuid=\(config.deviceUUID)"
+        guard let checkURL = URL(string: urlStr) else {
             completion(.error("Invalid URL"))
             return
         }
 
         var request = URLRequest(url: checkURL)
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("sb_publishable_0A_u1M6MBppiDn8Yl4WZUw_t930Z61C", forHTTPHeaderField: "apikey")
         request.timeoutInterval = 10
 
         URLSession.shared.dataTask(with: request) { data, _, error in
@@ -224,13 +216,27 @@ final class DxaiPointService {
                 return
             }
             guard let data = data,
-                  let arr = try? JSONDecoder().decode([[String: String]].self, from: data) else {
-                // 빈 배열이면 사용 가능
+                  let json = try? JSONDecoder().decode([String: AnyCodable].self, from: data),
+                  let available = json["available"]?.boolValue else {
                 completion(.available)
                 return
             }
-            completion(arr.isEmpty ? .available : .taken)
+            completion(available ? .available : .taken)
         }.resume()
+    }
+
+    /// JSON 디코딩용 유틸리티
+    private struct AnyCodable: Decodable {
+        let value: Any
+        var boolValue: Bool? { value as? Bool }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let b = try? container.decode(Bool.self) { value = b }
+            else if let i = try? container.decode(Int.self) { value = i }
+            else if let s = try? container.decode(String.self) { value = s }
+            else { value = try container.decode(String.self) }
+        }
     }
 
     func updateNickname(_ name: String) {
@@ -321,6 +327,9 @@ final class DxaiPointService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !Self.submitAPIKey.isEmpty {
+            request.setValue(Self.submitAPIKey, forHTTPHeaderField: "X-API-Key")
+        }
         request.timeoutInterval = 15
 
         let encoder = JSONEncoder()

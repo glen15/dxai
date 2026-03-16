@@ -84,6 +84,11 @@ $(if [[ "$BUILD_CONFIG" == "release" ]]; then cat << 'SPARKLE'
     <string>wZ77Vb+gcsLFFNNumqor98VzKd7tFODOzfLU64IcptI=</string>
 SPARKLE
 fi)
+$(if [[ -n "${SUBMIT_API_KEY:-}" ]]; then cat << APIKEY
+    <key>SubmitAPIKey</key>
+    <string>$SUBMIT_API_KEY</string>
+APIKEY
+fi)
 </dict>
 </plist>
 PLIST
