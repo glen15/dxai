@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>DxaiBar Updates</title>
+    <link>https://glen15.github.io/dxai/appcast.xml</link>
+    <language>en</language>
+    <item>
+      <title>Version 1.0.10</title>
+      <pubDate>Mon, 16 Mar 2026 03:19:33 +0000</pubDate>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/glen15/dxai/releases/download/V1.0.10/DxaiBar.zip"
+        sparkle:version="1.0.10"
+        sparkle:shortVersionString="1.0.10"
+        sparkle:edSignature="0q5qRnlqV7C1wJREPQ6uolGrtcFV25WquuWpCAjpzqIxDpbSdAhF4Gd3SB6NYXtlmspaGf/qvndrK9HLw+U6Cg=="
+        length="6216232"
+        type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>
