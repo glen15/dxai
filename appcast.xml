@@ -5,15 +5,15 @@
     <link>https://glen15.github.io/dxai/appcast.xml</link>
     <language>en</language>
     <item>
-      <title>Version 1.0.11</title>
-      <pubDate>Mon, 16 Mar 2026 04:11:42 +0000</pubDate>
+      <title>Version 1.0.12</title>
+      <pubDate>Mon, 16 Mar 2026 13:56:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
       <enclosure
-        url="https://github.com/glen15/dxai/releases/download/V1.0.11/DxaiBar.zip"
-        sparkle:version="1.0.11"
-        sparkle:shortVersionString="1.0.11"
-        sparkle:edSignature="A7eKZweSrHJnqQQjY11i23TIzW6VhxJJWxDlsGbaKvv9QyCx1Xzxc/5gwYnWld3YkM25PHoNdmXlYctKFb4hDA=="
-        length="6216528"
+        url="https://github.com/glen15/dxai/releases/download/V1.0.12/DxaiBar.zip"
+        sparkle:version="1.0.12"
+        sparkle:shortVersionString="1.0.12"
+        sparkle:edSignature="3JM22VE/B7Q3QtYBNwU8iZPwiAWuHZ26wcGPqNCJJ1PsMEC0BDsQJBTDSUzYgIg55UgYEYLOam+jqLNDm4zICA=="
+        length="6217983"
         type="application/octet-stream" />
     </item>
   </channel>
