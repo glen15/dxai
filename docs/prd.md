@@ -133,7 +133,6 @@ dxai
 - [x] 보안 강화 (API key 인증, RLS, CORS, rate limit, 보안 헤더)
 - [x] 코드 정리 (미사용 의존성/CSS/함수 제거, 코드맵 업데이트)
 - [ ] Homebrew Core 등록 (GitHub 30+ 스타 필요)
-- [ ] 다국어 확장 (JP, CN 등)
 
 ## Vanguard Rank 시스템
 
