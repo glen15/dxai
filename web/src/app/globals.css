@@ -128,32 +128,6 @@ body {
   background: linear-gradient(135deg, rgba(217, 119, 6, 0.06) 0%, rgba(217, 119, 6, 0.02) 100%);
 }
 
-/* Rank number glow */
-.rank-gold { text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); }
-.rank-silver { text-shadow: 0 0 16px rgba(203, 213, 225, 0.4); }
-.rank-bronze { text-shadow: 0 0 16px rgba(217, 119, 6, 0.4); }
-
-/* Row glow for table */
-.row-glow-gold {
-  background: linear-gradient(90deg, rgba(250, 204, 21, 0.04) 0%, transparent 50%);
-}
-.row-glow-silver {
-  background: linear-gradient(90deg, rgba(203, 213, 225, 0.03) 0%, transparent 50%);
-}
-.row-glow-bronze {
-  background: linear-gradient(90deg, rgba(217, 119, 6, 0.03) 0%, transparent 50%);
-}
-
-/* Countdown ring */
-.countdown-ring {
-  transform: rotate(-90deg);
-}
-.countdown-track { stroke: rgba(148, 163, 184, 0.1); }
-.countdown-fill {
-  stroke: #22d3ee;
-  transition: stroke-dashoffset 1s linear;
-}
-
 /* Token diff — 반짝이며 유지 */
 @keyframes token-pulse {
   0%, 100% { opacity: 1; }
