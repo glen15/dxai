@@ -52,6 +52,7 @@ final class DxaiPointService {
         let codex_tokens: Int
         let vanguard_tier: String
         let vanguard_division: Int?
+        let secret_token: String?
     }
 
     struct SubmissionResponse: Codable {
@@ -339,7 +340,8 @@ final class DxaiPointService {
             claude_tokens: record.claudeTokens,
             codex_tokens: record.codexTokens,
             vanguard_tier: record.vanguardTier,
-            vanguard_division: record.vanguardDivision
+            vanguard_division: record.vanguardDivision,
+            secret_token: Self.loadSecretToken()
         )
 
         sendPayload(payload)

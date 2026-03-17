@@ -91,6 +91,7 @@ serve(async (req: Request) => {
     codex_tokens,
     vanguard_tier,
     vanguard_division,
+    secret_token: clientSecretToken,
   } = body;
 
   // Use daily_coins if present, fall back to daily_points for old clients
@@ -170,6 +171,12 @@ serve(async (req: Request) => {
   if (existingUser) {
     userId = existingUser.id;
     secretToken = existingUser.secret_token;
+
+    // secret_token 검증 (클라이언트가 토큰을 보낸 경우에만, 구버전 호환)
+    if (clientSecretToken && clientSecretToken !== existingUser.secret_token) {
+      return respond({ ok: false, error: "invalid_secret_token" }, 403);
+    }
+
     if (existingUser.nickname !== nickname) {
       const { error: nickErr } = await supabase
         .from("users")
