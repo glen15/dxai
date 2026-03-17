@@ -71,35 +71,3 @@ export function TierBadge({
   );
 }
 
-/** SVG tier icon (shield shape, colored by tier) */
-export function TierIcon({ tier, className = "w-5 h-5" }: { tier: string; className?: string }) {
-  const colorMap: Record<string, string> = {
-    Bronze: "#b45309",
-    Silver: "#94a3b8",
-    Gold: "#facc15",
-    Platinum: "#22d3ee",
-    Diamond: "#60a5fa",
-    Master: "#c084fc",
-    Grandmaster: "#f87171",
-    Challenger: "#fb923c",
-  };
-  const color = colorMap[tier] ?? "#6b7280";
-
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M12 2L4 6v5c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z"
-        fill={color}
-        fillOpacity={0.25}
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 8l1.5 3 3.5.5-2.5 2.5.5 3.5L12 16l-3 1.5.5-3.5L7 11.5l3.5-.5L12 8z"
-        fill={color}
-        fillOpacity={0.6}
-      />
-    </svg>
-  );
-}

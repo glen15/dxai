@@ -135,34 +135,6 @@ export async function fetchUserProfile(nickname: string): Promise<ProfileRespons
   return res.json();
 }
 
-export function tierColor(tier: string): string {
-  const colors: Record<string, string> = {
-    Bronze: "text-amber-700",
-    Silver: "text-gray-400",
-    Gold: "text-yellow-400",
-    Platinum: "text-cyan-300",
-    Diamond: "text-blue-400",
-    Master: "text-purple-400",
-    Grandmaster: "text-red-400",
-    Challenger: "text-orange-400",
-  };
-  return colors[tier] ?? "text-gray-300";
-}
-
-export function tierEmoji(tier: string): string {
-  const emojis: Record<string, string> = {
-    Bronze: "\u{1F949}",
-    Silver: "\u{1F948}",
-    Gold: "\u{1F947}",
-    Platinum: "\u{1F4A0}",
-    Diamond: "\u{1F48E}",
-    Master: "\u{1F3C6}",
-    Grandmaster: "\u{1F451}",
-    Challenger: "\u{26A1}",
-  };
-  return emojis[tier] ?? "";
-}
-
 export type Lang = "ko" | "en";
 
 const UI_STRINGS: Record<string, [string, string]> = {
@@ -372,44 +344,3 @@ export function formatNumber(n: number): string {
   return n.toLocaleString();
 }
 
-/** Delta display: "+12%" / "-5%" / "NEW" / "--" */
-export function formatDelta(current: number, previous: number, lang: Lang): string {
-  if (previous === 0 && current === 0) return "--";
-  if (previous === 0) return lang === "ko" ? "NEW" : "NEW";
-
-  const diff = current - previous;
-  const pct = Math.round((diff / previous) * 100);
-
-  if (pct === 0) return t("no_change", lang);
-  const sign = pct > 0 ? "+" : "";
-  return `${sign}${pct}%`;
-}
-
-/** Activity rate as percentage string */
-export function activityRate(daysActive: number, periodDays: number): string {
-  if (periodDays <= 0) return "0%";
-  return `${Math.round((daysActive / periodDays) * 100)}%`;
-}
-
-/** Tier label with localization */
-export function tierLabel(tier: string, lang: Lang): string {
-  const labels: Record<string, [string, string]> = {
-    Bronze: ["브론즈", "Bronze"],
-    Silver: ["실버", "Silver"],
-    Gold: ["골드", "Gold"],
-    Platinum: ["플래티넘", "Platinum"],
-    Diamond: ["다이아몬드", "Diamond"],
-    Master: ["마스터", "Master"],
-    Grandmaster: ["그랜드마스터", "Grandmaster"],
-    Challenger: ["챌린저", "Challenger"],
-  };
-  const pair = labels[tier];
-  return pair ? pair[lang === "ko" ? 0 : 1] : tier;
-}
-
-/** Delta direction indicator */
-export function deltaDirection(current: number, previous: number): "up" | "down" | "same" {
-  if (current > previous) return "up";
-  if (current < previous) return "down";
-  return "same";
-}
