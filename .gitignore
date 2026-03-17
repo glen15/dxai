@@ -80,9 +80,6 @@ dxai_guidelines.md
 CLAUDE.md
 __pycache__/
 
-# Internal docs (PRD, security audit)
-docs/
-SECURITY_AUDIT.md
 
 # Legacy
 mo

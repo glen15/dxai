@@ -12,7 +12,7 @@ A clear and concise description of what the bug is. We suggest using English for
 
 ## Steps to reproduce
 
-1. Run command: `mo ...`
+1. Run command: `dxai ...`
 2. ...
 3. See error
 
@@ -25,8 +25,8 @@ A clear and concise description of what you expected to happen.
 Please run the command with `--debug` flag and paste the output here:
 
 ```bash
-mo <command> --debug
-# Example: mo clean --debug
+dxai <command> --debug
+# Example: dxai clean --debug
 ```
 
 <details>
@@ -40,10 +40,10 @@ Paste the debug output here
 
 ## Environment
 
-Please run `mo update` to ensure you are on the latest version, then paste the output of `mo --version` below:
+Please run `dxai update` to ensure you are on the latest version, then paste the output of `dxai --version` below:
 
 ```text
-Paste mo --version output here
+Paste dxai --version output here
 ```
 
 ## Additional context
