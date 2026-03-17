@@ -8,6 +8,7 @@ import { TierBadge } from "@/components/shared";
 import {
   fetchUserProfile,
   type UserProfile,
+  type Achievement,
   formatTokens,
   formatNumber,
   formatHeroTokens,
@@ -83,6 +84,40 @@ function StatCard({ label, value, sub, accent }: { label: string; value: number;
         <NumberTicker value={value} className={`text-2xl font-bold ${accent ?? "text-white"}`} />
       </div>
       {sub && <div className="text-xs text-white/40 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+const RARITY_STYLES: Record<string, { border: string; bg: string; text: string }> = {
+  common:    { border: "border-white/10",    bg: "bg-white/[0.03]",    text: "text-white/50" },
+  uncommon:  { border: "border-green-500/30", bg: "bg-green-500/[0.06]", text: "text-green-400" },
+  rare:      { border: "border-blue-500/30",  bg: "bg-blue-500/[0.06]",  text: "text-blue-400" },
+  legendary: { border: "border-amber-500/30", bg: "bg-amber-500/[0.06]", text: "text-amber-400" },
+};
+
+function AchievementBadge({ achievement, lang }: { achievement: Achievement; lang: Lang }) {
+  const style = RARITY_STYLES[achievement.rarity] ?? RARITY_STYLES.common;
+  const name = lang === "ko" ? achievement.name_ko : achievement.name_en;
+  const desc = lang === "ko" ? achievement.desc_ko : achievement.desc_en;
+
+  return (
+    <div
+      className={`relative rounded-lg border ${style.border} ${style.bg} p-3 flex items-start gap-3 group`}
+      title={desc}
+    >
+      <span className="text-2xl shrink-0">{achievement.icon}</span>
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-white/90 truncate">{name}</div>
+        <div className="text-[11px] text-white/40 truncate">{desc}</div>
+        {achievement.achieved_at && (
+          <div className="text-[10px] text-white/25 mt-1">
+            {new Date(achievement.achieved_at).toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US")}
+          </div>
+        )}
+      </div>
+      <span className={`absolute top-2 right-2 text-[9px] uppercase font-bold tracking-wider ${style.text}`}>
+        {achievement.rarity}
+      </span>
     </div>
   );
 }
@@ -259,6 +294,28 @@ export default function UserPage() {
       </motion.p>
 
       {milestone && <p className="text-sm text-purple-400/70 mb-6 italic">{milestone}</p>}
+
+      {profile.achievements && profile.achievements.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }} className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white/90">
+              {lang === "ko" ? "업적" : "Achievements"}
+              <span className="text-sm font-normal text-white/40 ml-2">{profile.achievements.length}/36</span>
+            </h2>
+            <a
+              href="/achievements"
+              className="text-xs text-purple-400/70 hover:text-purple-400 transition-colors"
+            >
+              {lang === "ko" ? "전체 보기" : "View all"} &rarr;
+            </a>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {profile.achievements.map((a) => (
+              <AchievementBadge key={a.id} achievement={a} lang={lang} />
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
         <h2 className="text-lg font-bold mb-4 text-white/90">{t("history_30d", lang)}</h2>

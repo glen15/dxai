@@ -63,6 +63,20 @@ export interface LeaderboardResponse {
   error?: string;
 }
 
+export interface Achievement {
+  id: string;
+  category: string;
+  name_ko: string;
+  name_en: string;
+  desc_ko: string;
+  desc_en: string;
+  rarity: string;
+  icon: string;
+  achieved_at?: string;
+  achieved_count?: number;
+  total_users?: number;
+}
+
 export interface UserProfile {
   nickname: string;
   rank: number;
@@ -75,6 +89,7 @@ export interface UserProfile {
   streak: number;
   weekly: PeriodStats;
   monthly: PeriodStats;
+  achievements: Achievement[];
   history: DayRecord[];
 }
 
@@ -121,6 +136,23 @@ export async function fetchSearch(query: string): Promise<{ ok: boolean; results
   });
   if (!res.ok) {
     return { ok: false, results: [] };
+  }
+  return res.json();
+}
+
+export interface AchievementsResponse {
+  ok: boolean;
+  type: string;
+  achievements: Achievement[];
+  error?: string;
+}
+
+export async function fetchAchievements(): Promise<AchievementsResponse> {
+  const res = await fetch(`${LEADERBOARD_BASE}?type=achievements&_t=${Date.now()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    return { ok: false, type: "achievements", achievements: [], error: `HTTP ${res.status}` };
   }
   return res.json();
 }

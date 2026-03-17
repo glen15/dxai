@@ -81,6 +81,8 @@ serve(async (req: Request) => {
       return await tokenRanking(supabase, page);
     case "search":
       return await searchUsers(supabase, url.searchParams.get("q") ?? "");
+    case "achievements":
+      return await achievementGallery(supabase);
     default:
       return json({ ok: false, error: "invalid_type" }, 400);
   }
@@ -436,10 +438,11 @@ async function getUserProfile(supabase: any, nickname: string) {
   // Active streak
   const streak = calculateStreak(history ?? []);
 
-  // Total users count
-  const { count: totalUsers } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true });
+  // Total users count + achievements (parallel)
+  const [{ count: totalUsers }, { data: achievements }] = await Promise.all([
+    supabase.from("users").select("id", { count: "exact", head: true }),
+    supabase.rpc("get_user_achievements", { p_user_id: user.id }),
+  ]);
 
   return json({
     ok: true,
@@ -465,6 +468,17 @@ async function getUserProfile(supabase: any, nickname: string) {
         codex_tokens: monthlyCodexTokens,
         days_active: (history ?? []).length,
       },
+      achievements: (achievements ?? []).map((a: any) => ({
+        id: a.achievement_id,
+        category: a.category,
+        name_ko: a.name_ko,
+        name_en: a.name_en,
+        desc_ko: a.desc_ko,
+        desc_en: a.desc_en,
+        rarity: a.rarity,
+        icon: a.icon,
+        achieved_at: a.achieved_at,
+      })),
       history: (history ?? []).map((r: any) => ({
         date: r.date,
         daily_coins: r.daily_coins,
@@ -474,6 +488,30 @@ async function getUserProfile(supabase: any, nickname: string) {
         codex_tokens: r.codex_tokens,
       })),
     },
+  });
+}
+
+// ── Achievement gallery ──
+
+async function achievementGallery(supabase: any) {
+  const { data, error } = await supabase.rpc("achievement_stats");
+  if (error) return json({ ok: false, error: "internal_error" }, 500);
+
+  return json({
+    ok: true,
+    type: "achievements",
+    achievements: (data ?? []).map((a: any) => ({
+      id: a.achievement_id,
+      category: a.category,
+      name_ko: a.name_ko,
+      name_en: a.name_en,
+      desc_ko: a.desc_ko,
+      desc_en: a.desc_en,
+      rarity: a.rarity,
+      icon: a.icon,
+      achieved_count: a.achieved_count,
+      total_users: a.total_users,
+    })),
   });
 }
 

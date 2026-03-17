@@ -161,7 +161,7 @@ serve(async (req: Request) => {
   // Upsert user
   const { data: existingUser } = await supabase
     .from("users")
-    .select("id, nickname, secret_token")
+    .select("id, nickname, secret_token, created_at")
     .eq("device_uuid", device_uuid)
     .single();
 
@@ -282,8 +282,230 @@ serve(async (req: Request) => {
     (r: any) => (r.claude_tokens + r.codex_tokens) > todayTotalTokens
   ).length + 1;
 
-  return respond({ ok: true, total_coins: totalCoins, total_tokens: totalTokens, rank, live_rank: liveRank, secret_token: secretToken });
+  // ── Achievement judgment ──
+  const newAchievements = await judgeAchievements(supabase, userId, {
+    totalTokens,
+    totalCoins,
+    vanguard_tier,
+    claude_tokens,
+    codex_tokens,
+    date,
+    rank,
+    createdAt: existingUser?.created_at,
+  });
+
+  return respond({
+    ok: true,
+    total_coins: totalCoins,
+    total_tokens: totalTokens,
+    rank,
+    live_rank: liveRank,
+    secret_token: secretToken,
+    ...(newAchievements.length > 0 ? { new_achievements: newAchievements } : {}),
+  });
 });
+
+// ── Achievement definitions ──
+
+const TOKEN_THRESHOLDS = [
+  { id: "token_first", min: 1 },
+  { id: "token_100k", min: 100_000 },
+  { id: "token_1m", min: 1_000_000 },
+  { id: "token_10m", min: 10_000_000 },
+  { id: "token_50m", min: 50_000_000 },
+  { id: "token_100m", min: 100_000_000 },
+  { id: "token_500m", min: 500_000_000 },
+  { id: "token_1b", min: 1_000_000_000 },
+];
+
+const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Challenger"];
+const TIER_ACHIEVEMENTS: Record<string, string> = {
+  Silver: "tier_silver",
+  Gold: "tier_gold",
+  Platinum: "tier_platinum",
+  Diamond: "tier_diamond",
+  Master: "tier_master",
+  Grandmaster: "tier_grandmaster",
+  Challenger: "tier_challenger",
+};
+
+const STREAK_THRESHOLDS = [
+  { id: "streak_3", min: 3 },
+  { id: "streak_7", min: 7 },
+  { id: "streak_14", min: 14 },
+  { id: "streak_30", min: 30 },
+  { id: "streak_60", min: 60 },
+  { id: "streak_100", min: 100 },
+];
+
+const DAYS_THRESHOLDS = [
+  { id: "days_7", min: 7 },
+  { id: "days_30", min: 30 },
+  { id: "days_60", min: 60 },
+  { id: "days_100", min: 100 },
+  { id: "days_365", min: 365 },
+];
+
+const COINS_THRESHOLDS = [
+  { id: "coins_1k", min: 1_000 },
+  { id: "coins_10k", min: 10_000 },
+  { id: "coins_50k", min: 50_000 },
+  { id: "coins_100k", min: 100_000 },
+  { id: "coins_500k", min: 500_000 },
+];
+
+interface JudgeContext {
+  totalTokens: number;
+  totalCoins: number;
+  vanguard_tier: string;
+  claude_tokens: number;
+  codex_tokens: number;
+  date: string;
+  rank: number;
+  createdAt?: string;
+}
+
+async function judgeAchievements(
+  supabase: any,
+  userId: string,
+  ctx: JudgeContext,
+): Promise<Array<{ id: string; name_ko: string; name_en: string; icon: string; rarity: string }>> {
+  // 1. 기존 업적 조회
+  const { data: existing } = await supabase
+    .from("user_achievements")
+    .select("achievement_id")
+    .eq("user_id", userId);
+
+  const earned = new Set((existing ?? []).map((r: any) => r.achievement_id));
+  const candidates: string[] = [];
+
+  // 2. Token 업적
+  for (const t of TOKEN_THRESHOLDS) {
+    if (!earned.has(t.id) && ctx.totalTokens >= t.min) candidates.push(t.id);
+  }
+
+  // 3. Tier 업적 (현재 티어 이하 모두 부여)
+  const tierIdx = TIER_ORDER.indexOf(ctx.vanguard_tier);
+  for (let i = 1; i <= tierIdx; i++) {
+    const achId = TIER_ACHIEVEMENTS[TIER_ORDER[i]];
+    if (achId && !earned.has(achId)) candidates.push(achId);
+  }
+
+  // 4. Days 업적 (총 활동일)
+  const { count: daysActive } = await supabase
+    .from("daily_records")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  for (const d of DAYS_THRESHOLDS) {
+    if (!earned.has(d.id) && (daysActive ?? 0) >= d.min) candidates.push(d.id);
+  }
+
+  // 5. Streak 업적 (연속 활동일)
+  const { data: recentDates } = await supabase
+    .from("daily_records")
+    .select("date")
+    .eq("user_id", userId)
+    .order("date", { ascending: false })
+    .limit(110);
+
+  const streak = calcStreak(recentDates ?? []);
+  for (const s of STREAK_THRESHOLDS) {
+    if (!earned.has(s.id) && streak >= s.min) candidates.push(s.id);
+  }
+
+  // 6. Coins 업적
+  for (const c of COINS_THRESHOLDS) {
+    if (!earned.has(c.id) && ctx.totalCoins >= c.min) candidates.push(c.id);
+  }
+
+  // 7. Special 업적
+  if (!earned.has("dual_wielder") && ctx.claude_tokens > 0 && ctx.codex_tokens > 0) {
+    candidates.push("dual_wielder");
+  }
+
+  const submittedDate = new Date(ctx.date + "T00:00:00Z");
+  const dow = submittedDate.getUTCDay();
+  if (!earned.has("weekend_warrior") && (dow === 0 || dow === 6)) {
+    candidates.push("weekend_warrior");
+  }
+
+  if (!earned.has("early_adopter") && ctx.createdAt) {
+    const created = new Date(ctx.createdAt);
+    if (created.getUTCFullYear() === 2026 && created.getUTCMonth() === 2) {
+      candidates.push("early_adopter");
+    }
+  }
+
+  if (!earned.has("perfectionist") && ctx.vanguard_tier === "Challenger") {
+    candidates.push("perfectionist");
+  }
+
+  if (!earned.has("top_ranker") && ctx.rank <= 3) {
+    candidates.push("top_ranker");
+  }
+
+  if (candidates.length === 0) return [];
+
+  // 8. 새 업적 삽입 (ON CONFLICT DO NOTHING)
+  const rows = candidates.map((id) => ({
+    user_id: userId,
+    achievement_id: id,
+  }));
+
+  await supabase
+    .from("user_achievements")
+    .upsert(rows, { onConflict: "user_id,achievement_id", ignoreDuplicates: true });
+
+  // 9. 새 업적 메타데이터 반환
+  const { data: meta } = await supabase
+    .from("achievements")
+    .select("id, name_ko, name_en, icon, rarity")
+    .in("id", candidates);
+
+  return (meta ?? []).map((a: any) => ({
+    id: a.id,
+    name_ko: a.name_ko,
+    name_en: a.name_en,
+    icon: a.icon,
+    rarity: a.rarity,
+  }));
+}
+
+function calcStreak(records: Array<{ date: string }>): number {
+  if (records.length === 0) return 0;
+  const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
+
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = kst.toISOString().slice(0, 10);
+  let streak = 0;
+  let expected = today;
+
+  for (const r of sorted) {
+    if (r.date === expected) {
+      streak++;
+      const d = new Date(expected + "T00:00:00Z");
+      d.setDate(d.getDate() - 1);
+      expected = d.toISOString().slice(0, 10);
+    } else if (streak === 0) {
+      // 오늘 기록이 없으면 어제부터 시작
+      const yesterday = new Date(today + "T00:00:00Z");
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yStr = yesterday.toISOString().slice(0, 10);
+      if (r.date === yStr) {
+        streak = 1;
+        const d = new Date(yStr + "T00:00:00Z");
+        d.setDate(d.getDate() - 1);
+        expected = d.toISOString().slice(0, 10);
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
 
 function json(data: any, status = 200, origin = "") {
   return new Response(JSON.stringify(data), {

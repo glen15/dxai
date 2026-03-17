@@ -135,12 +135,12 @@ dxai
 - [ ] Homebrew Core 등록 (GitHub 30+ 스타 필요, 대기)
 
 #### Phase 4 — 업적/배지 시스템
-- [ ] 업적 설계 (달성 조건, 카테고리, 희귀도)
-- [ ] DB 스키마 (achievements 테이블, user_achievements 관계)
-- [ ] Edge Function (업적 판정 로직, 달성 시 기록)
+- [x] 업적 설계 (6카테고리 36개, 4단계 희귀도)
+- [x] DB 스키마 (achievements + user_achievements + RPC + backfill)
+- [x] Edge Function (submit-daily 업적 판정 + leaderboard 업적 조회)
 - [ ] 앱 알림 (업적 달성 시 macOS 네이티브 알림)
-- [ ] 웹 프로필 배지 표시 (달성한 업적 목록)
-- [ ] 웹 업적 갤러리 (전체 업적 목록 + 달성률)
+- [x] 웹 프로필 배지 표시 (달성한 업적 목록)
+- [x] 웹 업적 갤러리 (/achievements, 전체 업적 + 달성률)
 
 ## Vanguard Rank 시스템
 
