@@ -106,7 +106,7 @@ function TopCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-2xl font-bold text-yellow-400">#1</span>
             <a
-              href={`/user/${entry.nickname}`}
+              href={`/user/?name=${encodeURIComponent(entry.nickname)}`}
               className="text-xl font-bold text-white hover:text-purple-400 transition-colors cursor-pointer truncate"
             >
               {entry.nickname}
@@ -183,7 +183,7 @@ function RunnerCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
             #{entry.rank}
           </span>
           <a
-            href={`/user/${entry.nickname}`}
+            href={`/user/?name=${encodeURIComponent(entry.nickname)}`}
             className="text-base font-semibold text-white/90 hover:text-purple-400 transition-colors cursor-pointer truncate"
           >
             {entry.nickname}
@@ -234,7 +234,7 @@ function RankingRow({ entry, lang, index, totalUsers }: {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <a
-            href={`/user/${entry.nickname}`}
+            href={`/user/?name=${encodeURIComponent(entry.nickname)}`}
             className="text-sm font-medium text-white/90 hover:text-purple-400 transition-colors cursor-pointer truncate"
           >
             {entry.nickname}

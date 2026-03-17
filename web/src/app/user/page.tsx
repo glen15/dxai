@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { BorderBeam } from "@/components/ui/border-beam";
@@ -26,7 +26,6 @@ function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number;
   const claudePct = (claude / total) * 100;
   const codexPct = (codex / total) * 100;
 
-  // SVG donut: stroke-dasharray trick
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const claudeArc = (claudePct / 100) * circumference;
@@ -36,7 +35,6 @@ function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number;
     <div className="flex items-center gap-5">
       <div className="relative w-24 h-24 shrink-0">
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-          {/* Codex (background ring) */}
           <circle
             cx="50" cy="50" r={radius}
             fill="none"
@@ -46,7 +44,6 @@ function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number;
             strokeDashoffset={-claudeArc}
             className="opacity-70"
           />
-          {/* Claude (foreground ring) */}
           <circle
             cx="50" cy="50" r={radius}
             fill="none"
@@ -90,15 +87,21 @@ function StatCard({ label, value, sub, accent }: { label: string; value: number;
   );
 }
 
-export default function UserPage({ params }: { params: Promise<{ nickname: string }> }) {
-  const { nickname } = use(params);
+export default function UserPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("en");
 
   useEffect(() => {
-    fetchUserProfile(nickname).then((res) => {
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name") ?? "";
+    if (!name) {
+      setError("No user specified");
+      setLoading(false);
+      return;
+    }
+    fetchUserProfile(name).then((res) => {
       if (res.ok && res.profile) {
         setProfile(res.profile);
       } else {
@@ -106,7 +109,7 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
       }
       setLoading(false);
     });
-  }, [nickname]);
+  }, []);
 
   if (loading) {
     return (
@@ -138,11 +141,9 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
   const division = profile.last_division;
   const message = vanguardMessage(tier, division, lang);
 
-  // Monthly tokens (last 30 days)
   const monthlyClaudeTokens = profile.monthly.claude_tokens;
   const monthlyCodexTokens = profile.monthly.codex_tokens;
   const monthlyTotalTokens = monthlyClaudeTokens + monthlyCodexTokens;
-  // All-time cumulative tokens (for level calculation)
   const allTimeTotalTokens = profile.total_tokens ?? monthlyTotalTokens;
 
   const milestone = tokenMilestone(allTimeTotalTokens, lang);
@@ -154,7 +155,6 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Top bar */}
       <div className="flex items-center justify-between mb-6">
         <a href="/" className="text-sm text-white/50 hover:text-white/80 transition-colors">
           &larr; {t("back", lang)}
@@ -167,7 +167,6 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
         </button>
       </div>
 
-      {/* Profile Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -213,7 +212,6 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
           </div>
         </div>
 
-        {/* Level progress bar */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] text-white/40 font-mono">
@@ -234,82 +232,35 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
         </div>
       </motion.div>
 
-      {/* Stats Grid — Level, Total Tokens, Coins (no points) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
         className="grid grid-cols-3 gap-3 mb-6"
       >
-        <StatCard
-          label={lang === "ko" ? "계정 레벨" : "Account Level"}
-          value={level}
-          accent="text-purple-400"
-        />
-        <StatCard
-          label={lang === "ko" ? "총 토큰" : "Total Tokens"}
-          value={allTimeTotalTokens}
-          sub={formatHeroTokens(allTimeTotalTokens, lang)}
-        />
-        <StatCard
-          label={lang === "ko" ? "코인" : "Coins"}
-          value={profile.total_coins}
-          accent="text-yellow-400"
-        />
+        <StatCard label={lang === "ko" ? "계정 레벨" : "Account Level"} value={level} accent="text-purple-400" />
+        <StatCard label={lang === "ko" ? "총 토큰" : "Total Tokens"} value={allTimeTotalTokens} sub={formatHeroTokens(allTimeTotalTokens, lang)} />
+        <StatCard label={lang === "ko" ? "코인" : "Coins"} value={profile.total_coins} accent="text-yellow-400" />
       </motion.div>
 
-      {/* Coin notice */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-[11px] text-white/30 mb-6 -mt-3 px-1"
-      >
-        {lang === "ko"
-          ? "코인은 추후 다양한 기능에서 사용될 예정입니다"
-          : "Coins will be usable for various features in the future"}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="text-[11px] text-white/30 mb-6 -mt-3 px-1">
+        {lang === "ko" ? "코인은 추후 다양한 기능에서 사용될 예정입니다" : "Coins will be usable for various features in the future"}
       </motion.p>
 
-      {/* Token Usage — Pie Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="bg-white/[0.03] rounded-xl border border-white/[0.08] p-5 mb-4"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="bg-white/[0.03] rounded-xl border border-white/[0.08] p-5 mb-4">
         <h3 className="text-sm font-medium text-white/60 mb-4">
           {lang === "ko" ? "AI 도구별 토큰 사용 비율" : "Token Usage by AI Tool"}
         </h3>
-        <TokenPieChart
-          claude={monthlyClaudeTokens}
-          codex={monthlyCodexTokens}
-          lang={lang}
-        />
+        <TokenPieChart claude={monthlyClaudeTokens} codex={monthlyCodexTokens} lang={lang} />
       </motion.div>
 
-      {/* Upcoming tools notice */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="text-[11px] text-white/30 mb-6 px-1"
-      >
-        {lang === "ko"
-          ? "Gemini, Grok 등 다른 AI 구독 서비스도 추가 지원 예정입니다"
-          : "Support for Gemini, Grok, and other AI subscriptions coming soon"}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="text-[11px] text-white/30 mb-6 px-1">
+        {lang === "ko" ? "Gemini, Grok 등 다른 AI 구독 서비스도 추가 지원 예정입니다" : "Support for Gemini, Grok, and other AI subscriptions coming soon"}
       </motion.p>
 
-      {/* Milestone */}
-      {milestone && (
-        <p className="text-sm text-purple-400/70 mb-6 italic">{milestone}</p>
-      )}
+      {milestone && <p className="text-sm text-purple-400/70 mb-6 italic">{milestone}</p>}
 
-      {/* 30-Day History */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
         <h2 className="text-lg font-bold mb-4 text-white/90">{t("history_30d", lang)}</h2>
         <div className="bg-white/[0.04] rounded-xl border border-white/[0.08] overflow-hidden">
           <table className="w-full">
@@ -317,44 +268,22 @@ export default function UserPage({ params }: { params: Promise<{ nickname: strin
               <tr className="border-b border-white/[0.08] text-white/60 text-xs uppercase tracking-[0.15em]">
                 <th className="text-left py-3 px-5">{t("date", lang)}</th>
                 <th className="text-left py-3 px-5">{lang === "ko" ? "데일리 티어" : "Daily Tier"}</th>
-                <th className="text-right py-3 px-5 hidden sm:table-cell">
-                  <span className="text-orange-400/80">Claude</span>
-                </th>
-                <th className="text-right py-3 px-5 hidden sm:table-cell">
-                  <span className="text-emerald-400/80">Codex</span>
-                </th>
-                <th className="text-right py-3 px-5">
-                  {lang === "ko" ? "합계" : "Total"}
-                </th>
+                <th className="text-right py-3 px-5 hidden sm:table-cell"><span className="text-orange-400/80">Claude</span></th>
+                <th className="text-right py-3 px-5 hidden sm:table-cell"><span className="text-emerald-400/80">Codex</span></th>
+                <th className="text-right py-3 px-5">{lang === "ko" ? "합계" : "Total"}</th>
               </tr>
             </thead>
             <tbody>
               {profile.history.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-white/30">{t("no_history", lang)}</td>
-                </tr>
+                <tr><td colSpan={5} className="text-center py-8 text-white/30">{t("no_history", lang)}</td></tr>
               ) : (
                 profile.history.map((day, i) => (
-                  <motion.tr
-                    key={day.date}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2, delay: i * 0.03 }}
-                    className="border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors"
-                  >
+                  <motion.tr key={day.date} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: i * 0.03 }} className="border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors">
                     <td className="py-3 px-5 text-sm text-white/60 font-mono">{day.date}</td>
-                    <td className="py-3 px-5">
-                      <TierBadge tier={day.vanguard_tier} division={day.vanguard_division} />
-                    </td>
-                    <td className="py-3 px-5 text-right font-mono text-sm text-orange-400 hidden sm:table-cell">
-                      {formatTokens(day.claude_tokens)}
-                    </td>
-                    <td className="py-3 px-5 text-right font-mono text-sm text-emerald-400 hidden sm:table-cell">
-                      {formatTokens(day.codex_tokens)}
-                    </td>
-                    <td className="py-3 px-5 text-right font-mono text-sm text-white/80">
-                      {formatTokens(day.claude_tokens + day.codex_tokens)}
-                    </td>
+                    <td className="py-3 px-5"><TierBadge tier={day.vanguard_tier} division={day.vanguard_division} /></td>
+                    <td className="py-3 px-5 text-right font-mono text-sm text-orange-400 hidden sm:table-cell">{formatTokens(day.claude_tokens)}</td>
+                    <td className="py-3 px-5 text-right font-mono text-sm text-emerald-400 hidden sm:table-cell">{formatTokens(day.codex_tokens)}</td>
+                    <td className="py-3 px-5 text-right font-mono text-sm text-white/80">{formatTokens(day.claude_tokens + day.codex_tokens)}</td>
                   </motion.tr>
                 ))
               )}

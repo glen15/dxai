@@ -113,7 +113,7 @@ function PodiumCard({ entry, lang, diff, type }: {
           </span>
           <div className="flex items-center gap-2 mt-1">
             <a
-              href={`/user/${entry.nickname}`}
+              href={`/user/?name=${encodeURIComponent(entry.nickname)}`}
               className="text-base font-semibold hover:text-purple-400 transition-colors cursor-pointer"
             >
               {entry.nickname}
@@ -196,7 +196,7 @@ function RankRow({ entry, lang, diff, index }: {
         <div>
           <div className="flex items-center gap-2">
             <a
-              href={`/user/${entry.nickname}`}
+              href={`/user/?name=${encodeURIComponent(entry.nickname)}`}
               className="text-base text-white/90 group-hover:text-white transition-colors cursor-pointer"
             >
               {entry.nickname}
