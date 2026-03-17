@@ -125,14 +125,22 @@ dxai
 > **수집하지 않는 것**: 프로젝트명, 프롬프트, 파일 경로, 대화 내용
 > Vanguard Point는 AI 활용도를 보여주는 스펙/지표로 활용
 
-#### Phase 3 — 확장 (진행 중)
+#### Phase 3 — 확장 ✅
 - [x] Apple Developer Program 등록 + 승인 (JEONGHUN LEE, Y6DMY4SBGN)
 - [x] Developer ID 서명 + Apple 공증 + Staple (Gatekeeper 경고 제거)
 - [x] Cloudflare → AWS 마이그레이션 (S3 + CloudFront + Route 53)
 - [x] Terraform IaC 전환 (infra/main.tf)
 - [x] 보안 강화 (API key 인증, RLS, CORS, rate limit, 보안 헤더)
 - [x] 코드 정리 (미사용 의존성/CSS/함수 제거, 코드맵 업데이트)
-- [ ] Homebrew Core 등록 (GitHub 30+ 스타 필요)
+- [ ] Homebrew Core 등록 (GitHub 30+ 스타 필요, 대기)
+
+#### Phase 4 — 업적/배지 시스템
+- [ ] 업적 설계 (달성 조건, 카테고리, 희귀도)
+- [ ] DB 스키마 (achievements 테이블, user_achievements 관계)
+- [ ] Edge Function (업적 판정 로직, 달성 시 기록)
+- [ ] 앱 알림 (업적 달성 시 macOS 네이티브 알림)
+- [ ] 웹 프로필 배지 표시 (달성한 업적 목록)
+- [ ] 웹 업적 갤러리 (전체 업적 목록 + 달성률)
 
 ## Vanguard Rank 시스템
 
