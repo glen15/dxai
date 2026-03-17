@@ -106,7 +106,7 @@ dxai
 - [x] CLI 앱 번들 내장 (Resources/dxai + bin/ + lib/)
 - [x] Go 바이너리 CI 빌드 포함 (analyze-go, status-go)
 - [x] 닉네임/opt-in 설정 시 리더보드 즉시 제출
-- [ ] 사용자 확보 (수업 배포, 사내 공유)
+- [x] 사용자 확보 (사내 배포, 실 사용자 5명: DXAI, ELLA, karin, RIKA, MacMini)
 
 #### Phase 2 — Vanguard 랭킹 서비스 ✅
 - [x] Vanguard Point 로컬 시스템 (포인트 공식, JSON 영속화, 3단 표시)
@@ -132,8 +132,7 @@ dxai
 - [x] Terraform IaC 전환 (infra/main.tf)
 - [x] 보안 강화 (API key 인증, RLS, CORS, rate limit, 보안 헤더)
 - [x] 코드 정리 (미사용 의존성/CSS/함수 제거, 코드맵 업데이트)
-- [ ] 사용자 확보 (수업 배포, 사내 공유)
-- [ ] Homebrew Core 등록
+- [ ] Homebrew Core 등록 (GitHub 30+ 스타 필요)
 - [ ] 다국어 확장 (JP, CN 등)
 
 ## Vanguard Rank 시스템
