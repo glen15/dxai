@@ -7,6 +7,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { TierBadge } from "@/components/shared";
 import {
   fetchUserProfile,
+  fetchAchievements,
   type UserProfile,
   type Achievement,
   formatTokens,
@@ -95,38 +96,70 @@ const RARITY_STYLES: Record<string, { border: string; bg: string; text: string }
   legendary: { border: "border-amber-500/30", bg: "bg-amber-500/[0.06]", text: "text-amber-400" },
 };
 
-function AchievementBadge({ achievement, lang }: { achievement: Achievement; lang: Lang }) {
+function AchievementBadge({ achievement, earned, lang }: { achievement: Achievement; earned: boolean; lang: Lang }) {
   const style = RARITY_STYLES[achievement.rarity] ?? RARITY_STYLES.common;
   const name = lang === "ko" ? achievement.name_ko : achievement.name_en;
   const desc = lang === "ko" ? achievement.desc_ko : achievement.desc_en;
 
   return (
     <div
-      className={`relative rounded-lg border ${style.border} ${style.bg} p-3 flex items-start gap-3 group`}
+      className={`relative rounded-lg border p-3 flex items-start gap-3 ${
+        earned
+          ? `${style.border} ${style.bg}`
+          : "border-white/[0.04] bg-white/[0.01] opacity-40"
+      }`}
       title={desc}
     >
-      <span className="text-2xl shrink-0">{achievement.icon}</span>
+      <span className={`text-2xl shrink-0 ${earned ? "" : "grayscale"}`}>{achievement.icon}</span>
       <div className="min-w-0">
-        <div className="text-sm font-medium text-white/90 truncate">{name}</div>
-        <div className="text-[11px] text-white/40 truncate">{desc}</div>
-        {achievement.achieved_at && (
+        <div className={`text-sm font-medium truncate ${earned ? "text-white/90" : "text-white/30"}`}>{name}</div>
+        <div className={`text-[11px] truncate ${earned ? "text-white/40" : "text-white/20"}`}>{desc}</div>
+        {earned && achievement.achieved_at && (
           <div className="text-[10px] text-white/25 mt-1">
             {new Date(achievement.achieved_at).toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US")}
           </div>
         )}
       </div>
-      <span className={`absolute top-2 right-2 text-[9px] uppercase font-bold tracking-wider ${style.text}`}>
+      <span className={`absolute top-2 right-2 text-[9px] uppercase font-bold tracking-wider ${earned ? style.text : "text-white/15"}`}>
         {achievement.rarity}
       </span>
     </div>
   );
 }
 
+type OwnershipFilter = "all" | "earned" | "locked";
+type RarityFilter = "all" | "common" | "uncommon" | "rare" | "legendary";
+
+const OWNERSHIP_LABELS: Record<OwnershipFilter, [string, string]> = {
+  all:    ["전체", "All"],
+  earned: ["달성", "Earned"],
+  locked: ["미달성", "Locked"],
+};
+
+const RARITY_LABELS: Record<RarityFilter, [string, string]> = {
+  all:       ["전체", "All"],
+  common:    ["Common", "Common"],
+  uncommon:  ["Uncommon", "Uncommon"],
+  rare:      ["Rare", "Rare"],
+  legendary: ["Legendary", "Legendary"],
+};
+
+const RARITY_FILTER_COLORS: Record<RarityFilter, string> = {
+  all:       "",
+  common:    "text-white/60",
+  uncommon:  "text-green-400",
+  rare:      "text-blue-400",
+  legendary: "text-amber-400",
+};
+
 export default function UserPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("en");
+  const [ownerFilter, setOwnerFilter] = useState<OwnershipFilter>("all");
+  const [rarityFilter, setRarityFilter] = useState<RarityFilter>("all");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -136,11 +169,14 @@ export default function UserPage() {
       setLoading(false);
       return;
     }
-    fetchUserProfile(name).then((res) => {
-      if (res.ok && res.profile) {
-        setProfile(res.profile);
+    Promise.all([fetchUserProfile(name), fetchAchievements()]).then(([profileRes, achRes]) => {
+      if (profileRes.ok && profileRes.profile) {
+        setProfile(profileRes.profile);
       } else {
-        setError(res.error ?? "User not found");
+        setError(profileRes.error ?? "User not found");
+      }
+      if (achRes.ok) {
+        setAllAchievements(achRes.achievements);
       }
       setLoading(false);
     });
@@ -295,27 +331,82 @@ export default function UserPage() {
 
       {milestone && <p className="text-sm text-purple-400/70 mb-6 italic">{milestone}</p>}
 
-      {profile.achievements && profile.achievements.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }} className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white/90">
-              {lang === "ko" ? "업적" : "Achievements"}
-              <span className="text-sm font-normal text-white/40 ml-2">{profile.achievements.length}/36</span>
-            </h2>
-            <a
-              href="/achievements"
-              className="text-xs text-purple-400/70 hover:text-purple-400 transition-colors"
-            >
-              {lang === "ko" ? "전체 보기" : "View all"} &rarr;
-            </a>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {profile.achievements.map((a) => (
-              <AchievementBadge key={a.id} achievement={a} lang={lang} />
-            ))}
-          </div>
-        </motion.div>
-      )}
+      {allAchievements.length > 0 && (() => {
+        const earnedIds = new Set((profile.achievements ?? []).map((a) => a.id));
+        const earnedMap = Object.fromEntries((profile.achievements ?? []).map((a) => [a.id, a]));
+        const earnedCount = earnedIds.size;
+
+        const merged = allAchievements.map((a) => ({
+          ...a,
+          achieved_at: earnedMap[a.id]?.achieved_at,
+          earned: earnedIds.has(a.id),
+        }));
+
+        const filtered = merged.filter((a) => {
+          if (ownerFilter === "earned" && !a.earned) return false;
+          if (ownerFilter === "locked" && a.earned) return false;
+          if (rarityFilter !== "all" && a.rarity !== rarityFilter) return false;
+          return true;
+        });
+
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }} className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-white/90">
+                {lang === "ko" ? "업적" : "Achievements"}
+                <span className="text-sm font-normal text-white/40 ml-2">{earnedCount}/{allAchievements.length}</span>
+              </h2>
+              <a href="/achievements" className="text-xs text-purple-400/70 hover:text-purple-400 transition-colors">
+                {lang === "ko" ? "갤러리" : "Gallery"} &rarr;
+              </a>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {(Object.keys(OWNERSHIP_LABELS) as OwnershipFilter[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setOwnerFilter(key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    ownerFilter === key
+                      ? "bg-white/[0.1] text-white"
+                      : "bg-white/[0.02] text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {lang === "ko" ? OWNERSHIP_LABELS[key][0] : OWNERSHIP_LABELS[key][1]}
+                  {key === "earned" && ` ${earnedCount}`}
+                  {key === "locked" && ` ${allAchievements.length - earnedCount}`}
+                </button>
+              ))}
+              <span className="w-px h-5 bg-white/[0.08] self-center mx-1" />
+              {(Object.keys(RARITY_LABELS) as RarityFilter[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setRarityFilter(key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    rarityFilter === key
+                      ? `bg-white/[0.1] ${RARITY_FILTER_COLORS[key] || "text-white"}`
+                      : "bg-white/[0.02] text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {lang === "ko" ? RARITY_LABELS[key][0] : RARITY_LABELS[key][1]}
+                </button>
+              ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="text-center py-8 text-white/20 text-sm">
+                {lang === "ko" ? "조건에 맞는 업적이 없습니다" : "No achievements match the filter"}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filtered.map((a) => (
+                  <AchievementBadge key={a.id} achievement={a} earned={a.earned} lang={lang} />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        );
+      })()}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
         <h2 className="text-lg font-bold mb-4 text-white/90">{t("history_30d", lang)}</h2>
