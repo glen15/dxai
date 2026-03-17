@@ -17,7 +17,7 @@ struct L {
 
     // MARK: - Header
 
-    var refresh: String { ko ? "새로고침" : "Refresh" }
+    var restart: String { ko ? "최신화" : "Update" }
 
     // MARK: - About
 

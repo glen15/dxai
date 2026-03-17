@@ -140,11 +140,11 @@ struct DxaiMenuView: View {
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
 
-            Button(action: { viewModel.refresh(force: true) }) {
+            Button(action: { relaunchApp() }) {
                 HStack(spacing: 3) {
-                    Image(systemName: "arrow.clockwise")
+                    Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 12))
-                    Text(l.refresh)
+                    Text(l.restart)
                         .font(.system(size: 13))
                 }
             }

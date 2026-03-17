@@ -19,6 +19,7 @@ final class UpdaterManager: ObservableObject {
         )
         controller = ctrl
         isAvailable = true
+        ctrl.updater.automaticallyDownloadsUpdates = true
         ctrl.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
     }
