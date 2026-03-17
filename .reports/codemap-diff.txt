@@ -1,0 +1,26 @@
+코드맵 업데이트 보고서
+====================
+날짜: 2026-03-17
+트리거: Cloudflare → AWS 마이그레이션 + 죽은 코드 정리
+
+변경 파일 및 비율
+-----------------
+| 파일               | 변경 비율 | 주요 변경                                    |
+|--------------------|-----------|----------------------------------------------|
+| architecture.md    | ~25%      | Cloudflare→AWS 다이어그램, 배포 방법, IaC 추가 |
+| frontend.md        | ~30%      | 배포/라우팅/의존성/파일구조 업데이트           |
+| data.md            | ~20%      | RLS 정책, 마이그레이션 6건 추가               |
+| backend.md         | ~3%       | 타임스탬프만 업데이트                         |
+
+전체 변경량: ~26% (30% 미만 → 자동 승인)
+
+주요 변경 사항
+--------------
+1. 인프라: Cloudflare Workers → AWS S3 + CloudFront + Route 53
+2. 빌드: Next.js SSR → static export (output: "export")
+3. 라우팅: /user/[nickname] → /user/?name= (쿼리 파라미터)
+4. IaC: infra/main.tf (Terraform) 추가
+5. 삭제: open-next.config.ts, button.tsx, TierIcon, 미사용 함수 6개
+6. 의존성 제거: framer-motion, shadcn, tw-animate-css, @opennextjs/cloudflare
+7. RLS 강화: users 테이블 anon SELECT 차단
+8. 마이그레이션 6건 추가 (20260316~20260317)
