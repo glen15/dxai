@@ -87,6 +87,10 @@ SECURITY_AUDIT.md
 # Legacy
 mo
 
+# Environment / secrets
+.env*
+*.tfstate*
+
 # Supabase CLI temp
 supabase/.temp/
 

@@ -243,7 +243,7 @@ if [[ "$BUILD_CONFIG" == "release" ]] && security find-identity -v -p codesignin
     echo ""
     echo "Submitting for notarization..."
     if xcrun notarytool submit "$ZIP_PATH" \
-        --apple-id "glen15@naver.com" \
+        --apple-id "${APPLE_ID:-glen15@naver.com}" \
         --team-id "$TEAM_ID" \
         --keychain-profile "dxai-notary" \
         --wait; then

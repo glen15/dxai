@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "deploy": "next build && aws s3 sync out s3://vanguard-dx-ai --delete --profile dxai && aws cloudfront create-invalidation --distribution-id E3I0R6N4IXKYGE --paths '/*' --profile dxai",
+    "deploy": "next build && aws s3 sync out s3://vanguard-dx-ai --delete --profile dxai && aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DIST_ID:-E3I0R6N4IXKYGE} --paths '/*' --profile dxai",
     "start": "next start",
     "lint": "eslint"
   },
