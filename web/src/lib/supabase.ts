@@ -313,12 +313,13 @@ export function formatHeroTokens(n: number, lang: Lang): string {
   return String(n);
 }
 
-/** 계정 레벨: 누적 토큰 = 경험치, 무한 레벨 */
+/** 계정 레벨: 누적 토큰 = 경험치, 무한 레벨 (1.4x 성장) */
 const LEVEL_BASE = 1_000_000; // Lv.2 = 1M tokens
+const LEVEL_GROWTH = 1.4;
 
 export function levelThreshold(level: number): number {
   if (level <= 1) return 0;
-  return LEVEL_BASE * Math.pow(2, level - 2);
+  return Math.round(LEVEL_BASE * Math.pow(LEVEL_GROWTH, level - 2));
 }
 
 export function calculateLevel(totalTokens: number): {
