@@ -174,15 +174,23 @@ ENTPLIST
 
 if security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
     echo "Signing with Developer ID..."
-    # Sign Sparkle frameworks first (inside-out)
+    # Sign Sparkle frameworks first (inside-out: 가장 안쪽부터)
     if [[ -d "$APP_DIR/Contents/Frameworks/Sparkle.framework" ]]; then
-        # Sign XPC services inside Sparkle
+        # Sign all Mach-O binaries inside Sparkle (XPC, Autoupdate, helpers)
+        find "$APP_DIR/Contents/Frameworks/Sparkle.framework" -type f | while read -r bin; do
+            if file "$bin" | grep -q "Mach-O"; then
+                echo "  Signing Sparkle binary: $(basename "$bin")"
+                codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
+                    --sign "$SIGN_IDENTITY" --timestamp "$bin"
+            fi
+        done
+        # Sign XPC bundles
         find "$APP_DIR/Contents/Frameworks/Sparkle.framework" -name "*.xpc" -type d | while read -r xpc; do
             echo "  Signing XPC: $(basename "$xpc")"
             codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
                 --sign "$SIGN_IDENTITY" --timestamp "$xpc"
         done
-        # Sign Sparkle Autoupdate app
+        # Sign .app bundles inside Sparkle
         find "$APP_DIR/Contents/Frameworks/Sparkle.framework" -name "*.app" -type d | while read -r app; do
             echo "  Signing: $(basename "$app")"
             codesign --force --options runtime --entitlements "$ENTITLEMENTS" \
@@ -242,30 +250,46 @@ echo "Zip: $ZIP_PATH ($(du -sh "$ZIP_PATH" | cut -f1))"
 if [[ "$BUILD_CONFIG" == "release" ]] && security find-identity -v -p codesigning | grep -q "$TEAM_ID"; then
     echo ""
     echo "Submitting for notarization..."
-    if xcrun notarytool submit "$ZIP_PATH" \
+    NOTARY_OUTPUT=$(xcrun notarytool submit "$ZIP_PATH" \
         --apple-id "${APPLE_ID:-glen15@naver.com}" \
         --team-id "$TEAM_ID" \
         --keychain-profile "dxai-notary" \
-        --wait; then
+        --wait --output-format json 2>&1) || true
+    echo "$NOTARY_OUTPUT"
+
+    # 공증 상태 검증 (--wait이 Invalid여도 exit 0 반환하는 문제 대비)
+    NOTARY_STATUS=$(echo "$NOTARY_OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','Unknown'))" 2>/dev/null || echo "Unknown")
+    echo "Notarization status: $NOTARY_STATUS"
+
+    if [[ "$NOTARY_STATUS" == "Accepted" ]]; then
         echo "Notarization succeeded, stapling..."
-        # CloudKit 전파 지연 대비 재시도 (최대 5회, 15초 간격)
+        # CloudKit 전파 지연 대비 재시도 (최대 8회, 20초 간격)
         STAPLE_OK=false
-        for i in 1 2 3 4 5; do
+        for i in 1 2 3 4 5 6 7 8; do
             if xcrun stapler staple "$APP_DIR" 2>&1; then
                 STAPLE_OK=true
                 break
             fi
-            echo "Staple attempt $i failed, retrying in 15s..."
-            sleep 15
+            echo "Staple attempt $i failed, retrying in 20s..."
+            sleep 20
         done
         if [[ "$STAPLE_OK" != "true" ]]; then
-            echo "Warning: Stapling failed after 5 attempts. App is notarized but not stapled."
+            echo "ERROR: Stapling failed after 8 attempts."
+            exit 1
         fi
         # Re-create zip with stapled app
         rm -f "$ZIP_PATH"
         ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME.zip"
         echo "Stapled zip: $ZIP_PATH ($(du -sh "$ZIP_PATH" | cut -f1))"
     else
-        echo "Warning: Notarization failed. App is signed but not notarized."
+        echo "ERROR: Notarization failed with status: $NOTARY_STATUS"
+        # 상세 로그 출력
+        SUBMISSION_ID=$(echo "$NOTARY_OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || echo "")
+        if [[ -n "$SUBMISSION_ID" ]]; then
+            echo "Fetching notarization log..."
+            xcrun notarytool log "$SUBMISSION_ID" \
+                --keychain-profile "dxai-notary" 2>&1 || true
+        fi
+        exit 1
     fi
 fi
