@@ -6,6 +6,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DXAI_ROOT="$(dirname "$(dirname "$PROJECT_DIR")")"
 
+# .env 파일에서 환경변수 로드 (로컬 개발용)
+if [[ -f "$DXAI_ROOT/.env" ]]; then
+    set -a
+    source "$DXAI_ROOT/.env"
+    set +a
+fi
+
 BUILD_CONFIG="${1:-debug}"
 APP_NAME="DxaiBar"
 BUNDLE_ID="com.dxai.DxaiBar"
