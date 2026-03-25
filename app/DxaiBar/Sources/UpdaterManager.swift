@@ -19,7 +19,9 @@ final class UpdaterManager: ObservableObject {
         )
         controller = ctrl
         isAvailable = true
+        ctrl.updater.automaticallyChecksForUpdates = true
         ctrl.updater.automaticallyDownloadsUpdates = true
+        ctrl.updater.updateCheckInterval = 3600 // 1시간마다 체크
         ctrl.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
     }
