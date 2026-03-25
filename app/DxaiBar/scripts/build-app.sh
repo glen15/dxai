@@ -16,7 +16,14 @@ fi
 BUILD_CONFIG="${1:-debug}"
 APP_NAME="DxaiBar"
 BUNDLE_ID="com.dxai.DxaiBar"
-VERSION="${DXAI_VERSION:-1.0.0}"
+# DXAI_VERSION이 없으면 최신 git 태그에서 자동 추출
+if [[ -n "${DXAI_VERSION:-}" ]]; then
+    VERSION="$DXAI_VERSION"
+else
+    LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    VERSION="${LATEST_TAG#V}"  # V1.0.18 → 1.0.18
+    VERSION="${VERSION:-1.0.0}"
+fi
 
 # Output paths
 if [[ "$BUILD_CONFIG" == "release" ]]; then
