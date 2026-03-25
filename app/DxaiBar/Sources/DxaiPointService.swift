@@ -1,47 +1,13 @@
 import Foundation
 
-/// Vanguard Coin 시스템 — 일일 Vanguard Rank를 코인으로 변환, 로컬 누적 저장 + 서버 제출
+/// Vanguard Coin 시스템 — 일일 Vanguard Rank를 코인으로 변환, SQLite 저장 + 서버 제출
 final class DxaiPointService {
     static let shared = DxaiPointService()
 
-    private let configURL: URL
-    private let historyURL: URL
-    private let pendingURL: URL
-
-    private(set) var config: PointConfig
-    private(set) var history: [DailyRecord]
-    private var pendingQueue: [SubmissionPayload]
+    private let store = DxaiStore.shared
     private var isSubmitting = false
 
     // MARK: - Types
-
-    struct PointConfig: Codable {
-        var nickname: String
-        var optIn: Bool
-        var deviceUUID: String
-        var lastRecordedDate: String  // "yyyy-MM-dd"
-        var cachedTotalTokens: Int?
-        var cachedLiveRank: Int?
-
-        static var `default`: PointConfig {
-            PointConfig(
-                nickname: "",
-                optIn: true,
-                deviceUUID: UUID().uuidString,
-                lastRecordedDate: ""
-            )
-        }
-    }
-
-    struct DailyRecord: Codable {
-        let date: String
-        let vanguardTier: String
-        let vanguardDivision: Int?
-        let dailyCoins: Int
-        let claudeTokens: Int
-        let codexTokens: Int
-        let totalCoins: Int  // 누적 코인
-    }
 
     struct SubmissionPayload: Codable {
         let device_uuid: String
@@ -84,8 +50,6 @@ final class DxaiPointService {
         return entry.base + entry.bonus * (5 - div)
     }
 
-    // MARK: - Init
-
     // MARK: - Server Config
 
     private static let submitURL = "https://ldsqtmirplfgclzessrd.supabase.co/functions/v1/submit-daily"
@@ -93,65 +57,67 @@ final class DxaiPointService {
     private static let submitAPIKey: String = Bundle.main.infoDictionary?["SubmitAPIKey"] as? String ?? ""
 
     private init() {
-        let base = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/dxai/points")
-        configURL = base.appendingPathComponent("config.json")
-        historyURL = base.appendingPathComponent("history.json")
-        pendingURL = base.appendingPathComponent("pending.json")
+        serverTotalTokens = store.getConfigInt("cached_total_tokens") ?? 0
+        serverLiveRank = store.getConfigInt("cached_live_rank") ?? 0
+    }
 
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    // MARK: - Config Accessors
 
-        config = Self.load(configURL) ?? .default
-        history = Self.load(historyURL) ?? []
-        pendingQueue = Self.load(pendingURL) ?? []
+    var nickname: String {
+        store.getConfig("nickname") ?? ""
+    }
 
-        // 영속화된 서버 데이터 복원
-        serverTotalTokens = config.cachedTotalTokens ?? 0
-        serverLiveRank = config.cachedLiveRank ?? 0
+    var optIn: Bool {
+        store.getConfig("opt_in") != "0"
+    }
+
+    var deviceUUID: String {
+        if let uuid = store.getConfig("device_uuid") { return uuid }
+        let uuid = UUID().uuidString
+        store.setConfig("device_uuid", uuid)
+        return uuid
+    }
+
+    var lastRecordedDate: String {
+        store.getConfig("last_recorded_date") ?? ""
     }
 
     // MARK: - Public API
 
-    /// 서버에서 받은 누적 토큰 (레벨 계산용, config에 영속화)
     private(set) var serverTotalTokens: Int = 0 {
         didSet {
             guard serverTotalTokens != oldValue else { return }
-            config.cachedTotalTokens = serverTotalTokens
-            saveConfig()
+            store.setConfigInt("cached_total_tokens", serverTotalTokens)
         }
     }
 
-    /// 서버에서 받은 라이브 순위 (오늘 토큰 기준, config에 영속화)
     private(set) var serverLiveRank: Int = 0 {
         didSet {
             guard serverLiveRank != oldValue else { return }
-            config.cachedLiveRank = serverLiveRank
-            saveConfig()
+            store.setConfigInt("cached_live_rank", serverLiveRank)
         }
     }
 
     var totalCoins: Int {
-        history.last?.totalCoins ?? 0
+        store.lastDailyRecord()?.totalCoins ?? 0
     }
 
     var todayCoins: Int {
-        let today = Self.todayString()
-        return history.last(where: { $0.date == today })?.dailyCoins ?? 0
+        store.getDailyRecord(date: Self.todayString())?.dailyCoins ?? 0
     }
 
     var weeklyCoins: Int {
         let dates = Self.thisWeekDates()
-        return history.filter { dates.contains($0.date) }.reduce(0) { $0 + $1.dailyCoins }
+        return store.dailyRecordsInDates(dates).reduce(0) { $0 + $1.dailyCoins }
     }
 
-    /// 이번 주 월~일 날짜 집합 (월요일 시작)
     static func thisWeekDates() -> Set<String> {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
-        cal.firstWeekday = 2 // 월요일
+        cal.firstWeekday = 2
         let today = cal.startOfDay(for: Date())
         let weekday = cal.component(.weekday, from: today)
-        let daysFromMonday = (weekday + 5) % 7 // 월=0, 화=1, ..., 일=6
+        let daysFromMonday = (weekday + 5) % 7
         let monday = cal.date(byAdding: .day, value: -daysFromMonday, to: today)!
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
@@ -162,65 +128,53 @@ final class DxaiPointService {
         })
     }
 
-    var recentHistory: [DailyRecord] {
-        Array(history.suffix(30))
+    var history: [DxaiStore.DailyRow] {
+        store.allDailyRecords()
     }
 
-    /// refresh() 시 호출 — 오늘의 Vanguard Rank + 토큰 기록
+    var recentHistory: [DxaiStore.DailyRow] {
+        store.recentDailyRecords(limit: 30)
+    }
+
+    // MARK: - Record Daily Best
+
     func recordDailyBest(tier: String, division: Int?, claudeTokens: Int, codexTokens: Int) {
         let today = Self.todayString()
         let points = Self.calculateCoins(tier: tier, division: division)
-        var changed = false
 
-        if let idx = history.firstIndex(where: { $0.date == today }) {
-            let existing = history[idx]
+        if let existing = store.getDailyRecord(date: today) {
+            let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
+            guard points > existing.dailyCoins || tokensChanged else { return }
             let newPoints = max(points, existing.dailyCoins)
             let newTier = points >= existing.dailyCoins ? tier : existing.vanguardTier
             let newDiv = points >= existing.dailyCoins ? division : existing.vanguardDivision
-            let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
-            guard points > existing.dailyCoins || tokensChanged else { return }
             let cumulative = totalCoinsExcluding(today) + newPoints
-            history[idx] = DailyRecord(
-                date: today,
-                vanguardTier: newTier,
-                vanguardDivision: newDiv,
-                dailyCoins: newPoints,
-                claudeTokens: claudeTokens,
-                codexTokens: codexTokens,
-                totalCoins: cumulative
-            )
-            changed = true
+            store.upsertDailyRecord(DxaiStore.DailyRow(
+                date: today, vanguardTier: newTier, vanguardDivision: newDiv,
+                dailyCoins: newPoints, claudeTokens: claudeTokens,
+                codexTokens: codexTokens, totalCoins: cumulative
+            ))
         } else {
             let cumulative = totalCoins + points
-            history.append(DailyRecord(
-                date: today,
-                vanguardTier: tier,
-                vanguardDivision: division,
-                dailyCoins: points,
-                claudeTokens: claudeTokens,
-                codexTokens: codexTokens,
-                totalCoins: cumulative
+            store.upsertDailyRecord(DxaiStore.DailyRow(
+                date: today, vanguardTier: tier, vanguardDivision: division,
+                dailyCoins: points, claudeTokens: claudeTokens,
+                codexTokens: codexTokens, totalCoins: cumulative
             ))
-            changed = true
         }
 
-        guard changed else { return }
-        config.lastRecordedDate = today
-        save()
+        store.setConfig("last_recorded_date", today)
+        store.pruneOldRecords()
 
-        if config.optIn && !config.nickname.isEmpty {
+        if optIn && !nickname.isEmpty {
             submitToServer(date: today)
         }
     }
 
-    /// 날짜 변경 감지 — 전날 데이터 확정
     func finalizePreviousDay() {
         let today = Self.todayString()
-        guard config.lastRecordedDate != today,
-              !config.lastRecordedDate.isEmpty else { return }
-        // 전날 기록이 이미 있으면 별도 처리 불필요 — recordDailyBest가 관리
-        config.lastRecordedDate = today
-        save()
+        guard lastRecordedDate != today, !lastRecordedDate.isEmpty else { return }
+        store.setConfig("last_recorded_date", today)
     }
 
     // MARK: - Config Mutation
@@ -231,9 +185,8 @@ final class DxaiPointService {
         case error(String)
     }
 
-    /// 서버에서 닉네임 중복 확인 (Edge Function 경유, REST API 직접 접근 제거)
     func checkNickname(_ name: String, completion: @escaping (NicknameResult) -> Void) {
-        let urlStr = Self.leaderboardURL + "?check_nickname=\(name)&device_uuid=\(config.deviceUUID)"
+        let urlStr = Self.leaderboardURL + "?check_nickname=\(name)&device_uuid=\(deviceUUID)"
         guard let checkURL = URL(string: urlStr) else {
             completion(.error("Invalid URL"))
             return
@@ -257,7 +210,6 @@ final class DxaiPointService {
         }.resume()
     }
 
-    /// JSON 디코딩용 유틸리티
     private struct AnyCodable: Decodable {
         let value: Any
         var boolValue: Bool? { value as? Bool }
@@ -272,47 +224,27 @@ final class DxaiPointService {
     }
 
     func updateNickname(_ name: String) {
-        config.nickname = name
-        saveConfig()
+        store.setConfig("nickname", name)
         submitCurrentIfReady()
     }
 
     func updateOptIn(_ value: Bool) {
-        config.optIn = value
-        saveConfig()
+        store.setConfig("opt_in", value ? "1" : "0")
         if value { submitCurrentIfReady() }
     }
 
-    /// 닉네임/opt-in 변경 시 오늘 데이터가 있으면 즉시 제출
     private func submitCurrentIfReady() {
         let today = Self.todayString()
-        guard config.optIn, !config.nickname.isEmpty,
-              history.contains(where: { $0.date == today }) else { return }
+        guard optIn, !nickname.isEmpty,
+              store.getDailyRecord(date: today) != nil else { return }
         submitToServer(date: today)
     }
 
     // MARK: - Private
 
     private func totalCoinsExcluding(_ date: String) -> Int {
-        history.filter { $0.date != date }.last?.totalCoins
-            ?? (history.count > 1 ? history[history.count - 2].totalCoins : 0)
-    }
-
-    private func save() {
-        saveConfig()
-        saveHistory()
-    }
-
-    private func saveConfig() {
-        Self.write(config, to: configURL)
-    }
-
-    private func saveHistory() {
-        // 최근 365일만 유지
-        if history.count > 365 {
-            history = Array(history.suffix(365))
-        }
-        Self.write(history, to: historyURL)
+        let all = store.allDailyRecords()
+        return all.last(where: { $0.date != date })?.totalCoins ?? 0
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -328,13 +260,12 @@ final class DxaiPointService {
 
     // MARK: - Server Submission
 
-    /// 오늘 기록을 서버에 제출 (fire-and-forget)
     private func submitToServer(date: String) {
-        guard let record = history.last(where: { $0.date == date }) else { return }
+        guard let record = store.getDailyRecord(date: date) else { return }
 
         let payload = SubmissionPayload(
-            device_uuid: config.deviceUUID,
-            nickname: config.nickname,
+            device_uuid: deviceUUID,
+            nickname: nickname,
             date: date,
             daily_coins: record.dailyCoins,
             claude_tokens: record.claudeTokens,
@@ -347,13 +278,38 @@ final class DxaiPointService {
         sendPayload(payload)
     }
 
-    /// pending queue에 있는 미제출 건도 같이 처리
     func retryPendingSubmissions() {
-        guard config.optIn, !pendingQueue.isEmpty, !isSubmitting else { return }
-        let batch = pendingQueue
-        pendingQueue.removeAll()
-        savePending()
-        for payload in batch {
+        guard optIn, !isSubmitting else { return }
+        let pending = store.allPending()
+        guard !pending.isEmpty else { return }
+        store.clearPending()
+        for p in pending {
+            let payload = SubmissionPayload(
+                device_uuid: p.deviceUUID, nickname: p.nickname,
+                date: p.date, daily_coins: p.dailyCoins,
+                claude_tokens: p.claudeTokens, codex_tokens: p.codexTokens,
+                vanguard_tier: p.vanguardTier, vanguard_division: p.vanguardDivision,
+                secret_token: p.secretToken
+            )
+            sendPayload(payload)
+        }
+    }
+
+    func backfillHistory() {
+        guard optIn, !nickname.isEmpty, !isSubmitting else { return }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date())!
+        let cutoffStr = Self.dateFormatter.string(from: cutoff)
+        let records = store.allDailyRecords().filter { $0.date >= cutoffStr }
+        guard !records.isEmpty else { return }
+        NSLog("[DxaiPoint] Backfill: \(records.count)건 제출 시작")
+        for record in records {
+            let payload = SubmissionPayload(
+                device_uuid: deviceUUID, nickname: nickname,
+                date: record.date, daily_coins: record.dailyCoins,
+                claude_tokens: record.claudeTokens, codex_tokens: record.codexTokens,
+                vanguard_tier: record.vanguardTier, vanguard_division: record.vanguardDivision,
+                secret_token: Self.loadSecretToken()
+            )
             sendPayload(payload)
         }
     }
@@ -377,7 +333,6 @@ final class DxaiPointService {
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             defer { self?.isSubmitting = false }
 
-            // 네트워크 실패 → pending queue에 추가
             if error != nil {
                 self?.enqueuePending(payload)
                 return
@@ -389,13 +344,11 @@ final class DxaiPointService {
                 return
             }
 
-            // 서버 에러 (5xx) → 재시도 대상
             if httpResponse.statusCode >= 500 {
                 self?.enqueuePending(payload)
                 return
             }
 
-            // 4xx (닉네임 중복, 유효성 실패 등) → 재시도 안 함, 로그만
             if httpResponse.statusCode >= 400 {
                 if let resp = try? JSONDecoder().decode(SubmissionResponse.self, from: data) {
                     NSLog("[DxaiPoint] Submit rejected: \(resp.error ?? "unknown")")
@@ -403,7 +356,6 @@ final class DxaiPointService {
                 return
             }
 
-            // 성공
             if let resp = try? JSONDecoder().decode(SubmissionResponse.self, from: data) {
                 if let tokens = resp.total_tokens {
                     self?.serverTotalTokens = tokens
@@ -420,18 +372,13 @@ final class DxaiPointService {
     }
 
     private func enqueuePending(_ payload: SubmissionPayload) {
-        // 같은 날짜의 기존 pending 제거 (최신 것만 유지)
-        pendingQueue.removeAll { $0.date == payload.date && $0.device_uuid == payload.device_uuid }
-        pendingQueue.append(payload)
-        // 최대 30건 유지
-        if pendingQueue.count > 30 {
-            pendingQueue = Array(pendingQueue.suffix(30))
-        }
-        savePending()
-    }
-
-    private func savePending() {
-        Self.write(pendingQueue, to: pendingURL)
+        store.addPending(DxaiStore.PendingRow(
+            id: nil, deviceUUID: payload.device_uuid, nickname: payload.nickname,
+            date: payload.date, dailyCoins: payload.daily_coins,
+            claudeTokens: payload.claude_tokens, codexTokens: payload.codex_tokens,
+            vanguardTier: payload.vanguard_tier, vanguardDivision: payload.vanguard_division,
+            secretToken: payload.secret_token
+        ))
     }
 
     // MARK: - Keychain (Secret Token)
@@ -464,19 +411,5 @@ final class DxaiPointService {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
-    }
-
-    // MARK: - Persistence Helpers
-
-    private static func load<T: Decodable>(_ url: URL) -> T? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
-    }
-
-    private static func write<T: Encodable>(_ value: T, to url: URL) {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(value) else { return }
-        try? data.write(to: url, options: .atomic)
     }
 }

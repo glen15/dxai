@@ -259,22 +259,22 @@ struct DxaiMenuView: View {
 
                         Button(action: { showSettings = true }) {
                             HStack(spacing: 3) {
-                                Image(systemName: DxaiPointService.shared.config.nickname.isEmpty
+                                Image(systemName: DxaiPointService.shared.nickname.isEmpty
                                     ? "person.crop.circle.badge.plus"
                                     : "person.crop.circle")
                                     .font(.system(size: 9))
-                                Text(DxaiPointService.shared.config.nickname.isEmpty
+                                Text(DxaiPointService.shared.nickname.isEmpty
                                     ? (lang == "ko" ? "닉네임 지정" : "Set Nickname")
-                                    : DxaiPointService.shared.config.nickname)
+                                    : DxaiPointService.shared.nickname)
                                     .font(.system(size: 10, weight: .medium))
                                     .lineLimit(1)
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(DxaiPointService.shared.config.nickname.isEmpty
+                            .background(DxaiPointService.shared.nickname.isEmpty
                                 ? Color.purple.opacity(colors.bgCard)
                                 : Color.secondary.opacity(colors.bgSubtle))
-                            .foregroundColor(DxaiPointService.shared.config.nickname.isEmpty
+                            .foregroundColor(DxaiPointService.shared.nickname.isEmpty
                                 ? .purple
                                 : .secondary)
                             .cornerRadius(4)

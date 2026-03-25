@@ -18,6 +18,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var totalCoins: Int = 0
     @Published var allTimeTokens: Int = 0
     @Published var accountLevel: Int = 1
+    private var hasBackfilled = false
     @Published var liveRank: Int = 0
 
     private var isLoadingWeekly = false
@@ -151,10 +152,11 @@ final class DxaiViewModel: ObservableObject {
     // MARK: - Account Level (누적 토큰 기반)
 
     private static let levelBase = 1_000_000 // Lv.2 = 1M tokens
+    private static let levelGrowth = 1.4
 
     static func levelThreshold(_ level: Int) -> Int {
         if level <= 1 { return 0 }
-        return levelBase * (1 << (level - 2)) // 2^(level-2)
+        return Int(round(Double(levelBase) * pow(levelGrowth, Double(level - 2))))
     }
 
     static func calculateLevel(_ totalTokens: Int) -> Int {
@@ -261,8 +263,12 @@ final class DxaiViewModel: ObservableObject {
         // 라이브 순위
         liveRank = ps.serverLiveRank
 
-        // 미제출 건 재시도
+        // 미제출 건 재시도 + 첫 실행 시 history backfill
         ps.retryPendingSubmissions()
+        if !hasBackfilled {
+            hasBackfilled = true
+            ps.backfillHistory()
+        }
     }
 
     // MARK: - Token Milestones

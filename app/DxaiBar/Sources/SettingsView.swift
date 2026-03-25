@@ -9,15 +9,15 @@ struct SettingsView: View {
     private var l: L { L(lang) }
     private var colors: DxaiColors { DxaiColors(scheme: scheme) }
 
-    @State private var nickname: String = DxaiPointService.shared.config.nickname
-    @State private var optIn: Bool = DxaiPointService.shared.config.optIn
+    @State private var nickname: String = DxaiPointService.shared.nickname
+    @State private var optIn: Bool = DxaiPointService.shared.optIn
     @State private var nicknameError: String?
     @State private var nicknameSuccess: String?
     @State private var isSaving = false
     @State private var notificationsEnabled = true
 
     private var nicknameChanged: Bool {
-        nickname.trimmingCharacters(in: .whitespaces) != DxaiPointService.shared.config.nickname
+        nickname.trimmingCharacters(in: .whitespaces) != DxaiPointService.shared.nickname
     }
 
     var body: some View {
