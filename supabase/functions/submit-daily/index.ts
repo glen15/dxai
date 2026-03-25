@@ -111,11 +111,11 @@ serve(async (req: Request) => {
     return respond({ ok: false, error: "invalid_date" }, 400);
   }
 
-  // Reject future dates or dates older than 7 days
+  // Reject future dates or dates older than 30 days
   const submittedDate = new Date(date + "T00:00:00Z");
   const now = new Date();
   const daysDiff = (now.getTime() - submittedDate.getTime()) / DAY_MS;
-  if (daysDiff < -1 || daysDiff > 7) {
+  if (daysDiff < -1 || daysDiff > 30) {
     return respond({ ok: false, error: "date_out_of_range" }, 400);
   }
 
