@@ -157,7 +157,12 @@ export default function UserPage() {
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>("ko");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("lang");
+    if (saved === "ko" || saved === "en") setLang(saved);
+  }, []);
   const [ownerFilter, setOwnerFilter] = useState<OwnershipFilter>("all");
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("all");
 
@@ -231,7 +236,11 @@ export default function UserPage() {
           &larr; {t("back", lang)}
         </a>
         <button
-          onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
+          onClick={() => setLang((l) => {
+            const next = l === "en" ? "ko" : "en";
+            localStorage.setItem("lang", next);
+            return next;
+          })}
           className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.08] transition-all cursor-pointer"
         >
           {lang === "en" ? "KR" : "EN"}

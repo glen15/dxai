@@ -243,7 +243,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dateInput, setDateInput] = useState(yesterdayString());
   const [search, setSearch] = useState("");
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>("ko");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("lang");
+    if (saved === "ko" || saved === "en") setLang(saved);
+  }, []);
   const [diffs, setDiffs] = useState<Record<string, { claude: number; codex: number }>>({});
   const dataRef = useRef<LeaderboardResponse | null>(null);
 
@@ -329,7 +334,11 @@ export default function Home() {
           </p>
         </div>
         <button
-          onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
+          onClick={() => setLang((l) => {
+            const next = l === "en" ? "ko" : "en";
+            localStorage.setItem("lang", next);
+            return next;
+          })}
           className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.08] transition-all cursor-pointer"
         >
           {lang === "en" ? "KR" : "EN"}

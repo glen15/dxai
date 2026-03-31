@@ -67,7 +67,12 @@ function AchievementCard({ a, lang }: { a: Achievement; lang: Lang }) {
 export default function AchievementsPage() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>("ko");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("lang");
+    if (saved === "ko" || saved === "en") setLang(saved);
+  }, []);
 
   useEffect(() => {
     fetchAchievements().then((res) => {
@@ -98,7 +103,11 @@ export default function AchievementsPage() {
           </p>
         </div>
         <button
-          onClick={() => setLang((l) => (l === "en" ? "ko" : "en"))}
+          onClick={() => setLang((l) => {
+            const next = l === "en" ? "ko" : "en";
+            localStorage.setItem("lang", next);
+            return next;
+          })}
           className="px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md text-sm font-medium text-white/60 hover:text-white/90 hover:bg-white/[0.08] transition-all cursor-pointer"
         >
           {lang === "en" ? "KR" : "EN"}

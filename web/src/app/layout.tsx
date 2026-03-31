@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
+    <html lang="ko" className={cn("dark", "font-sans", geist.variable)}>
       <body
         className={`${jetbrains.variable} antialiased min-h-screen scanlines`}
       >
