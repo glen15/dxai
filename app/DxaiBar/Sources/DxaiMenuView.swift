@@ -140,7 +140,16 @@ struct DxaiMenuView: View {
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
 
-            Button(action: { relaunchApp() }) {
+            Button(action: {
+                // 새 버전 있으면 Sparkle 업데이트 다이얼로그, 없으면 앱 재시작
+                if updaterManager.isAvailable {
+                    updaterManager.checkForUpdatesOrRun { [self] in
+                        relaunchApp()
+                    }
+                } else {
+                    relaunchApp()
+                }
+            }) {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 12))
