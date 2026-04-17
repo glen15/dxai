@@ -234,6 +234,26 @@ serve(async (req: Request) => {
         .eq("id", existingRecord.id);
     }
   } else {
+    // 전일 토큰값과 완전히 동일하면 자정 경계 버그 의심 → reject
+    // (앱이 새 date 첫 submit에서 전일 누적값을 그대로 올리는 케이스 방어)
+    const prevDateObj = new Date(date + "T00:00:00Z");
+    prevDateObj.setUTCDate(prevDateObj.getUTCDate() - 1);
+    const prevDateStr = prevDateObj.toISOString().slice(0, 10);
+    const { data: prevRecord } = await supabase
+      .from("daily_records")
+      .select("claude_tokens, codex_tokens")
+      .eq("user_id", userId)
+      .eq("date", prevDateStr)
+      .single();
+    if (
+      prevRecord &&
+      (claude_tokens + codex_tokens) > 0 &&
+      prevRecord.claude_tokens === claude_tokens &&
+      prevRecord.codex_tokens === codex_tokens
+    ) {
+      return respond({ ok: false, error: "duplicate_of_previous_day" }, 400);
+    }
+
     await supabase
       .from("daily_records")
       .insert({

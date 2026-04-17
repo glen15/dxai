@@ -4,6 +4,13 @@
 
 ---
 
+### 자정 경계 — 전일 토큰값이 오늘 row로 복사됨
+- **발견**: 2026-04-17
+- **증상**: karin의 2026-04-17 daily_record 값이 2026-04-16과 완전히 동일 (1280 coins / 1,052,110,797 claude_tokens). 자정 직후 최초 insert 후 하루 종일 업데이트 없음
+- **근본 원인 (가설)**: 자정 직전 시작되어 자정을 넘긴 Claude 요청이 jsonl에 완료 시각(오늘) timestamp로 기록되면서 해당 usage가 오늘 집계로 복사. 혹은 앱 `db.todayStats()` 파싱의 파일 mdate/라인 timestamp 필터가 경계 케이스에서 어긋남
+- **방어**: `submit-daily`에서 새 date INSERT 시 전일 record와 claude/codex tokens가 정확히 같고 0이 아니면 `duplicate_of_previous_day`로 reject
+- **교훈**: 자정 기준 "오늘" 계산 로직은 경계 테스트 필수. 로컬 파일 기반 집계는 서버에서 재검증 레이어 필요
+
 ### 앱/웹 레벨 곡선 불일치
 - **발견**: 2026-03-25
 - **증상**: 리더보드 레벨 26, 로컬 메뉴바 레벨 14
