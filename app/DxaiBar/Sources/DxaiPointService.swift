@@ -142,6 +142,19 @@ final class DxaiPointService {
         let today = Self.todayString()
         let points = Self.calculateCoins(tier: tier, division: division)
 
+        // 자정 경계 가드: 오늘 기록이 없는데 전일 로컬 기록과 claude/codex tokens가 정확히 동일하면
+        // db.todayStats()가 어제 값을 반환한 것으로 판단하고 저장·제출 모두 스킵.
+        // 이틀 연속 같은 정수 토큰이 찍힐 확률은 사실상 0.
+        if store.getDailyRecord(date: today) == nil,
+           (claudeTokens + codexTokens) > 0,
+           let prev = Self.previousDateString(of: today),
+           let prevRow = store.getDailyRecord(date: prev),
+           prevRow.claudeTokens == claudeTokens,
+           prevRow.codexTokens == codexTokens {
+            NSLog("[DxaiPoint] Skip: 오늘 집계가 전일과 정확히 동일 (자정 경계 버그 의심)")
+            return
+        }
+
         if let existing = store.getDailyRecord(date: today) {
             let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
             guard points > existing.dailyCoins || tokensChanged else { return }
@@ -256,6 +269,12 @@ final class DxaiPointService {
 
     private static func todayString() -> String {
         dateFormatter.string(from: Date())
+    }
+
+    private static func previousDateString(of date: String) -> String? {
+        guard let d = dateFormatter.date(from: date),
+              let prev = Calendar.current.date(byAdding: .day, value: -1, to: d) else { return nil }
+        return dateFormatter.string(from: prev)
     }
 
     // MARK: - Server Submission
