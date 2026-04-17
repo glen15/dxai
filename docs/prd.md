@@ -26,7 +26,7 @@ dxai
 │   ├── 토큰 대시보드     — 오늘 토큰, 도구별 사용량
 │   ├── 쿼터 모니터링     — Claude/Codex 5h/7d 제한 + 리셋 타이머
 │   ├── Vanguard Rank    — 8등급 36레벨 게이미피케이션
-│   ├── Token Milestone  — 16단계 토큰 마일스톤 알림
+│   ├── Token Milestone  — 14단계 토큰 마일스톤 알림
 │   ├── Quick Actions    — 시스템 상태, AI 스캔, 정리, 최적화
 │   ├── AI 환경 스캔     — 네이티브 SwiftUI UI
 │   ├── About 페이지     — 앱 소개 + GitHub Star 링크
@@ -57,7 +57,7 @@ dxai
 - [x] Claude 쿼터 API 직접 호출 (`api.anthropic.com/api/oauth/usage`)
 - [x] 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
 - [x] Vanguard Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
-- [x] Token Milestone 알림 (16단계, AI 테마)
+- [x] Token Milestone 알림 (14단계, AI 테마, 2천만 ~ 20억)
 - [x] Quick Actions (status, scan, clean, optimize)
 - [x] AI 환경 스캔 네이티브 SwiftUI UI (ScanPanelView)
 - [x] About 페이지 (앱 소개, GitHub Star 링크)
@@ -163,24 +163,22 @@ dxai
 
 | 토큰 | 제목 (AI 테마) |
 |------|---------------|
-| 500K | Hello, World! |
-| 1M | Token Millionaire |
-| 1.5M | Prompt Artisan |
-| 2M | Rate Limit Regular |
-| 2.5M | Context Master |
-| 3M | API Billing Alert |
-| 5M | GPU Overheating |
-| 7M | Datacenter Alert |
-| 10M | Transformer Overload |
-| 15M | Training Data Material |
-| 20M | Sam Altman Notified |
-| 30M | Dario Amodei Paged |
-| 50M | Approaching Singularity |
-| 100M | Anthropic Job Offer |
-| 200M | OpenAI Job Offer |
-| 500M | AGI Achieved |
+| 20M | Hello, World! |
+| 50M | Token Millionaire |
+| 100M | Prompt Artisan |
+| 150M | Rate Limit Regular |
+| 200M | Context Master |
+| 300M | API Billing Alert |
+| 500M | GPU Overheating |
+| 700M | Datacenter Alert |
+| 1B | Transformer Overload |
+| 1.2B | Training Data Material |
+| 1.4B | Sam Altman Notified |
+| 1.6B | Dario Amodei Paged |
+| 1.8B | Approaching Singularity |
+| 2B | AGI Achieved |
 
-EN/KR 모두 지원 (Localization.swift).
+14단계, 하루 사용량 분포에 맞춰 2천만 시작 ~ 20억 상한. EN/KR 모두 지원 (Localization.swift).
 
 ## 데이터 소스
 

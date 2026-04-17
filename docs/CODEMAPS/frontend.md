@@ -42,7 +42,7 @@ app/DxaiBar/Sources/
 
 ```
 DxaiViewModel.VanguardLevel    # 8티어 x 5디비전 + Challenger
-DxaiViewModel.MilestoneInfo    # 16단계 토큰 마일스톤
+DxaiViewModel.MilestoneInfo    # 14단계 토큰 마일스톤 (2천만 ~ 20억)
 DxaiDatabase.DailyStats        # 일별 도구별 토큰 통계
 DxaiDatabase.QuotaInfo         # Claude/Codex 쿼터 (5h/7d)
 DxaiPointService.PointConfig   # 닉네임, UUID, opt-in
@@ -113,7 +113,7 @@ web/src/
 | `fetchUserProfile(nickname)` | 프로필 조회 |
 | `formatTokens(n)`, `formatHeroTokens(n, lang)` | 숫자 포맷 |
 | `vanguardMessage(tier, div, lang)` | 등급별 메시지 (36개) |
-| `tokenMilestone(tokens, lang)` | 16단계 마일스톤 텍스트 |
+| `tokenMilestone(tokens, lang)` | 14단계 마일스톤 텍스트 |
 | `calculateLevel(tokens)` | 누적 토큰 -> 레벨 |
 | `tierProgress(tokens)` | 프로그레스 바 진행도 |
 | `t(key, lang)` | 한/영 UI 문자열 |
