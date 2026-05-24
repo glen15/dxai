@@ -449,7 +449,7 @@ final class DxaiDatabase {
         claudeQuotaCache = nil
     }
 
-    func claudeQuota() -> QuotaInfo? {
+    func claudeQuota() async -> QuotaInfo? {
         // 인메모리 캐시 유효 (5분 — API rate limit 방지)
         if let cache = claudeQuotaCache,
            Date().timeIntervalSince(cache.timestamp) < 300 {
@@ -457,7 +457,7 @@ final class DxaiDatabase {
         }
         // API 직접 호출 시도
         if let creds = readClaudeCredentials(),
-           let info = fetchClaudeUsage(accessToken: creds.token, plan: creds.plan) {
+           let info = await fetchClaudeUsage(accessToken: creds.token, plan: creds.plan) {
             claudeQuotaCache = (data: info, timestamp: Date())
             return info
         }
@@ -516,38 +516,33 @@ final class DxaiDatabase {
         return (token: accessToken, plan: plan)
     }
 
-    private func fetchClaudeUsage(accessToken: String, plan: String) -> QuotaInfo? {
+    private func fetchClaudeUsage(accessToken: String, plan: String) async -> QuotaInfo? {
         guard let url = URL(string: "https://api.anthropic.com/api/oauth/usage") else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 5)
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
 
-        var result: QuotaInfo?
-        let sem = DispatchSemaphore(value: 0)
-        URLSession.shared.dataTask(with: request) { data, response, _ in
-            defer { sem.signal() }
-            guard let data,
-                  let http = response as? HTTPURLResponse,
-                  http.statusCode == 200,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse,
+              http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
 
-            let fiveHour = json["five_hour"] as? [String: Any]
-            let sevenDay = json["seven_day"] as? [String: Any]
+        let fiveHour = json["five_hour"] as? [String: Any]
+        let sevenDay = json["seven_day"] as? [String: Any]
 
-            let fh = (fiveHour?["utilization"] as? Double).map { Int(max(0, min(100, $0.rounded()))) }
-            let sd = (sevenDay?["utilization"] as? Double).map { Int(max(0, min(100, $0.rounded()))) }
-            let fhReset = (fiveHour?["resets_at"] as? String).flatMap(Self.parseISO8601)
-            let sdReset = (sevenDay?["resets_at"] as? String).flatMap(Self.parseISO8601)
+        let fh = (fiveHour?["utilization"] as? Double).map { Int(max(0, min(100, $0.rounded()))) }
+        let sd = (sevenDay?["utilization"] as? Double).map { Int(max(0, min(100, $0.rounded()))) }
+        let fhReset = (fiveHour?["resets_at"] as? String).flatMap(Self.parseISO8601)
+        let sdReset = (sevenDay?["resets_at"] as? String).flatMap(Self.parseISO8601)
 
-            result = QuotaInfo(
-                plan: plan,
-                fiveHour: fh, sevenDay: sd,
-                fiveHourReset: fhReset, sevenDayReset: sdReset
-            )
-        }.resume()
-        sem.wait()
-        return result
+        return QuotaInfo(
+            plan: plan,
+            fiveHour: fh, sevenDay: sd,
+            fiveHourReset: fhReset, sevenDayReset: sdReset
+        )
     }
 
     func codexQuota() -> QuotaInfo? {

@@ -177,8 +177,8 @@ final class DxaiViewModel: ObservableObject {
 
     init() {
         setupNotifications()
-        refresh()
         startTimer()
+        Task { await refreshAsync() }
     }
 
     private func setupNotifications() {
@@ -191,13 +191,23 @@ final class DxaiViewModel: ObservableObject {
     }
 
     func refresh(force: Bool = false) {
+        Task { await refreshAsync(force: force) }
+    }
+
+    func refreshAsync(force: Bool = false) async {
         let db = DxaiDatabase.shared
         if force { db.invalidateClaudeQuotaCache() }
-        let stats = db.todayStats()
+
+        // 1) 무거운 파일 I/O는 백그라운드에서 (오늘 토큰 + codex 쿼터)
+        async let statsTask: [DxaiDatabase.DailyStats] = Task.detached { db.todayStats() }.value
+        async let codexQuotaTask: DxaiDatabase.QuotaInfo? = Task.detached { db.codexQuota() }.value
+
+        // 2) Claude quota는 네트워크 — async/await으로 메인 스레드 안 막음
+        async let claudeQuotaTask: DxaiDatabase.QuotaInfo? = db.claudeQuota()
+
+        let stats = await statsTask
         toolStats = stats
         todayTokens = stats.reduce(0) { $0 + $1.totalTokens }
-        if let q = db.claudeQuota() { claudeQuota = q }
-        if let q = db.codexQuota() { codexQuota = q }
         lastUpdated = Date()
 
         let newLevel = VanguardLevel.forTokens(todayTokens)
@@ -211,8 +221,12 @@ final class DxaiViewModel: ObservableObject {
 
         checkTokenMilestone()
 
-        // Vanguard Coin 기록
+        // Vanguard Coin 기록 (로컬 SQLite — 빠름)
         updateCoins()
+
+        // Quota는 도착하는 대로 반영 (UI 즉시 갱신 후 quota만 늦게 채워짐)
+        if let q = await claudeQuotaTask { claudeQuota = q }
+        if let q = await codexQuotaTask { codexQuota = q }
 
         // 백그라운드에서 주간 데이터 로드 (5분 간격, 중복 실행 방지)
         let now = Date()
@@ -227,7 +241,6 @@ final class DxaiViewModel: ObservableObject {
                 }
             }
         }
-
     }
 
     // MARK: - Vanguard Coins
