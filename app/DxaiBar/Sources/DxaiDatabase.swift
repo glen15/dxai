@@ -545,7 +545,14 @@ final class DxaiDatabase {
         )
     }
 
+    private var codexQuotaCache: (data: QuotaInfo, timestamp: Date)?
+
     func codexQuota() -> QuotaInfo? {
+        // 인메모리 캐시 (5분) — 411개 파일 enumerate + 64KB 읽기 부담 회피
+        if let cache = codexQuotaCache,
+           Date().timeIntervalSince(cache.timestamp) < 300 {
+            return cache.data
+        }
         let sessionsDir = home.appendingPathComponent(".codex/sessions")
         guard let enumerator = FileManager.default.enumerator(
             at: sessionsDir,
@@ -591,7 +598,7 @@ final class DxaiDatabase {
 
                 let plan = (rate["plan_type"] as? String ?? "?").capitalized
 
-                return QuotaInfo(
+                let info = QuotaInfo(
                     plan: plan,
                     fiveHour: primary["used_percent"] as? Int,
                     sevenDay: secondary["used_percent"] as? Int,
@@ -602,6 +609,8 @@ final class DxaiDatabase {
                         Date(timeIntervalSince1970: $0)
                     }
                 )
+                codexQuotaCache = (data: info, timestamp: Date())
+                return info
             }
         }
         return nil
