@@ -38,6 +38,24 @@
 - **근본 원인**: `build-app.sh`에서 `DXAI_VERSION` 미설정 시 `1.0.0` 폴백. CI만 태그에서 주입하고 로컬 빌드는 고려 안 함
 - **교훈**: 기본값이 있는 변수는 "기본값이 맞는지" 검증해야 함. `git describe --tags`로 자동 감지가 더 안전.
 
+### Homebrew Cask `auto_updates true` 누락 → brew와 Sparkle 불일치
+- **발견**: 2026-05-25 (V1.0.22 릴리스 직후)
+- **증상**: Sparkle이 1시간 주기로 새 버전 자동 다운로드/설치하는데, `brew outdated --cask`는 dxai를 outdated로 잘못 표시하거나 `brew upgrade --cask dxai`가 이미 최신인 앱을 다시 덮어쓰려 함
+- **근본 원인**: `glen15/homebrew-dxai`의 `Casks/dxai.rb`에 `auto_updates true` 플래그 누락. 이 플래그가 없으면 Homebrew는 "앱이 스스로 업데이트한다"는 사실을 모르고 단순 버전 비교만 수행
+- **방어**: cask에 `auto_updates true` 추가 (`glen15/homebrew-dxai@e02a00c`)
+- **교훈**: Sparkle을 통합한 앱을 Homebrew Cask로 배포할 때는 **반드시** `auto_updates true` 명시. 두 업데이트 경로가 공존할 때 Homebrew 측에 "주 경로는 앱 내부"라고 알려야 충돌이 없음.
+
+### 메뉴바 앱 메인 스레드 블로킹 — DispatchSemaphore + 동기 파일 I/O
+- **발견**: 2026-05-25 (V1.0.22 작업)
+- **증상**: 앱 시작 직후 최대 5초 UI 프리즈, 15초 주기 refresh마다 잠깐 멈춤
+- **근본 원인 1**: `DxaiDatabase.fetchClaudeUsage`가 `DispatchSemaphore.wait()`로 URLSession 콜백을 메인 스레드에서 동기 대기. Anthropic API 응답이 느리면 그대로 메인 블로킹
+- **근본 원인 2**: `DxaiViewModel.init() → refresh()` 가 `@MainActor` 동기 체인. 2,122개 jsonl 파일 enumerate + 파싱이 메인에서 수행
+- **방어**:
+  - `fetchClaudeUsage` → `async/await` (URLSession.data) 으로 전환, semaphore 제거
+  - `refresh()` → `refreshAsync()` 로 분리, `Task.detached`로 파일 I/O 백그라운드화
+  - `codexQuota`에 5분 인메모리 캐시 추가 (claudeQuota와 통일)
+- **교훈**: `@MainActor` 클래스 안에서 `DispatchSemaphore`로 비동기→동기 변환하면 메인 스레드가 그대로 막힘. async API가 있다면 무조건 await으로. UI 응답성은 "데이터 정확성"보다 우선이므로 첫 화면은 캐시/빈 값으로 즉시 표시 후 백그라운드 갱신이 정석.
+
 ### Edge Function 배포 후 구버전 캐시
 - **발견**: 2026-03 (이전)
 - **증상**: Edge Function 코드 수정 후 배포했는데 이전 버전이 실행됨
