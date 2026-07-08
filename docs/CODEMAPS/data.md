@@ -90,7 +90,11 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 ```
 소스: ~/.claude/projects/**/*.jsonl   (Claude Code 로그)
 소스: ~/.codex/sessions/**/*.jsonl    (Codex CLI 로그)
-캐시: 인메모리 (weeklyCache + fingerprint)
+소스: ~/.codex/archived_sessions/*.jsonl (아카이브된 Codex 세션)
+소스: ~/.hermes/state.db sessions     (Hermes openai-codex 세션)
+소스: ~/.hermes/profiles/*/state.db sessions (Hermes profile별 openai-codex 세션)
+보정: ~/.codex/state_5.sqlite threads.tokens_used (Codex/Hermes 진행 중 세션)
+캐시: 인메모리 (weeklyCache + fingerprint; jsonl 및 Hermes state DB mtime 기반)
 ```
 
 ### DxaiPointService (로컬 JSON 영속화)

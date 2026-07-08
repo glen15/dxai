@@ -2,7 +2,58 @@
 
 프로젝트에서 발견된 함정과 근본 원인 기록. fix 커밋 시 반드시 여기에 항목 추가.
 
+### Hermes openai-codex 사용량 누락
+- **발견**: 2026-07-08 (V1.0.23 준비)
+- **증상**: Hermes에서 `openai-codex` OAuth/provider로 Codex를 사용하면 실제 Codex 할당량은 소모되지만 DXAI의 `codex_tokens`가 0 또는 과소 집계됨. 같은 날 `~/.hermes/state.db`에는 `billing_provider='openai-codex'` 세션 토큰이 존재하지만 `~/.codex/sessions`에는 오늘 `token_count` 이벤트가 없을 수 있음
+- **근본 원인**: DXAI 앱/CLI가 Codex 사용량 소스를 `~/.codex/*`에 한정하고 Hermes의 canonical session store(`~/.hermes/state.db`, `~/.hermes/profiles/*/state.db`)를 읽지 않음
+- **방어**:
+  - 앱 `DxaiDatabase`: Hermes state DB들을 read-only로 스캔하고 `sessions.billing_provider = 'openai-codex'`의 input/output/cache/reasoning tokens를 Codex 집계에 추가
+  - CLI `bin/ai.py`: 동일한 Hermes state DB 집계를 `get_codex_token_stats()`에 합산
+  - 메시지 내용은 읽지 않고 `sessions`의 숫자 집계 컬럼만 조회하며, 프로필 DB schema/lock 문제는 fail-soft 처리
+- **교훈**: “Codex 사용량”은 Codex CLI/App 로그만이 아니라 Codex 인증을 사용하는 상위 에이전트(Hermes 등)의 세션 저장소도 포함해야 한다. 새 agent/provider 경로가 추가될 때는 실제 billing provider와 로컬 저장 위치를 함께 확인할 것
+
 ---
+
+### Codex archived_sessions 누락으로 토큰 0 표시
+- **발견**: 2026-06-11
+- **증상**: Codex/Hermes 계열 사용으로 할당량은 소모되지만 DXAI 토큰 사용량이 0 또는 과소 집계될 수 있음
+- **근본 원인**: 앱/CLI 파서가 `~/.codex/sessions/**/*.jsonl`만 읽고 `~/.codex/archived_sessions/*.jsonl`을 무시함. Codex가 세션을 아카이브한 뒤에는 로컬 로그가 남아 있어도 집계 대상에서 빠짐
+- **방어**:
+  - 앱 `DxaiDatabase`: Codex 로그 루트를 `sessions` + `archived_sessions`로 확장
+  - CLI `bin/ai.py`: 동일 경로 확장 및 같은 파일명이 양쪽에 있을 때 중복 집계 방지
+- **교훈**: 외부 도구 로그 파서는 "현재 세션"과 "아카이브 세션" 경로를 함께 추적해야 한다. 새 Codex 실행 경로가 생기면 실제 파일 위치부터 확인할 것
+
+### Claude 5h quota와 오늘 토큰 숫자 불일치
+- **발견**: 2026-06-11
+- **증상**: Claude/Fable 5 사용으로 5시간 세션 리밋에 걸렸는데 메뉴바 상단 오늘 토큰은 낮게 보임
+- **근본 원인**:
+  - 메뉴바 상단은 KST 자정 이후 일일 토큰, Claude quota는 최근 5시간 롤링 윈도우라 자정 직후에는 서로 다른 기간을 보여줌
+  - Claude 파서가 `cache_creation_input_tokens`를 total에 포함하지 않아 Fable 5처럼 cache creation이 큰 모델을 과소 집계함
+- **방어**:
+  - Claude total 계산에 `cache_creation_input_tokens` 포함
+  - 도구 카드에 오늘 토큰과 별도로 최근 5시간 세션 토큰을 표시해 quota 소모와 비교 가능하게 함
+  - 세션 토큰 표시 조건은 `세션 > 오늘`이 아니라 `세션이 있고 오늘과 다를 때`여야 함. 5시간 구간은 보통 오늘 총량보다 작아서 반대 조건이면 영원히 숨겨짐
+  - CLI의 `today` 기준을 앱과 같은 로컬 날짜 기준으로 통일
+- **교훈**: "오늘"과 "세션/롤링 quota"는 제품에서 같은 사용량처럼 보이지만 기간 정의가 다르다. 같은 화면에 둘 다 있을 때는 수치 기준을 분리해서 표시해야 한다.
+
+### 메뉴바 패널 열린 상태에서 Claude subagent 토큰 갱신 지연
+- **발견**: 2026-06-11
+- **증상**: Claude Code/Fable 5를 계속 사용해 `~/.claude/projects/.../subagents/workflows/.../agent-*.jsonl`에는 토큰이 쌓이는데 메뉴바 카드 숫자가 이전 값에 머무름
+- **근본 원인**: 메뉴바 UI 타이머가 기본 RunLoop 모드에 등록되어 패널/메뉴 상호작용 중 refresh가 밀릴 수 있음. 사용자가 패널을 열어놓고 관찰하면 CLI 집계와 메뉴바 표시가 어긋남
+- **방어**:
+  - refresh 타이머를 `.common` RunLoop 모드에 등록
+  - 메뉴 패널 `onAppear`에서 강제 refresh
+  - refresh 중복 실행 가드로 늦은 작업이 최신 표시를 덮는 상황 방지
+- **교훈**: 메뉴바/팝오버 앱의 실시간 지표는 기본 RunLoop 타이머만 믿으면 안 된다. UI가 열린 상태에서 갱신되는지 반드시 직접 확인해야 한다.
+
+### Codex/Hermes token_count JSONL flush 지연
+- **발견**: 2026-06-11
+- **증상**: Codex/Hermes를 계속 사용해도 DXAI Codex 토큰이 바로 늘지 않음. `~/.codex/sessions/*.jsonl`은 수정되지만 최근 구간에 `token_count` 이벤트가 없을 수 있음
+- **근본 원인**: Codex Desktop/Hermes는 현재 스레드 토큰 누적을 `~/.codex/state_5.sqlite`의 `threads.tokens_used`에 먼저 반영하고, JSONL `token_count`는 지연되거나 일부 경로에서 누락될 수 있음
+- **방어**:
+  - Codex JSONL 집계값과 `state_5.sqlite`에서 오늘 생성된 thread의 `tokens_used` 합계를 비교
+  - SQLite 합계가 더 크면 총 토큰을 그 값으로 보정
+- **교훈**: Codex 계열 로그는 JSONL만 신뢰하면 안 된다. 진행 중인 Desktop/Hermes 세션은 state DB를 보조 소스로 써야 실시간 표시가 맞는다.
 
 ### 자정 경계 — 전일 토큰값이 오늘 row로 복사됨
 - **발견**: 2026-04-17

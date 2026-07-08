@@ -104,6 +104,9 @@ struct DxaiMenuView: View {
         }
         .frame(width: 400)
         .background(.ultraThickMaterial)
+        .onAppear {
+            viewModel.refresh(force: true)
+        }
     }
 
     // MARK: - Header
@@ -551,6 +554,9 @@ struct DxaiMenuView: View {
         let quota = stat.tool.lowercased() == "claude"
             ? viewModel.claudeQuota
             : viewModel.codexQuota
+        let sessionStat = viewModel.sessionStats.first {
+            $0.tool.lowercased() == stat.tool.lowercased()
+        }
 
         return VStack(alignment: .leading, spacing: 8) {
             // Header: icon + name + plan
@@ -588,6 +594,22 @@ struct DxaiMenuView: View {
                 Text(l.today)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary.opacity(colors.textSub))
+            }
+
+            if let sessionStat,
+               sessionStat.totalTokens > 0,
+               sessionStat.totalTokens != stat.totalTokens {
+                HStack(spacing: 8) {
+                    Text("\(l.session5h) \(formatNumber(sessionStat.totalTokens)) tok")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(theme.primary)
+                    Text("\u{00B7}")
+                        .foregroundColor(.secondary.opacity(colors.textMuted))
+                    Text("\(sessionStat.requests) req")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
             }
         }
         .padding(.vertical, 10)

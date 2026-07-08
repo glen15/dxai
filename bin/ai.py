@@ -20,6 +20,7 @@ import subprocess
 import time
 import os
 import sys
+import sqlite3
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -152,15 +153,15 @@ def parse_iso_utc(value):
 
 
 def get_period_start(period):
-    now_utc = datetime.now(timezone.utc)
-    today = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+    now_local = datetime.now().astimezone()
+    today = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == 'today':
         return today
     if period == 'week':
         return today - timedelta(days=7)
     if period == 'month':
         return today - timedelta(days=30)
-    return datetime.min.replace(tzinfo=timezone.utc)
+    return datetime.min.replace(tzinfo=now_local.tzinfo)
 
 
 def empty_token_stats(extra_keys=None):
@@ -301,6 +302,7 @@ def get_claude_token_stats(period='today'):
                             usage.get('input_tokens', 0)
                             + usage.get('output_tokens', 0)
                             + usage.get('cache_read_input_tokens', 0)
+                            + usage.get('cache_creation_input_tokens', 0)
                         )
                         stats['requests'] += 1
                     except (json.JSONDecodeError, ValueError):
@@ -312,6 +314,24 @@ def get_claude_token_stats(period='today'):
 
 
 # ─── Codex 데이터 수집 ───────────────────────────────────────
+
+def iter_codex_jsonl_files():
+    home = Path.home()
+    roots = [
+        home / ".codex" / "sessions",
+        home / ".codex" / "archived_sessions",
+    ]
+    seen = set()
+
+    for root in roots:
+        if not root.exists():
+            continue
+        for filepath in root.glob("**/*.jsonl"):
+            if filepath.name in seen:
+                continue
+            seen.add(filepath.name)
+            yield filepath
+
 
 def get_codex_usage():
     auth_path = Path.home() / ".codex" / "auth.json"
@@ -399,12 +419,8 @@ def _seconds_until(epoch_seconds):
 
 
 def _get_codex_usage_from_local_sessions(auth_meta=None):
-    sessions_dir = Path.home() / ".codex" / "sessions"
-    if not sessions_dir.exists():
-        return None
-
     jsonl_files = sorted(
-        sessions_dir.glob("**/*.jsonl"),
+        iter_codex_jsonl_files(),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
@@ -479,16 +495,9 @@ def _format_date(iso_str):
 
 
 def get_codex_token_stats(period='today'):
-    sessions_dir = Path.home() / ".codex" / "sessions"
-    if not sessions_dir.exists():
-        return None
-
-    jsonl_files = list(sessions_dir.glob("**/*.jsonl"))
-    if not jsonl_files:
-        return empty_token_stats(extra_keys=['reasoning_output_tokens'])
-
+    jsonl_files = list(iter_codex_jsonl_files())
     start_time = get_period_start(period)
-    stats = empty_token_stats(extra_keys=['reasoning_output_tokens'])
+    stats = empty_token_stats(extra_keys=['reasoning_output_tokens', 'hermes_codex_tokens'])
 
     for filepath in jsonl_files:
         prev_totals = None
@@ -557,7 +566,125 @@ def get_codex_token_stats(period='today'):
         except Exception:
             continue
 
+    _apply_codex_state_floor(stats, period)
+    _add_token_stats(stats, get_hermes_codex_token_stats(period))
     return stats
+
+
+def _add_token_stats(target, source):
+    for key, value in source.items():
+        if key in target and isinstance(value, int):
+            target[key] += value
+
+
+def iter_hermes_state_dbs():
+    home = Path.home()
+    roots = [home / ".hermes" / "state.db"]
+    profiles = home / ".hermes" / "profiles"
+    if profiles.exists():
+        try:
+            roots.extend(profile / "state.db" for profile in profiles.iterdir() if profile.is_dir())
+        except Exception:
+            pass
+
+    seen = set()
+    for db_path in roots:
+        try:
+            resolved = str(db_path.resolve())
+        except Exception:
+            resolved = str(db_path)
+        if resolved in seen or not db_path.exists():
+            continue
+        seen.add(resolved)
+        yield db_path
+
+
+def get_hermes_codex_token_stats(period='today'):
+    start_time = get_period_start(period)
+    start_epoch = int(start_time.timestamp())
+    stats = empty_token_stats(extra_keys=['reasoning_output_tokens', 'hermes_codex_tokens'])
+
+    query = """
+        SELECT
+            COALESCE(SUM(input_tokens), 0),
+            COALESCE(SUM(output_tokens), 0),
+            COALESCE(SUM(cache_read_tokens), 0),
+            COALESCE(SUM(cache_write_tokens), 0),
+            COALESCE(SUM(reasoning_tokens), 0),
+            COUNT(*)
+        FROM sessions
+        WHERE started_at >= ?
+          AND billing_provider = 'openai-codex'
+    """
+
+    for db_path in iter_hermes_state_dbs():
+        try:
+            conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=1)
+            try:
+                row = conn.execute(query, [start_epoch]).fetchone()
+            finally:
+                conn.close()
+        except Exception:
+            continue
+
+        if not row:
+            continue
+        input_tokens = int(row[0] or 0)
+        output_tokens = int(row[1] or 0)
+        cache_read_tokens = int(row[2] or 0)
+        cache_write_tokens = int(row[3] or 0)
+        reasoning_tokens = int(row[4] or 0)
+        requests = int(row[5] or 0)
+        total_tokens = (
+            input_tokens + output_tokens + cache_read_tokens
+            + cache_write_tokens + reasoning_tokens
+        )
+        if total_tokens <= 0:
+            continue
+
+        stats["input_tokens"] += input_tokens + cache_write_tokens
+        stats["output_tokens"] += output_tokens + reasoning_tokens
+        stats["cache_read_tokens"] += cache_read_tokens
+        stats["cache_creation_tokens"] += cache_write_tokens
+        stats["reasoning_output_tokens"] += reasoning_tokens
+        stats["total_tokens"] += total_tokens
+        stats["hermes_codex_tokens"] += total_tokens
+        stats["requests"] += requests
+
+    return stats
+
+
+def _apply_codex_state_floor(stats, period):
+    state_total = _get_codex_state_tokens(period)
+    if state_total is None or state_total <= stats["total_tokens"]:
+        return
+    delta = state_total - stats["total_tokens"]
+    stats["input_tokens"] += delta
+    stats["total_tokens"] = state_total
+
+
+def _get_codex_state_tokens(period):
+    db_path = Path.home() / ".codex" / "state_5.sqlite"
+    if not db_path.exists():
+        return None
+
+    start_time = get_period_start(period)
+    start_epoch = int(start_time.timestamp())
+    params = [start_epoch]
+    where = "created_at >= ?"
+
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=1)
+        try:
+            row = conn.execute(
+                f"SELECT COALESCE(SUM(tokens_used), 0) FROM threads WHERE {where}",
+                params,
+            ).fetchone()
+        finally:
+            conn.close()
+        return int(row[0] or 0)
+    except Exception:
+        return None
 
 
 # ─── 표시 함수 ───────────────────────────────────────────────
@@ -673,6 +800,7 @@ def display_claude_detail():
         _print_bar("입력 토큰", stats['input_tokens'], total, Colors.BLUE)
         _print_bar("출력 토큰", stats['output_tokens'], total, Colors.GREEN)
         _print_bar("캐시 읽기", stats['cache_read_tokens'], total, Colors.CYAN)
+        _print_bar("캐시 생성", stats['cache_creation_tokens'], total, Colors.YELLOW)
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
@@ -761,6 +889,7 @@ def display_claude_period(period):
     _print_bar("입력 토큰", stats['input_tokens'], total, Colors.BLUE)
     _print_bar("출력 토큰", stats['output_tokens'], total, Colors.GREEN)
     _print_bar("캐시 읽기", stats['cache_read_tokens'], total, Colors.CYAN)
+    _print_bar("캐시 생성", stats['cache_creation_tokens'], total, Colors.YELLOW)
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
@@ -834,7 +963,7 @@ def _get_db_module():
 
 def collect_to_db():
     db = _get_db_module()
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now().astimezone().strftime("%Y-%m-%d")
 
     print(f"{Colors.BOLD}데이터 수집 중...{Colors.END}")
 

@@ -54,6 +54,7 @@ dxai
 - [x] MenuBarExtra (.window 스타일) 기본 구조
 - [x] 오늘 토큰 수 실시간 표시 (메뉴바 + 대시보드)
 - [x] Claude/Codex 토큰 파싱 (`.jsonl` 로그)
+- [x] Hermes `openai-codex` 세션 사용량 합산 (`~/.hermes/state.db`, profiles 포함)
 - [x] Claude 쿼터 API 직접 호출 (`api.anthropic.com/api/oauth/usage`)
 - [x] 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
 - [x] Vanguard Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
@@ -183,7 +184,7 @@ dxai
 ## 데이터 소스
 
 - **Claude**: `~/.claude/projects/**/*.jsonl` (토큰), `api.anthropic.com` (쿼터)
-- **Codex**: `~/.codex/sessions/**/*.jsonl` (토큰)
+- **Codex**: `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/*.jsonl`, `~/.codex/state_5.sqlite`, `~/.hermes/state.db`, `~/.hermes/profiles/*/state.db` (토큰)
 
 모든 데이터는 로컬 read-only 파싱. 원본 수정 없음.
 

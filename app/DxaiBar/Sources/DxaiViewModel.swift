@@ -12,6 +12,7 @@ final class DxaiViewModel: ObservableObject {
     @Published var lastUpdated: Date = Date()
     @Published var systemStatus: SystemStatus?
     @Published var scanResult: ScanResult?
+    @Published var sessionStats: [DxaiDatabase.DailyStats] = []
     @Published var weeklyStats: [DxaiDatabase.DailyStats] = []
     @Published var todayCoins: Int = 0
     @Published var weeklyCoins: Int = 0
@@ -30,6 +31,7 @@ final class DxaiViewModel: ObservableObject {
     }
 
     private var timer: Timer?
+    private var isRefreshing = false
     private var lastNotifiedLevel: VanguardLevel?
     private var lastNotifiedMilestone: Int = 0
     private var milestoneBaselineSet: Bool = false
@@ -195,18 +197,25 @@ final class DxaiViewModel: ObservableObject {
     }
 
     func refreshAsync(force: Bool = false) async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
         let db = DxaiDatabase.shared
         if force { db.invalidateClaudeQuotaCache() }
 
-        // 1) 무거운 파일 I/O는 백그라운드에서 (오늘 토큰 + codex 쿼터)
+        // 1) 무거운 파일 I/O는 백그라운드에서 (오늘 토큰 + 5h 세션 + codex 쿼터)
         async let statsTask: [DxaiDatabase.DailyStats] = Task.detached { db.todayStats() }.value
+        async let sessionStatsTask: [DxaiDatabase.DailyStats] = Task.detached { db.recentStats(hours: 5) }.value
         async let codexQuotaTask: DxaiDatabase.QuotaInfo? = Task.detached { db.codexQuota() }.value
 
         // 2) Claude quota는 네트워크 — async/await으로 메인 스레드 안 막음
         async let claudeQuotaTask: DxaiDatabase.QuotaInfo? = db.claudeQuota()
 
         let stats = await statsTask
+        let recent = await sessionStatsTask
         toolStats = stats
+        sessionStats = recent
         todayTokens = stats.reduce(0) { $0 + $1.totalTokens }
         lastUpdated = Date()
 
@@ -392,11 +401,14 @@ final class DxaiViewModel: ObservableObject {
     }
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+        timer?.invalidate()
+        let refreshTimer = Timer(timeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
             }
         }
+        RunLoop.main.add(refreshTimer, forMode: .common)
+        timer = refreshTimer
     }
 
     private func formatTokens(_ n: Int) -> String {

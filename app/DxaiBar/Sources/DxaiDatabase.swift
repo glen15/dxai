@@ -10,6 +10,42 @@ final class DxaiDatabase {
     private var weeklyCache: [DailyStats]?
     private var weeklyCacheFingerprint: String?
 
+    private var codexLogDirs: [URL] {
+        [
+            home.appendingPathComponent(".codex/sessions"),
+            home.appendingPathComponent(".codex/archived_sessions"),
+        ]
+    }
+
+    private var hermesStateDBFiles: [URL] {
+        var files: [URL] = []
+        var seen = Set<String>()
+
+        func addIfExists(_ url: URL) {
+            guard FileManager.default.fileExists(atPath: url.path),
+                  seen.insert(url.path).inserted else { return }
+            files.append(url)
+        }
+
+        addIfExists(home.appendingPathComponent(".hermes/state.db"))
+
+        let profilesDir = home.appendingPathComponent(".hermes/profiles")
+        if let profiles = try? FileManager.default.contentsOfDirectory(
+            at: profilesDir,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for profile in profiles {
+                if let vals = try? profile.resourceValues(forKeys: [.isDirectoryKey]),
+                   vals.isDirectory == true {
+                    addIfExists(profile.appendingPathComponent("state.db"))
+                }
+            }
+        }
+
+        return files
+    }
+
     struct DailyStats {
         let date: String
         let tool: String
@@ -61,8 +97,18 @@ final class DxaiDatabase {
         var inputTokens = 0
         var outputTokens = 0
         var cacheReadTokens = 0
+        var cacheCreationTokens = 0
         var totalTokens = 0
         var requests = 0
+
+        mutating func add(_ other: TokenAccum) {
+            inputTokens += other.inputTokens
+            outputTokens += other.outputTokens
+            cacheReadTokens += other.cacheReadTokens
+            cacheCreationTokens += other.cacheCreationTokens
+            totalTokens += other.totalTokens
+            requests += other.requests
+        }
     }
 
     private func parseClaudeToday(startOfDay: Date) -> TokenAccum {
@@ -99,11 +145,13 @@ final class DxaiDatabase {
                 let input = usage["input_tokens"] as? Int ?? 0
                 let output = usage["output_tokens"] as? Int ?? 0
                 let cacheRead = usage["cache_read_input_tokens"] as? Int ?? 0
+                let cacheCreation = usage["cache_creation_input_tokens"] as? Int ?? 0
 
                 accum.inputTokens += input
                 accum.outputTokens += output
                 accum.cacheReadTokens += cacheRead
-                accum.totalTokens += input + output + cacheRead
+                accum.cacheCreationTokens += cacheCreation
+                accum.totalTokens += input + output + cacheRead + cacheCreation
                 accum.requests += 1
             }
         }
@@ -116,18 +164,9 @@ final class DxaiDatabase {
     private func parseCodexToday(startOfDay: Date) -> TokenAccum {
         var accum = TokenAccum()
 
-        let sessionsDir = home.appendingPathComponent(".codex/sessions")
-        guard let enumerator = FileManager.default.enumerator(
-            at: sessionsDir,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return accum }
-
         let dayStart = startOfDay.timeIntervalSince1970
 
-        for case let url as URL in enumerator {
-            guard url.pathExtension == "jsonl" else { continue }
-
+        for url in codexJSONLFiles(keys: [.contentModificationDateKey]) {
             if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
                let mdate = vals.contentModificationDate,
                mdate.timeIntervalSince1970 < dayStart {
@@ -184,6 +223,8 @@ final class DxaiDatabase {
             }
         }
 
+        applyCodexStateFloor(to: &accum, from: startOfDay, to: nil)
+        accum.add(combinedAccum(parseHermesCodex(from: startOfDay, to: nil)))
         return accum
     }
 
@@ -203,6 +244,7 @@ final class DxaiDatabase {
 
         let claudeByDate = parseClaude(from: startDate, to: endDate)
         let codexByDate = parseCodex(from: startDate, to: endDate)
+        let hermesCodexByDate = parseHermesCodex(from: startDate, to: endDate)
 
         var results: [DailyStats] = []
         for daysAgo in (0...13).reversed() {
@@ -217,7 +259,8 @@ final class DxaiDatabase {
                 requests: c.requests
             ))
 
-            let x = codexByDate[dateKey] ?? TokenAccum()
+            var x = codexByDate[dateKey] ?? TokenAccum()
+            x.add(hermesCodexByDate[dateKey] ?? TokenAccum())
             results.append(DailyStats(
                 date: dateKey, tool: "codex",
                 totalTokens: x.totalTokens, inputTokens: x.inputTokens,
@@ -231,6 +274,40 @@ final class DxaiDatabase {
         return results
     }
 
+    func recentStats(hours: Int) -> [DailyStats] {
+        let endDate = Date()
+        let startDate = endDate.addingTimeInterval(-Double(hours) * 3600)
+        let dateKey = Self.dateString(endDate)
+
+        let claude = combinedAccum(parseClaude(from: startDate, to: endDate))
+        var codex = combinedAccum(parseCodex(from: startDate, to: endDate))
+        applyCodexStateFloor(to: &codex, from: startDate, to: endDate)
+        codex.add(combinedAccum(parseHermesCodex(from: startDate, to: endDate)))
+
+        var results: [DailyStats] = []
+        if claude.totalTokens > 0 {
+            results.append(DailyStats(
+                date: dateKey, tool: "claude",
+                totalTokens: claude.totalTokens,
+                inputTokens: claude.inputTokens,
+                outputTokens: claude.outputTokens,
+                cacheReadTokens: claude.cacheReadTokens,
+                requests: claude.requests
+            ))
+        }
+        if codex.totalTokens > 0 {
+            results.append(DailyStats(
+                date: dateKey, tool: "codex",
+                totalTokens: codex.totalTokens,
+                inputTokens: codex.inputTokens,
+                outputTokens: codex.outputTokens,
+                cacheReadTokens: codex.cacheReadTokens,
+                requests: codex.requests
+            ))
+        }
+        return results
+    }
+
     /// jsonl 파일들의 수 + 최신 수정시간으로 변경 여부 판단
     private func jsonlFingerprint() -> String {
         var count = 0
@@ -239,6 +316,7 @@ final class DxaiDatabase {
         let dirs = [
             home.appendingPathComponent(".claude/projects"),
             home.appendingPathComponent(".codex/sessions"),
+            home.appendingPathComponent(".codex/archived_sessions"),
         ]
         for dir in dirs {
             guard let enumerator = FileManager.default.enumerator(
@@ -255,6 +333,15 @@ final class DxaiDatabase {
                 }
             }
         }
+
+        for db in hermesStateDBFiles {
+            count += 1
+            if let vals = try? db.resourceValues(forKeys: [.contentModificationDateKey]),
+               let mdate = vals.contentModificationDate {
+                latestMod = max(latestMod, mdate.timeIntervalSince1970)
+            }
+        }
+
         return "\(count)-\(latestMod)"
     }
 
@@ -287,12 +374,14 @@ final class DxaiDatabase {
                 let input = usage["input_tokens"] as? Int ?? 0
                 let output = usage["output_tokens"] as? Int ?? 0
                 let cacheRead = usage["cache_read_input_tokens"] as? Int ?? 0
+                let cacheCreation = usage["cache_creation_input_tokens"] as? Int ?? 0
 
                 var bucket = accum[dateKey] ?? TokenAccum()
                 bucket.inputTokens += input
                 bucket.outputTokens += output
                 bucket.cacheReadTokens += cacheRead
-                bucket.totalTokens += input + output + cacheRead
+                bucket.cacheCreationTokens += cacheCreation
+                bucket.totalTokens += input + output + cacheRead + cacheCreation
                 bucket.requests += 1
                 accum[dateKey] = bucket
             }
@@ -302,16 +391,9 @@ final class DxaiDatabase {
 
     private func parseCodex(from startDate: Date, to endDate: Date) -> [String: TokenAccum] {
         var accum: [String: TokenAccum] = [:]
-        let sessionsDir = home.appendingPathComponent(".codex/sessions")
-        guard let enumerator = FileManager.default.enumerator(
-            at: sessionsDir,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return accum }
 
         let rangeStart = startDate.timeIntervalSince1970
-        for case let url as URL in enumerator {
-            guard url.pathExtension == "jsonl" else { continue }
+        for url in codexJSONLFiles(keys: [.contentModificationDateKey]) {
             if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
                let mdate = vals.contentModificationDate,
                mdate.timeIntervalSince1970 < rangeStart { continue }
@@ -368,6 +450,75 @@ final class DxaiDatabase {
         return accum
     }
 
+    private func parseHermesCodex(from startDate: Date, to endDate: Date?) -> [String: TokenAccum] {
+        var accum: [String: TokenAccum] = [:]
+        let start = Int(startDate.timeIntervalSince1970)
+        let endClause: String
+        if let endDate {
+            endClause = " AND started_at < \(Int(endDate.timeIntervalSince1970))"
+        } else {
+            endClause = ""
+        }
+
+        let query = """
+        SELECT date(started_at, 'unixepoch', 'localtime') AS day,
+               COALESCE(SUM(input_tokens), 0),
+               COALESCE(SUM(output_tokens), 0),
+               COALESCE(SUM(cache_read_tokens), 0),
+               COALESCE(SUM(cache_write_tokens), 0),
+               COALESCE(SUM(reasoning_tokens), 0),
+               COUNT(*)
+        FROM sessions
+        WHERE started_at >= \(start)\(endClause)
+          AND billing_provider = 'openai-codex'
+        GROUP BY day;
+        """
+
+        for db in hermesStateDBFiles {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+            proc.arguments = ["-readonly", "-separator", "\t", db.path, query]
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = FileHandle.nullDevice
+
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+            } catch {
+                continue
+            }
+            guard proc.terminationStatus == 0 else { continue }
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            guard let raw = String(data: data, encoding: .utf8) else { continue }
+            for line in raw.split(separator: "\n") {
+                let parts = line.split(separator: "\t", omittingEmptySubsequences: false)
+                guard parts.count >= 7 else { continue }
+                let dateKey = String(parts[0])
+                let input = Int(parts[1]) ?? 0
+                let output = Int(parts[2]) ?? 0
+                let cacheRead = Int(parts[3]) ?? 0
+                let cacheWrite = Int(parts[4]) ?? 0
+                let reasoning = Int(parts[5]) ?? 0
+                let requests = Int(parts[6]) ?? 0
+                let total = input + output + cacheRead + cacheWrite + reasoning
+                guard total > 0 else { continue }
+
+                var bucket = accum[dateKey] ?? TokenAccum()
+                bucket.inputTokens += input + cacheWrite
+                bucket.outputTokens += output + reasoning
+                bucket.cacheReadTokens += cacheRead
+                bucket.cacheCreationTokens += cacheWrite
+                bucket.totalTokens += total
+                bucket.requests += requests
+                accum[dateKey] = bucket
+            }
+        }
+
+        return accum
+    }
+
     // MARK: - Line-by-line Reader
 
     private func forEachLine(in url: URL, _ handler: (Data) -> Void) {
@@ -392,6 +543,77 @@ final class DxaiDatabase {
         }) {}
 
         if !leftover.isEmpty { handler(leftover) }
+    }
+
+    private func combinedAccum(_ byDate: [String: TokenAccum]) -> TokenAccum {
+        var total = TokenAccum()
+        for bucket in byDate.values {
+            total.add(bucket)
+        }
+        return total
+    }
+
+    private func applyCodexStateFloor(to accum: inout TokenAccum, from startDate: Date, to endDate: Date?) {
+        guard let stateTotal = codexStateTokens(from: startDate, to: endDate),
+              stateTotal > accum.totalTokens else { return }
+        let delta = stateTotal - accum.totalTokens
+        accum.inputTokens += delta
+        accum.totalTokens = stateTotal
+    }
+
+    private func codexStateTokens(from startDate: Date, to endDate: Date?) -> Int? {
+        let db = home.appendingPathComponent(".codex/state_5.sqlite")
+        guard FileManager.default.fileExists(atPath: db.path) else { return nil }
+
+        let start = Int(startDate.timeIntervalSince1970)
+        let query: String
+        if let endDate {
+            let end = Int(endDate.timeIntervalSince1970)
+            query = "SELECT COALESCE(SUM(tokens_used),0) FROM threads WHERE created_at >= \(start) AND created_at < \(end);"
+        } else {
+            query = "SELECT COALESCE(SUM(tokens_used),0) FROM threads WHERE created_at >= \(start);"
+        }
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+        proc.arguments = ["-readonly", db.path, query]
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = FileHandle.nullDevice
+
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+        } catch {
+            return nil
+        }
+        guard proc.terminationStatus == 0 else { return nil }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let raw = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return Int(raw)
+    }
+
+    private func codexJSONLFiles(keys: [URLResourceKey]) -> [URL] {
+        var files: [URL] = []
+        var seen = Set<String>()
+
+        for dir in codexLogDirs {
+            guard let enumerator = FileManager.default.enumerator(
+                at: dir,
+                includingPropertiesForKeys: keys,
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+
+            for case let url as URL in enumerator {
+                guard url.pathExtension == "jsonl" else { continue }
+                guard seen.insert(url.lastPathComponent).inserted else { continue }
+                files.append(url)
+            }
+        }
+
+        return files
     }
 
     // MARK: - Helpers
@@ -553,17 +775,10 @@ final class DxaiDatabase {
            Date().timeIntervalSince(cache.timestamp) < 300 {
             return cache.data
         }
-        let sessionsDir = home.appendingPathComponent(".codex/sessions")
-        guard let enumerator = FileManager.default.enumerator(
-            at: sessionsDir,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return nil }
 
         // Collect .jsonl files sorted by modification date (newest first)
         var files: [(URL, Date)] = []
-        for case let url as URL in enumerator {
-            guard url.pathExtension == "jsonl" else { continue }
+        for url in codexJSONLFiles(keys: [.contentModificationDateKey]) {
             if let vals = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
                let mdate = vals.contentModificationDate {
                 files.append((url, mdate))

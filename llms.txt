@@ -2,7 +2,7 @@
 
 > AI dev environment manager for macOS
 
-dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
+dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI, Hermes-backed Codex). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
 
 ## Repository
 
@@ -17,7 +17,7 @@ dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI co
 SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `com.dxai.DxaiBar`.
 
 Features:
-- Real-time token usage tracking across Claude Code, Codex CLI
+- Real-time token usage tracking across Claude Code, Codex CLI, Hermes openai-codex
 - Quota bars for Claude/Codex 5-hour session and 7-day limits
 - Vanguard Rank system: 8 tiers (Bronze → Challenger), 36 levels with unique messages per division
 - Token Milestone achievement notifications (16 thresholds)
@@ -90,7 +90,7 @@ dxai/
 
 ## Data Handling
 
-- Reads AI tool logs from `~/.claude/`, `~/.codex/` (read-only)
+- Reads AI tool logs from `~/.claude/`, `~/.codex/`, and numeric Hermes session totals from `~/.hermes/` (read-only)
 - Never deletes AI tool data
 - All processing is local — no data leaves the machine
 - Log files (.jsonl) are parsed but never modified
@@ -98,7 +98,8 @@ dxai/
 ## Token Sources
 
 - Claude Code: `~/.claude/projects/*/logs/*.jsonl`
-- Codex CLI: `~/.codex/logs/*.jsonl`
+- Codex CLI: `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/*.jsonl`, `~/.codex/state_5.sqlite`
+- Hermes Codex: `~/.hermes/state.db`, `~/.hermes/profiles/*/state.db` (`sessions.billing_provider = 'openai-codex'`)
 
 ## Vanguard Rank Tiers
 
