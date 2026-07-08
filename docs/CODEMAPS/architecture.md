@@ -1,6 +1,6 @@
 # DXAI 전체 아키텍처
 
-**마지막 업데이트:** 2026-03-17
+**마지막 업데이트:** 2026-07-08
 **레포:** glen15/dxai (public)
 **브랜딩:** DXAI (회사) / Vanguard (랭킹 서비스)
 
@@ -21,13 +21,13 @@
 |  SwiftUI         |  15s   |   (Deno/TS)      |
 +--------+---------+        +--------+---------+
          |                           |
-         | .jsonl 파싱               | PostgreSQL
+         | 로컬 read-only 파싱        | PostgreSQL
          v                           v
 +------------------+        +------------------+
 | ~/.claude/       |        |  Supabase DB     |
 | ~/.codex/        |        |  (Seoul Region)  |
-| (로컬 토큰 로그) |        |  users +         |
-+------------------+        |  daily_records   |
+| ~/.hermes/       |        |  users +         |
+| (.jsonl + SQLite)|        |  daily_records   |
                             +------------------+
          +
          | CLI 실행
@@ -52,10 +52,10 @@
 
 ### 1. 토큰 수집 (로컬)
 ```
-Claude Code .jsonl  -+
-                     +-> DxaiDatabase.swift (파싱)
-Codex CLI .jsonl    -+       |
-                             v
+Claude Code .jsonl     -+
+Codex CLI/App .jsonl    +-> DxaiDatabase.swift (read-only 파싱)
+Codex state_5.sqlite    +       |
+Hermes state.db         -+       v
                      DxaiViewModel.swift (집계)
                              |
                      15초 타이머 refresh()
@@ -86,7 +86,7 @@ Supabase Realtime (postgres_changes)
 
 ## Vanguard Rank 시스템
 
-8 티어 x 5 디비전 = 36 레벨 + Challenger
+8 티어 × 5 디비전 + Challenger = 36 레벨
 
 | 티어 | 토큰 범위 (일일) | 코인 (base+bonus) |
 |------|-----------------|-------------------|

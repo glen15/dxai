@@ -1,6 +1,6 @@
 # 프론트엔드 코드맵
 
-**마지막 업데이트:** 2026-03-17
+**마지막 업데이트:** 2026-07-08
 
 ## A. macOS 메뉴바 앱 (DxaiBar)
 
@@ -14,7 +14,8 @@
 app/DxaiBar/Sources/
 ├── DxaiBarApp.swift        # @main, MenuBarExtra(.window), 중복 실행 방지
 ├── DxaiViewModel.swift     # 핵심 상태 관리 (ObservableObject)
-├── DxaiDatabase.swift      # .jsonl 파서 (Claude/Codex 토큰 직접 파싱)
+├── DxaiDatabase.swift      # Claude/Codex/Hermes 토큰 파서 + 쿼터 조회
+├── DxaiStore.swift         # SQLite 로컬 저장소 (config/daily/pending)
 ├── DxaiPointService.swift  # Vanguard Coin + 서버 제출 + pending queue
 ├── DxaiMenuView.swift      # 메인 UI (대시보드, Quick Actions, 탭)
 ├── InsightsView.swift      # 주간 인사이트 (차트, 트렌드, 캐시 적중률)
@@ -32,8 +33,9 @@ app/DxaiBar/Sources/
 |------|----------|------|
 | DxaiBarApp | DxaiViewModel, UpdaterManager, DxaiMenuView | 앱 진입, 메뉴바 등록 |
 | DxaiViewModel | DxaiDatabase, DxaiPointService, L | 토큰 집계, 알림, 타이머(15s), 태스크 실행 |
-| DxaiDatabase | (로컬 파일시스템) | Claude/Codex .jsonl 파싱, Quota API 호출 |
-| DxaiPointService | (URLSession, 로컬 JSON) | 코인 계산, 서버 제출, pending queue 관리 |
+| DxaiDatabase | (로컬 파일시스템, `/usr/bin/sqlite3`) | Claude/Codex JSONL, Codex SQLite, Hermes SQLite 토큰 파싱, Quota API 호출 |
+| DxaiStore | SQLite3 | `~/.config/dxai/points/dxai.db` config/daily/pending 영속화 및 JSON 마이그레이션 |
+| DxaiPointService | (URLSession, DxaiStore) | 코인 계산, 서버 제출, pending queue 관리 |
 | DxaiMenuView | DxaiViewModel, InsightsView, SettingsView, DxaiColors, L | 전체 UI 조합 |
 | StatusPanelView | DxaiColors | JSON -> 시스템 상태 시각화 |
 | ScanPanelView | DxaiColors, L, FlowLayout | JSON -> AI 환경 시각화 |
@@ -76,6 +78,8 @@ web/src/
 ├── app/
 │   ├── layout.tsx              # 루트 레이아웃 (nav, footer, ClickSpark)
 │   ├── page.tsx                # 메인 리더보드 (Live/Daily/Ranking/Search 탭)
+│   ├── achievements/
+│   │   └── page.tsx        # 업적 갤러리
 │   ├── globals.css             # Tailwind + 커스텀 스타일
 │   └── user/
 │       └── page.tsx            # 개인 프로필 (?name= 쿼리 파라미터)
@@ -110,9 +114,10 @@ web/src/
 |-----------|------|
 | `fetchLeaderboard(type, params, page)` | Edge Function 호출 |
 | `fetchSearch(query)` | 닉네임 검색 |
-| `fetchUserProfile(nickname)` | 프로필 조회 |
+| `fetchUserProfile(nickname)` | 프로필 + 달성 업적 조회 |
+| `fetchAchievements()` | 업적 갤러리 통계 조회 |
 | `formatTokens(n)`, `formatHeroTokens(n, lang)` | 숫자 포맷 |
-| `vanguardMessage(tier, div, lang)` | 등급별 메시지 (36개) |
+| `vanguardMessage(tier, div, lang)` | 등급별 메시지 (36레벨) |
 | `tokenMilestone(tokens, lang)` | 14단계 마일스톤 텍스트 |
 | `calculateLevel(tokens)` | 누적 토큰 -> 레벨 |
 | `tierProgress(tokens)` | 프로그레스 바 진행도 |

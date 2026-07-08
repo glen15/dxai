@@ -1,6 +1,6 @@
 # 데이터 모델 코드맵
 
-**마지막 업데이트:** 2026-03-17
+**마지막 업데이트:** 2026-07-08
 **DB:** Supabase PostgreSQL (Seoul, ldsqtmirplfgclzessrd)
 
 ## 테이블 스키마
@@ -16,6 +16,7 @@ last_tier     TEXT
 last_division INT
 created_at    TIMESTAMPTZ DEFAULT now()
 updated_at    TIMESTAMPTZ DEFAULT now()
+secret_token   UUID NOT NULL
 ```
 
 **인덱스:** nickname, total_coins DESC
@@ -38,12 +39,38 @@ UNIQUE(user_id, date)
 
 **인덱스:** date DESC, (user_id, date) DESC
 
+### achievements
+
+```sql
+id          TEXT PRIMARY KEY
+category    TEXT NOT NULL
+name_ko     TEXT NOT NULL
+name_en     TEXT NOT NULL
+desc_ko     TEXT NOT NULL
+desc_en     TEXT NOT NULL
+rarity      TEXT NOT NULL
+icon        TEXT NOT NULL
+sort_order  INT NOT NULL
+```
+
+### user_achievements
+
+```sql
+id             UUID PK DEFAULT gen_random_uuid()
+user_id        UUID NOT NULL FK -> users(id) ON DELETE CASCADE
+achievement_id TEXT NOT NULL FK -> achievements(id) ON DELETE CASCADE
+achieved_at    TIMESTAMPTZ DEFAULT now()
+UNIQUE(user_id, achievement_id)
+```
+
 ## RLS (Row Level Security)
 
 | 테이블 | anon | service_role |
 |--------|------|-------------|
 | users | - (차단) | ALL |
 | daily_records | SELECT (Realtime용) | ALL |
+| achievements | SELECT | ALL |
+| user_achievements | SELECT | ALL |
 
 Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 
@@ -59,6 +86,8 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 | `leaderboard_period_count(start, end)` | 기간 내 활성 유저 수 | - |
 | `tier_distribution(start, end)` | 기간 내 티어 분포 | - |
 | `search_users(query, limit)` | 닉네임 검색 (ILIKE) | - |
+| `get_user_achievements(user_id)` | 유저 달성 업적 | achieved_at DESC |
+| `achievement_stats()` | 전체 업적 + 달성률 | sort_order ASC |
 
 ## 마이그레이션 히스토리
 
@@ -82,10 +111,13 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 | 20260316300000 | add_secret_token.sql | 코인 인증용 secret_token |
 | 20260317000000 | remove_users_anon_read.sql | users 테이블 anon SELECT 차단 |
 | 20260317100000 | delete_dummy_users.sql | 더미 유저 전체 삭제 |
+| 20260318000000 | achievements.sql | 업적 테이블/RPC/시드 |
+| 20260318000001 | backfill_achievements.sql | 기존 기록 기반 업적 백필 |
+| 20260417000000 | suspicious_duplicates_view.sql | 자정 경계 중복 모니터링 VIEW |
 
 ## 로컬 데이터 (앱)
 
-### DxaiDatabase (로컬 파싱, DB 미사용)
+### DxaiDatabase (로컬 read-only 사용량 파싱)
 
 ```
 소스: ~/.claude/projects/**/*.jsonl   (Claude Code 로그)
@@ -97,14 +129,16 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 캐시: 인메모리 (weeklyCache + fingerprint; jsonl 및 Hermes state DB mtime 기반)
 ```
 
-### DxaiPointService (로컬 JSON 영속화)
+### DxaiStore / DxaiPointService (로컬 SQLite 영속화)
 
 ```
-~/.config/dxai/points/
-├── config.json    # { nickname, optIn, deviceUUID, lastRecordedDate }
-├── history.json   # DailyRecord[] (최근 365일)
-└── pending.json   # SubmissionPayload[] (미제출 큐, 최대 30건)
+~/.config/dxai/points/dxai.db
+├── config               # nickname, optIn, deviceUUID, secretToken, lastRecordedDate 등 key/value
+├── daily_records        # 최근 365일 일별 best record
+└── pending_submissions  # 미제출 큐
 ```
+
+구버전 JSON(`config.json`, `history.json`, `pending.json`)은 `DxaiStore.migrateFromJSON()`으로 SQLite에 1회 마이그레이션한다.
 
 ## Vanguard Coin 공식
 

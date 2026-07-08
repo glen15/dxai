@@ -36,7 +36,7 @@ macOS 13 (Ventura) 이상. API 키 불필요.
 
 ## 주요 기능
 
-- **토큰 대시보드** — Claude Code, Codex CLI 사용량 실시간 합산
+- **토큰 대시보드** — Claude Code, Codex CLI, Hermes 기반 Codex 사용량 실시간 합산
 - **쿼터 모니터링** — 5시간/7일 제한, 리셋 타이머
 - **Vanguard 랭크** — 일일 사용량 기반 8등급 36레벨 (Bronze → Challenger)
 - **Vanguard 리더보드** — opt-in 랭킹 ([vanguard.dx-ai.cloud](https://vanguard.dx-ai.cloud))
@@ -48,8 +48,8 @@ macOS 13 (Ventura) 이상. API 키 불필요.
 
 ## 데이터 안전
 
-- 모든 데이터는 로컬 로그 파일(`.jsonl`)을 읽기 전용으로 파싱
-- AI 도구 데이터(`~/.claude/`, `~/.codex/`)는 정리 대상에서 제외
+- 모든 사용량 데이터는 로컬 로그와 숫자 DB(`.jsonl`, Codex SQLite, Hermes SQLite)를 읽기 전용으로 파싱
+- AI 도구 데이터(`~/.claude/`, `~/.codex/`, `~/.hermes/`)는 정리 대상에서 제외
 - 리더보드 참여는 opt-in. 닉네임 + 토큰 수만 전송 (프롬프트/대화 내용 수집 없음)
 
 ---

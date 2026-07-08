@@ -1,6 +1,6 @@
 # 백엔드 코드맵
 
-**마지막 업데이트:** 2026-03-17
+**마지막 업데이트:** 2026-07-08
 
 ## A. Supabase Edge Functions
 
@@ -28,7 +28,7 @@
 
 ### leaderboard
 
-**라우팅:** `?type=` 파라미터로 7가지 모드
+**라우팅:** `?type=` 파라미터로 8가지 모드
 
 | 타입 | RPC / 쿼리 | 정렬 기준 |
 |------|-----------|----------|
@@ -39,8 +39,9 @@
 | total | `leaderboard_total_enhanced` | 누적 코인 DESC |
 | ranking | `leaderboard_by_tokens` | 누적 토큰 DESC |
 | search | `search_users(query)` | 닉네임 LIKE |
+| achievements | `achievement_stats()` | 업적 갤러리 통계 |
 
-**프로필:** `?user=NICKNAME` -> 30일 히스토리, 주간/월간 통계, streak, 순위
+**프로필:** `?user=NICKNAME` -> 30일 히스토리, 주간/월간 통계, streak, 순위, 달성 업적
 
 ### 공통 헬퍼
 
@@ -55,7 +56,7 @@ calculateStreak()  -- 연속 활동일 계산
 
 ## B. CLI (dxai)
 
-**진입점:** `dxai` (Bash script, v1.29.0)
+**진입점:** `dxai` (Bash script, v1.29.0; 릴리스 태그 V1.0.23 기준)
 **구조:** 서브커맨드 라우팅 -> bin/ 스크립트 위임
 
 ### 서브커맨드 매핑
@@ -129,7 +130,7 @@ lib/
 
 | 파일 | 역할 |
 |------|------|
-| `bin/ai.py` | AI 토큰 대시보드: .jsonl 파싱, 쿼터 조회, 실시간 모니터링 |
+| `bin/ai.py` | AI 토큰 대시보드: Claude/Codex JSONL, Codex SQLite, Hermes SQLite 집계, 쿼터 조회, 실시간 모니터링 |
 | `bin/scan.py` | AI 환경 스캔: Claude/Codex 설정, MCP, Skills, 활성 세션, 포트 |
 | `bin/telemetry.py` | 텔레메트리 수집 |
 | `lib/ai/db.py` | AI 데이터 DB 헬퍼 |

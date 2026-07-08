@@ -36,7 +36,7 @@ macOS 13 (Ventura) or later. No API keys needed.
 
 ## Features
 
-- **Token Dashboard** — Claude Code, Codex CLI usage combined in real-time
+- **Token Dashboard** — Claude Code, Codex CLI, and Hermes-backed Codex usage combined in real time
 - **Quota Monitoring** — 5-hour/7-day limits with reset timers
 - **Vanguard Rank** — daily usage-based tier system: 8 tiers, 36 levels (Bronze → Challenger)
 - **Vanguard Leaderboard** — opt-in ranking at [vanguard.dx-ai.cloud](https://vanguard.dx-ai.cloud)
@@ -48,8 +48,8 @@ macOS 13 (Ventura) or later. No API keys needed.
 
 ## Data Safety
 
-- All data is parsed locally from read-only log files (`.jsonl`)
-- AI tool data (`~/.claude/`, `~/.codex/`) is never deleted
+- All usage data is parsed locally from read-only logs and numeric local databases (`.jsonl`, Codex SQLite, Hermes SQLite)
+- AI tool data (`~/.claude/`, `~/.codex/`, `~/.hermes/`) is never deleted
 - Leaderboard is opt-in. Only nickname + token counts are submitted (no prompts, code, or conversations)
 
 ---

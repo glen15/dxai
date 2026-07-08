@@ -43,7 +43,7 @@ dxai
 │   └── dxai uninstall   — 전체 제거
 │
 └── 데이터 레이어
-    └── SQLite           — 로컬 시계열 데이터 (~/.config/dxai/dxai.db)
+    └── SQLite           — 로컬 시계열/설정 데이터 (~/.config/dxai/points/dxai.db)
 ```
 
 ## 현재 구현 상태
@@ -76,7 +76,7 @@ dxai
 - [x] 주간 토큰 누적 히어로 넘버 옆 표시
 
 #### CLI
-- [x] `dxai ai` — 토큰 대시보드 (Claude + Codex)
+- [x] `dxai ai` — 토큰 대시보드 (Claude + Codex + Hermes-backed Codex)
 - [x] `dxai ai watch` — 실시간 모니터링
 - [x] `dxai scan` — AI 환경 진단 (글로벌/프로젝트 MCP, 스킬, 세션, 포트)
 - [x] `dxai scan --json` — JSON 출력 (메뉴바 앱 연동)
@@ -90,8 +90,8 @@ dxai
 #### 배포/인프라
 - [x] .app 번들 빌드 스크립트 (build-app.sh, CLI + Go 바이너리 + 아이콘 포함)
 - [x] Homebrew Cask (`brew install --cask glen15/dxai/dxai`)
-- [x] Homebrew Formula (CLI: `brew install dxai`)
-- [x] GitHub Actions release.yml (태그 → Go 빌드 → Swift 앱 빌드 → 릴리스 → Homebrew 업데이트)
+- [x] Homebrew Formula (CLI: `brew install glen15/dxai/dxai`)
+- [x] GitHub Actions release workflow (태그 → Go 빌드 → Swift 앱 빌드/공증 → 릴리스 → Sparkle appcast → Homebrew 업데이트 시도)
 - [x] 독립 레포 (glen15/dxai, 클린 히스토리)
 - [x] README.md (영문), README.ko.md (한국어)
 - [x] AWS 웹 배포 (S3 + CloudFront + Route 53, vanguard.dx-ai.cloud)
@@ -100,14 +100,14 @@ dxai
 ### 미구현 / 향후 계획
 
 #### Phase 1 — 릴리스 ✅
-- [x] 첫 릴리스 태그 (V1.0.0 → V1.0.3 배포 완료)
+- [x] 릴리스 태그 운영 (최신: V1.0.23)
 - [x] Homebrew Tap 레포 생성 (`glen15/homebrew-dxai`)
 - [x] Homebrew Cask: `brew install --cask glen15/dxai/dxai`
 - [x] GitHub Actions CI/CD (빌드 → 릴리스 → Homebrew 자동 업데이트)
 - [x] CLI 앱 번들 내장 (Resources/dxai + bin/ + lib/)
 - [x] Go 바이너리 CI 빌드 포함 (analyze-go, status-go)
 - [x] 닉네임/opt-in 설정 시 리더보드 즉시 제출
-- [x] 사용자 확보 (사내 배포, 실 사용자 5명: DXAI, ELLA, karin, RIKA, MacMini)
+- [x] 사용자 확보 (사내/개인 배포, Vanguard opt-in 사용자 운영)
 
 #### Phase 2 — Vanguard 랭킹 서비스 ✅
 - [x] Vanguard Point 로컬 시스템 (포인트 공식, JSON 영속화, 3단 표시)
@@ -190,9 +190,9 @@ dxai
 
 ## 데이터 안전
 
-- AI 도구 데이터 (`~/.claude/`, `~/.codex/`)는 `dxai clean`으로 절대 삭제하지 않음
-- 모든 분석은 로컬. 외부 전송 없음
-- 로그 파일 (.jsonl)은 읽기 전용 파싱
+- AI 도구 데이터 (`~/.claude/`, `~/.codex/`, `~/.hermes/`)는 `dxai clean`으로 절대 삭제하지 않음
+- 모든 분석은 로컬. Vanguard opt-in 제출 외 외부 전송 없음
+- 로그 파일(.jsonl)과 로컬 SQLite DB는 읽기 전용 파싱
 
 ## 기술 스택
 
@@ -230,9 +230,7 @@ dxai/
 │   │   ├── SettingsView.swift    # 닉네임/opt-in 설정
 │   │   └── DxaiPointService.swift # 포인트 시스템 + 서버 제출
 │   └── scripts/build-app.sh       # .app 번들 빌더 (아이콘 + CLI 번들)
-├── homebrew/
-│   ├── Formula/dxai.rb            # CLI formula
-│   └── Casks/dxai.rb              # 메뉴바 앱 cask
+├── homebrew/                         # tap 템플릿/참고; 실제 tap은 glen15/homebrew-dxai
 ├── web/                           # Vanguard 랭킹 웹사이트 (Next.js)
 │   └── src/app/                   # 페이지 및 컴포넌트
 ├── supabase/
@@ -241,5 +239,5 @@ dxai/
 ├── tests/                         # Bats 테스트
 ├── scripts/                       # 빌드/체크 스크립트
 ├── docs/prd.md                    # 이 문서
-└── .github/workflows/release.yml  # CI/CD
+└── GitHub Actions Release workflow # 태그 기반 CI/CD
 ```
