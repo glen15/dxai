@@ -26,6 +26,7 @@ temp/
 *.temp
 *.dmg
 tests/tmp-*
+docs/notes/
 
 # Cache
 .cache/
@@ -45,6 +46,7 @@ tests/tmp-*
 .claude/
 .agents/
 .kiro/
+.hermes/
 CLAUDE.md
 ANTIGRAVITY.md
 WARP.md
