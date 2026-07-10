@@ -568,6 +568,7 @@ struct DxaiMenuView: View {
         let sessionStat = viewModel.sessionStats.first {
             $0.tool.lowercased() == stat.tool.lowercased()
         }
+        let supportsRollingSession = stat.tool.lowercased() != "hermes"
 
         return VStack(alignment: .leading, spacing: 8) {
             // Header: icon + name + plan
@@ -607,7 +608,8 @@ struct DxaiMenuView: View {
                     .foregroundColor(.secondary.opacity(colors.textSub))
             }
 
-            if let sessionStat,
+            if supportsRollingSession,
+               let sessionStat,
                sessionStat.totalTokens > 0,
                sessionStat.totalTokens != stat.totalTokens {
                 HStack(spacing: 8) {

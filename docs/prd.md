@@ -58,7 +58,8 @@ dxai
 - [x] Hermes 세션 독립 집계 (`~/.hermes/state.db`, profiles 포함, provider 무관)
 - [x] Claude/Codex/Hermes 도구 카드와 3색 주간 인사이트 그래프
 - [x] Claude 쿼터 API 직접 호출 (`api.anthropic.com/api/oauth/usage`)
-- [x] 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
+- [x] Claude/Codex 5시간 세션 / 7일 주간 쿼터 바 + 리셋 타이머
+- [x] Hermes는 quota 창 없이 오늘 사용량과 주간 인사이트 그래프로만 표시
 - [x] Vanguard Rank 시스템 (8등급 36레벨, 디비전별 고유 멘트)
 - [x] Token Milestone 알림 (14단계, AI 테마, 2천만 ~ 20억)
 - [x] Quick Actions (status, scan, clean, optimize)

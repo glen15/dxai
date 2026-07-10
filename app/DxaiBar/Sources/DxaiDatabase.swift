@@ -300,7 +300,6 @@ final class DxaiDatabase {
         let claude = combinedAccum(parseClaude(from: startDate, to: endDate))
         var codex = combinedAccum(parseCodex(from: startDate, to: endDate))
         applyCodexStateFloor(to: &codex, from: startDate, to: endDate)
-        let hermes = combinedAccum(parseHermes(from: startDate, to: endDate))
 
         var results: [DailyStats] = []
         if claude.totalTokens > 0 {
@@ -321,16 +320,6 @@ final class DxaiDatabase {
                 outputTokens: codex.outputTokens,
                 cacheReadTokens: codex.cacheReadTokens,
                 requests: codex.requests
-            ))
-        }
-        if hermes.totalTokens > 0 {
-            results.append(DailyStats(
-                date: dateKey, tool: "hermes",
-                totalTokens: hermes.totalTokens,
-                inputTokens: hermes.inputTokens,
-                outputTokens: hermes.outputTokens,
-                cacheReadTokens: hermes.cacheReadTokens,
-                requests: hermes.requests
             ))
         }
         return results
