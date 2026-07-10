@@ -78,7 +78,7 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 
 | 함수 | 용도 | 정렬 |
 |------|------|------|
-| `leaderboard_daily_by_tokens(date, limit, offset)` | 일별 토큰 랭킹 | claude+codex DESC |
+| `leaderboard_daily_by_tokens(date, limit, offset)` | 일별 토큰 랭킹 | claude+codex+hermes DESC |
 | `leaderboard_weekly_enhanced(start, end, limit, offset)` | 주간 코인 랭킹 | period_coins DESC |
 | `leaderboard_monthly_enhanced(start, end, limit, offset)` | 월간 코인 랭킹 | period_coins DESC |
 | `leaderboard_total_enhanced(limit, offset)` | 누적 코인 랭킹 | total_coins DESC |
@@ -114,6 +114,7 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 | 20260318000000 | achievements.sql | 업적 테이블/RPC/시드 |
 | 20260318000001 | backfill_achievements.sql | 기존 기록 기반 업적 백필 |
 | 20260417000000 | suspicious_duplicates_view.sql | 자정 경계 중복 모니터링 VIEW |
+| 20260711000000 | add_hermes_tokens.sql | Hermes 독립 저장 및 리더보드/RPC 3도구 합계 |
 
 ## 로컬 데이터 (앱)
 
@@ -129,7 +130,7 @@ Edge Functions는 `SUPABASE_SERVICE_ROLE_KEY`로 쓰기 수행.
 캐시: 인메모리 (weeklyCache + fingerprint; jsonl 및 Hermes state DB mtime 기반)
 ```
 
-`DailyStats.tool`은 `claude`, `codex`, `hermes`를 독립 반환한다. 로컬 UI/CLI 합계는 세 값을 한 번씩 더하고, 기존 Vanguard 서버 제출에서만 Hermes를 Codex에 합산한다.
+`DailyStats.tool`은 `claude`, `codex`, `hermes`를 독립 반환한다. 로컬 UI/CLI와 Vanguard 서버 합계는 세 값을 한 번씩 더한다. 마이그레이션 이전 서버 기록은 기존 Codex+Hermes 합산값을 보존한다.
 
 ### DxaiStore / DxaiPointService (로컬 SQLite 영속화)
 

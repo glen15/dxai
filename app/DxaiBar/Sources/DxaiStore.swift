@@ -5,6 +5,9 @@ import SQLite3
 final class DxaiStore {
     static let shared = DxaiStore()
 
+    private static let dailyColumns = "date, vanguard_tier, vanguard_division, daily_coins, claude_tokens, codex_tokens, hermes_tokens, total_coins"
+    private static let pendingColumns = "id, device_uuid, nickname, date, daily_coins, claude_tokens, codex_tokens, hermes_tokens, vanguard_tier, vanguard_division, secret_token"
+
     private var db: OpaquePointer?
     private let dbPath: String
 
@@ -42,6 +45,7 @@ final class DxaiStore {
             daily_coins INTEGER NOT NULL DEFAULT 0,
             claude_tokens INTEGER NOT NULL DEFAULT 0,
             codex_tokens INTEGER NOT NULL DEFAULT 0,
+            hermes_tokens INTEGER NOT NULL DEFAULT 0,
             total_coins INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS pending_submissions (
@@ -52,6 +56,7 @@ final class DxaiStore {
             daily_coins INTEGER NOT NULL,
             claude_tokens INTEGER NOT NULL,
             codex_tokens INTEGER NOT NULL,
+            hermes_tokens INTEGER NOT NULL DEFAULT 0,
             vanguard_tier TEXT NOT NULL,
             vanguard_division INTEGER,
             secret_token TEXT,
@@ -59,6 +64,23 @@ final class DxaiStore {
         );
         """
         sqlite3_exec(db, sql, nil, nil, nil)
+        addColumnIfNeeded(table: "daily_records", column: "hermes_tokens", definition: "INTEGER NOT NULL DEFAULT 0")
+        addColumnIfNeeded(table: "pending_submissions", column: "hermes_tokens", definition: "INTEGER NOT NULL DEFAULT 0")
+    }
+
+    private func addColumnIfNeeded(table: String, column: String, definition: String) {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &stmt, nil) == SQLITE_OK else { return }
+        var columnExists = false
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if String(cString: sqlite3_column_text(stmt, 1)) == column {
+                columnExists = true
+                break
+            }
+        }
+        sqlite3_finalize(stmt)
+        guard !columnExists else { return }
+        sqlite3_exec(db, "ALTER TABLE \(table) ADD COLUMN \(column) \(definition)", nil, nil, nil)
     }
 
     // MARK: - Config CRUD
@@ -102,14 +124,15 @@ final class DxaiStore {
         let dailyCoins: Int
         let claudeTokens: Int
         let codexTokens: Int
+        let hermesTokens: Int
         let totalCoins: Int
     }
 
     func upsertDailyRecord(_ row: DailyRow) {
         let sql = """
         INSERT OR REPLACE INTO daily_records
-        (date, vanguard_tier, vanguard_division, daily_coins, claude_tokens, codex_tokens, total_coins)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (date, vanguard_tier, vanguard_division, daily_coins, claude_tokens, codex_tokens, hermes_tokens, total_coins)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
@@ -125,12 +148,13 @@ final class DxaiStore {
         sqlite3_bind_int(stmt, 4, Int32(row.dailyCoins))
         sqlite3_bind_int64(stmt, 5, Int64(row.claudeTokens))
         sqlite3_bind_int64(stmt, 6, Int64(row.codexTokens))
-        sqlite3_bind_int64(stmt, 7, Int64(row.totalCoins))
+        sqlite3_bind_int64(stmt, 7, Int64(row.hermesTokens))
+        sqlite3_bind_int64(stmt, 8, Int64(row.totalCoins))
         sqlite3_step(stmt)
     }
 
     func getDailyRecord(date: String) -> DailyRow? {
-        let sql = "SELECT * FROM daily_records WHERE date = ?"
+        let sql = "SELECT \(Self.dailyColumns) FROM daily_records WHERE date = ?"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
@@ -140,12 +164,12 @@ final class DxaiStore {
     }
 
     func allDailyRecords() -> [DailyRow] {
-        let sql = "SELECT * FROM daily_records ORDER BY date ASC"
+        let sql = "SELECT \(Self.dailyColumns) FROM daily_records ORDER BY date ASC"
         return queryRows(sql)
     }
 
     func recentDailyRecords(limit: Int) -> [DailyRow] {
-        let sql = "SELECT * FROM daily_records ORDER BY date DESC LIMIT ?"
+        let sql = "SELECT \(Self.dailyColumns) FROM daily_records ORDER BY date DESC LIMIT ?"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -160,7 +184,7 @@ final class DxaiStore {
     func dailyRecordsInDates(_ dates: Set<String>) -> [DailyRow] {
         guard !dates.isEmpty else { return [] }
         let placeholders = dates.map { _ in "?" }.joined(separator: ",")
-        let sql = "SELECT * FROM daily_records WHERE date IN (\(placeholders)) ORDER BY date ASC"
+        let sql = "SELECT \(Self.dailyColumns) FROM daily_records WHERE date IN (\(placeholders)) ORDER BY date ASC"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -176,7 +200,7 @@ final class DxaiStore {
     }
 
     func lastDailyRecord() -> DailyRow? {
-        let sql = "SELECT * FROM daily_records ORDER BY date DESC LIMIT 1"
+        let sql = "SELECT \(Self.dailyColumns) FROM daily_records ORDER BY date DESC LIMIT 1"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
@@ -215,7 +239,8 @@ final class DxaiStore {
             dailyCoins: Int(sqlite3_column_int(stmt, 3)),
             claudeTokens: Int(sqlite3_column_int64(stmt, 4)),
             codexTokens: Int(sqlite3_column_int64(stmt, 5)),
-            totalCoins: Int(sqlite3_column_int64(stmt, 6))
+            hermesTokens: Int(sqlite3_column_int64(stmt, 6)),
+            totalCoins: Int(sqlite3_column_int64(stmt, 7))
         )
     }
 
@@ -240,6 +265,7 @@ final class DxaiStore {
         let dailyCoins: Int
         let claudeTokens: Int
         let codexTokens: Int
+        let hermesTokens: Int
         let vanguardTier: String
         let vanguardDivision: Int?
         let secretToken: String?
@@ -258,8 +284,8 @@ final class DxaiStore {
 
         let sql = """
         INSERT INTO pending_submissions
-        (device_uuid, nickname, date, daily_coins, claude_tokens, codex_tokens, vanguard_tier, vanguard_division, secret_token)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (device_uuid, nickname, date, daily_coins, claude_tokens, codex_tokens, hermes_tokens, vanguard_tier, vanguard_division, secret_token)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
@@ -270,16 +296,17 @@ final class DxaiStore {
         sqlite3_bind_int(stmt, 4, Int32(row.dailyCoins))
         sqlite3_bind_int64(stmt, 5, Int64(row.claudeTokens))
         sqlite3_bind_int64(stmt, 6, Int64(row.codexTokens))
-        sqlite3_bind_text(stmt, 7, row.vanguardTier, -1, transient)
+        sqlite3_bind_int64(stmt, 7, Int64(row.hermesTokens))
+        sqlite3_bind_text(stmt, 8, row.vanguardTier, -1, transient)
         if let div = row.vanguardDivision {
-            sqlite3_bind_int(stmt, 8, Int32(div))
-        } else {
-            sqlite3_bind_null(stmt, 8)
-        }
-        if let token = row.secretToken {
-            sqlite3_bind_text(stmt, 9, token, -1, transient)
+            sqlite3_bind_int(stmt, 9, Int32(div))
         } else {
             sqlite3_bind_null(stmt, 9)
+        }
+        if let token = row.secretToken {
+            sqlite3_bind_text(stmt, 10, token, -1, transient)
+        } else {
+            sqlite3_bind_null(stmt, 10)
         }
         sqlite3_step(stmt)
 
@@ -291,7 +318,7 @@ final class DxaiStore {
     }
 
     func allPending() -> [PendingRow] {
-        let sql = "SELECT * FROM pending_submissions ORDER BY id ASC"
+        let sql = "SELECT \(Self.pendingColumns) FROM pending_submissions ORDER BY id ASC"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
@@ -307,10 +334,10 @@ final class DxaiStore {
     }
 
     private func pendingFromStmt(_ stmt: OpaquePointer?) -> PendingRow {
-        let division = sqlite3_column_type(stmt, 8) == SQLITE_NULL
-            ? nil : Int(sqlite3_column_int(stmt, 8))
-        let token = sqlite3_column_type(stmt, 9) == SQLITE_NULL
-            ? nil : String(cString: sqlite3_column_text(stmt, 9))
+        let division = sqlite3_column_type(stmt, 9) == SQLITE_NULL
+            ? nil : Int(sqlite3_column_int(stmt, 9))
+        let token = sqlite3_column_type(stmt, 10) == SQLITE_NULL
+            ? nil : String(cString: sqlite3_column_text(stmt, 10))
         return PendingRow(
             id: Int(sqlite3_column_int(stmt, 0)),
             deviceUUID: String(cString: sqlite3_column_text(stmt, 1)),
@@ -319,7 +346,8 @@ final class DxaiStore {
             dailyCoins: Int(sqlite3_column_int(stmt, 4)),
             claudeTokens: Int(sqlite3_column_int64(stmt, 5)),
             codexTokens: Int(sqlite3_column_int64(stmt, 6)),
-            vanguardTier: String(cString: sqlite3_column_text(stmt, 7)),
+            hermesTokens: Int(sqlite3_column_int64(stmt, 7)),
+            vanguardTier: String(cString: sqlite3_column_text(stmt, 8)),
             vanguardDivision: division,
             secretToken: token
         )
@@ -358,6 +386,7 @@ final class DxaiStore {
                     date: r.date, vanguardTier: r.vanguardTier,
                     vanguardDivision: r.vanguardDivision, dailyCoins: r.dailyCoins,
                     claudeTokens: r.claudeTokens, codexTokens: r.codexTokens,
+                    hermesTokens: 0,
                     totalCoins: r.totalCoins
                 ))
             }
@@ -373,6 +402,7 @@ final class DxaiStore {
                     id: nil, deviceUUID: p.device_uuid, nickname: p.nickname,
                     date: p.date, dailyCoins: p.daily_coins,
                     claudeTokens: p.claude_tokens, codexTokens: p.codex_tokens,
+                    hermesTokens: 0,
                     vanguardTier: p.vanguard_tier, vanguardDivision: p.vanguard_division,
                     secretToken: p.secret_token
                 ))

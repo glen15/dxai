@@ -19,6 +19,7 @@ export interface RankEntry {
   vanguard_division?: number;
   claude_tokens?: number;
   codex_tokens?: number;
+  hermes_tokens?: number;
   days_active?: number;
   best_tier?: string;
   last_tier?: string;
@@ -27,6 +28,7 @@ export interface RankEntry {
   total_tokens?: number;
   total_claude_tokens?: number;
   total_codex_tokens?: number;
+  total_hermes_tokens?: number;
   total_days_active?: number;
   member_since?: string;
   current_streak?: number;
@@ -97,6 +99,7 @@ interface PeriodStats {
   coins: number;
   claude_tokens: number;
   codex_tokens: number;
+  hermes_tokens: number;
   days_active: number;
 }
 
@@ -107,6 +110,7 @@ interface DayRecord {
   vanguard_division: number | null;
   claude_tokens: number;
   codex_tokens: number;
+  hermes_tokens: number;
 }
 
 export interface ProfileResponse {
@@ -376,4 +380,3 @@ export function tierProgress(totalTokens: number): { index: number; fraction: nu
 export function formatNumber(n: number): string {
   return n.toLocaleString();
 }
-

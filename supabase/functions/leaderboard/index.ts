@@ -121,6 +121,7 @@ async function realtimeLeaderboard(supabase: any, page: number) {
       vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      hermes_tokens: r.hermes_tokens,
       total_tokens: r.total_tokens,
     })),
   });
@@ -163,6 +164,7 @@ async function dailyLeaderboard(supabase: any, dateParam: string | null, page: n
       vanguard_division: r.vanguard_division,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      hermes_tokens: r.hermes_tokens,
       total_tokens: r.total_tokens,
     })),
   });
@@ -207,6 +209,7 @@ async function weeklyLeaderboard(supabase: any, param: string | null, page: numb
       days_active: r.days_active,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      hermes_tokens: r.hermes_tokens,
       best_tier: r.best_tier,
       streak: r.streak,
       prev_week_points: r.prev_week_points,
@@ -267,6 +270,7 @@ async function monthlyLeaderboard(supabase: any, param: string | null, page: num
       days_active: r.days_active,
       claude_tokens: r.claude_tokens,
       codex_tokens: r.codex_tokens,
+      hermes_tokens: r.hermes_tokens,
       best_tier: r.best_tier,
       best_division: r.best_division,
       period_days: r.period_days,
@@ -303,6 +307,7 @@ async function totalLeaderboard(supabase: any, page: number) {
       last_division: r.last_division,
       total_claude_tokens: r.total_claude_tokens,
       total_codex_tokens: r.total_codex_tokens,
+      total_hermes_tokens: r.total_hermes_tokens,
       total_days_active: r.total_days_active,
       member_since: r.member_since,
       current_streak: r.current_streak,
@@ -336,6 +341,7 @@ async function tokenRanking(supabase: any, page: number) {
       total_tokens: r.total_tokens,
       total_claude_tokens: r.total_claude_tokens,
       total_codex_tokens: r.total_codex_tokens,
+      total_hermes_tokens: r.total_hermes_tokens,
       total_coins: r.total_coins,
       last_tier: r.last_tier,
       last_division: r.last_division,
@@ -411,7 +417,7 @@ async function getUserProfile(supabase: any, nickname: string) {
   const thirtyDaysAgo = dateOffset(-30);
   const { data: history } = await supabase
     .from("daily_records")
-    .select("date, daily_coins, vanguard_tier, vanguard_division, claude_tokens, codex_tokens")
+    .select("date, daily_coins, vanguard_tier, vanguard_division, claude_tokens, codex_tokens, hermes_tokens")
     .eq("user_id", user.id)
     .gte("date", thirtyDaysAgo)
     .order("date", { ascending: false });
@@ -422,11 +428,13 @@ async function getUserProfile(supabase: any, nickname: string) {
   const weeklyCoins = weekRecords.reduce((s: number, r: any) => s + r.daily_coins, 0);
   const weeklyClaudeTokens = weekRecords.reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const weeklyCodexTokens = weekRecords.reduce((s: number, r: any) => s + r.codex_tokens, 0);
+  const weeklyHermesTokens = weekRecords.reduce((s: number, r: any) => s + r.hermes_tokens, 0);
 
   // Monthly stats (last 30 days)
   const monthlyCoins = (history ?? []).reduce((s: number, r: any) => s + r.daily_coins, 0);
   const monthlyClaudeTokens = (history ?? []).reduce((s: number, r: any) => s + r.claude_tokens, 0);
   const monthlyCodexTokens = (history ?? []).reduce((s: number, r: any) => s + r.codex_tokens, 0);
+  const monthlyHermesTokens = (history ?? []).reduce((s: number, r: any) => s + r.hermes_tokens, 0);
 
   // Global rank + total tokens — DB에서 RANK() OVER로 효율적 계산
   const { data: rankData } = await supabase.rpc("user_token_rank", {
@@ -460,12 +468,14 @@ async function getUserProfile(supabase: any, nickname: string) {
         coins: weeklyCoins,
         claude_tokens: weeklyClaudeTokens,
         codex_tokens: weeklyCodexTokens,
+        hermes_tokens: weeklyHermesTokens,
         days_active: weekRecords.length,
       },
       monthly: {
         coins: monthlyCoins,
         claude_tokens: monthlyClaudeTokens,
         codex_tokens: monthlyCodexTokens,
+        hermes_tokens: monthlyHermesTokens,
         days_active: (history ?? []).length,
       },
       achievements: (achievements ?? []).map((a: any) => ({
@@ -486,6 +496,7 @@ async function getUserProfile(supabase: any, nickname: string) {
         vanguard_division: r.vanguard_division,
         claude_tokens: r.claude_tokens,
         codex_tokens: r.codex_tokens,
+        hermes_tokens: r.hermes_tokens,
       })),
     },
   });

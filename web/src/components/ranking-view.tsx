@@ -86,6 +86,7 @@ function TopCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
   const tokens = entry.total_tokens ?? 0;
   const claude = entry.total_claude_tokens ?? 0;
   const codex = entry.total_codex_tokens ?? 0;
+  const hermes = entry.total_hermes_tokens ?? 0;
   const tier = entry.last_tier ?? "";
   const division = entry.last_division ?? null;
   const milestone = tokenMilestone(tokens, lang);
@@ -128,6 +129,10 @@ function TopCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
               <span className="text-emerald-400/70 text-xs">Codex</span>
               <div className="text-emerald-400">{formatTokens(codex)}</div>
             </div>
+            <div>
+              <span className="text-yellow-400/70 text-xs">Hermes</span>
+              <div className="text-yellow-400">{formatTokens(hermes)}</div>
+            </div>
           </div>
         </div>
 
@@ -154,6 +159,7 @@ function RunnerCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
   const tokens = entry.total_tokens ?? 0;
   const claude = entry.total_claude_tokens ?? 0;
   const codex = entry.total_codex_tokens ?? 0;
+  const hermes = entry.total_hermes_tokens ?? 0;
   const tier = entry.last_tier ?? "";
   const division = entry.last_division ?? null;
   const { level } = calculateLevel(tokens);
@@ -201,6 +207,8 @@ function RunnerCard({ entry, lang }: { entry: RankEntry; lang: Lang }) {
           <span className="text-orange-400/70">{formatTokens(claude)}</span>
           {" + "}
           <span className="text-emerald-400/70">{formatTokens(codex)}</span>
+          {" + "}
+          <span className="text-yellow-400/70">{formatTokens(hermes)}</span>
         </span>
       </div>
       <LevelProgress totalTokens={tokens} lang={lang} />
@@ -218,6 +226,7 @@ function RankingRow({ entry, lang, index, totalUsers }: {
   const tokens = entry.total_tokens ?? 0;
   const claude = entry.total_claude_tokens ?? 0;
   const codex = entry.total_codex_tokens ?? 0;
+  const hermes = entry.total_hermes_tokens ?? 0;
   const tier = entry.last_tier ?? "";
   const division = entry.last_division ?? null;
   const { level, progress } = calculateLevel(tokens);
@@ -252,6 +261,8 @@ function RankingRow({ entry, lang, index, totalUsers }: {
             <span className="text-orange-400/60">{formatTokens(claude)}</span>
             {" + "}
             <span className="text-emerald-400/60">{formatTokens(codex)}</span>
+            {" + "}
+            <span className="text-yellow-400/60">{formatTokens(hermes)}</span>
           </span>
         </div>
       </div>

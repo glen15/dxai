@@ -20,18 +20,25 @@ import {
   type Lang,
 } from "@/lib/supabase";
 
-/** SVG donut pie chart for Claude vs Codex ratio */
-function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number; lang: Lang }) {
-  const total = claude + codex;
+/** SVG donut chart for the three supported AI tools. */
+function TokenPieChart({ claude, codex, hermes, lang }: {
+  claude: number;
+  codex: number;
+  hermes: number;
+  lang: Lang;
+}) {
+  const total = claude + codex + hermes;
   if (total === 0) return null;
 
   const claudePct = (claude / total) * 100;
   const codexPct = (codex / total) * 100;
+  const hermesPct = (hermes / total) * 100;
 
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const claudeArc = (claudePct / 100) * circumference;
   const codexArc = (codexPct / 100) * circumference;
+  const hermesArc = (hermesPct / 100) * circumference;
 
   return (
     <div className="flex items-center gap-5">
@@ -45,6 +52,15 @@ function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number;
             strokeDasharray={`${codexArc} ${circumference - codexArc}`}
             strokeDashoffset={-claudeArc}
             className="opacity-70"
+          />
+          <circle
+            cx="50" cy="50" r={radius}
+            fill="none"
+            stroke="rgb(250, 204, 21)"
+            strokeWidth="12"
+            strokeDasharray={`${hermesArc} ${circumference - hermesArc}`}
+            strokeDashoffset={-(claudeArc + codexArc)}
+            className="opacity-80"
           />
           <circle
             cx="50" cy="50" r={radius}
@@ -71,6 +87,12 @@ function TokenPieChart({ claude, codex, lang }: { claude: number; codex: number;
           <span className="text-sm text-white/70">Codex</span>
           <span className="font-mono text-sm text-emerald-400 ml-auto">{formatTokens(codex)}</span>
           <span className="text-xs text-white/40 w-10 text-right">{Math.round(codexPct)}%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shrink-0" />
+          <span className="text-sm text-white/70">Hermes</span>
+          <span className="font-mono text-sm text-yellow-400 ml-auto">{formatTokens(hermes)}</span>
+          <span className="text-xs text-white/40 w-10 text-right">{Math.round(hermesPct)}%</span>
         </div>
       </div>
     </div>
@@ -219,7 +241,8 @@ export default function UserPage() {
 
   const monthlyClaudeTokens = profile.monthly.claude_tokens;
   const monthlyCodexTokens = profile.monthly.codex_tokens;
-  const monthlyTotalTokens = monthlyClaudeTokens + monthlyCodexTokens;
+  const monthlyHermesTokens = profile.monthly.hermes_tokens;
+  const monthlyTotalTokens = monthlyClaudeTokens + monthlyCodexTokens + monthlyHermesTokens;
   const allTimeTotalTokens = profile.total_tokens ?? monthlyTotalTokens;
 
   const milestone = tokenMilestone(allTimeTotalTokens, lang);
@@ -331,7 +354,12 @@ export default function UserPage() {
         <h3 className="text-sm font-medium text-white/60 mb-4">
           {lang === "ko" ? "AI 도구별 토큰 사용 비율" : "Token Usage by AI Tool"}
         </h3>
-        <TokenPieChart claude={monthlyClaudeTokens} codex={monthlyCodexTokens} lang={lang} />
+        <TokenPieChart
+          claude={monthlyClaudeTokens}
+          codex={monthlyCodexTokens}
+          hermes={monthlyHermesTokens}
+          lang={lang}
+        />
       </motion.div>
 
       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="text-[11px] text-white/30 mb-6 px-1">
@@ -427,12 +455,13 @@ export default function UserPage() {
                 <th className="text-left py-3 px-5">{lang === "ko" ? "데일리 티어" : "Daily Tier"}</th>
                 <th className="text-right py-3 px-5 hidden sm:table-cell"><span className="text-orange-400/80">Claude</span></th>
                 <th className="text-right py-3 px-5 hidden sm:table-cell"><span className="text-emerald-400/80">Codex</span></th>
+                <th className="text-right py-3 px-5 hidden lg:table-cell"><span className="text-yellow-400/80">Hermes</span></th>
                 <th className="text-right py-3 px-5">{lang === "ko" ? "합계" : "Total"}</th>
               </tr>
             </thead>
             <tbody>
               {profile.history.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-8 text-white/30">{t("no_history", lang)}</td></tr>
+                <tr><td colSpan={6} className="text-center py-8 text-white/30">{t("no_history", lang)}</td></tr>
               ) : (
                 profile.history.map((day, i) => (
                   <motion.tr key={day.date} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: i * 0.03 }} className="border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors">
@@ -440,7 +469,8 @@ export default function UserPage() {
                     <td className="py-3 px-5"><TierBadge tier={day.vanguard_tier} division={day.vanguard_division} /></td>
                     <td className="py-3 px-5 text-right font-mono text-sm text-orange-400 hidden sm:table-cell">{formatTokens(day.claude_tokens)}</td>
                     <td className="py-3 px-5 text-right font-mono text-sm text-emerald-400 hidden sm:table-cell">{formatTokens(day.codex_tokens)}</td>
-                    <td className="py-3 px-5 text-right font-mono text-sm text-white/80">{formatTokens(day.claude_tokens + day.codex_tokens)}</td>
+                    <td className="py-3 px-5 text-right font-mono text-sm text-yellow-400 hidden lg:table-cell">{formatTokens(day.hermes_tokens)}</td>
+                    <td className="py-3 px-5 text-right font-mono text-sm text-white/80">{formatTokens(day.claude_tokens + day.codex_tokens + day.hermes_tokens)}</td>
                   </motion.tr>
                 ))
               )}

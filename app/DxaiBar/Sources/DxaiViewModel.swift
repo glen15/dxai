@@ -266,7 +266,8 @@ final class DxaiViewModel: ObservableObject {
                 tier: level.tier.rawValue,
                 division: level.division,
                 claudeTokens: claudeTokens,
-                codexTokens: nativeCodexTokens + hermesTokens
+                codexTokens: nativeCodexTokens,
+                hermesTokens: hermesTokens
             )
         }
 
@@ -276,7 +277,9 @@ final class DxaiViewModel: ObservableObject {
 
         // 누적 토큰 → 레벨 계산 (서버 값 우선, 로컬 히스토리 fallback)
         let serverTokens = ps.serverTotalTokens
-        let localTokens = ps.history.reduce(0) { $0 + $1.claudeTokens + $1.codexTokens }
+        let localTokens = ps.history.reduce(0) {
+            $0 + $1.claudeTokens + $1.codexTokens + $1.hermesTokens
+        }
         let bestTokens = max(serverTokens, localTokens)
         if bestTokens > 0 {
             allTimeTokens = bestTokens

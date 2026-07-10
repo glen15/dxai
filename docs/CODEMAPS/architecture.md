@@ -65,7 +65,7 @@ Hermes state.db         -+       v
 ```
 DxaiViewModel.refresh()
   -> DxaiPointService.recordDailyBest()
-    -> 기존 서버 계약용 Codex + Hermes 호환 합산
+    -> Claude / Codex / Hermes 독립 일일 기록
     -> submitToServer() [POST]
       -> submit-daily Edge Function
         -> users + daily_records upsert

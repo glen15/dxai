@@ -1,6 +1,6 @@
 # 백엔드 코드맵
 
-**마지막 업데이트:** 2026-07-08
+**마지막 업데이트:** 2026-07-11
 
 ## A. Supabase Edge Functions
 
@@ -23,7 +23,7 @@
 |------|------|
 | 검증 | device_uuid, nickname(2-16자), date(7일 이내), coins-tier 매칭, rate limit(10/분) |
 | 유저 | device_uuid로 조회 -> 있으면 update, 없으면 insert (nickname unique 제약) |
-| 기록 | (user_id, date) unique -> 높은 코인만 업데이트, 토큰은 항상 갱신 |
+| 기록 | (user_id, date) unique -> 높은 코인만 업데이트, Claude/Codex/Hermes 토큰은 항상 갱신 |
 | 응답 | `{ ok, total_coins, total_tokens, rank, live_rank }` |
 
 ### leaderboard

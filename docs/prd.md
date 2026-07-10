@@ -190,7 +190,7 @@ dxai
 - **Codex**: `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/*.jsonl`, `~/.codex/state_5.sqlite` (토큰)
 - **Hermes**: `~/.hermes/state.db`, `~/.hermes/profiles/*/state.db`의 숫자형 세션 통계 (provider 무관)
 
-앱/CLI에서는 세 도구를 분리한다. 현재 Vanguard 서버 계약은 `claude_tokens`와 `codex_tokens`만 지원하므로 제출 시에만 `codex_tokens = native Codex + Hermes`로 호환 합산한다.
+앱/CLI와 Vanguard 서버는 세 도구를 `claude_tokens`, `codex_tokens`, `hermes_tokens`로 독립 저장한다. 2026-07-11 이전 서버 기록은 당시 제출된 Codex+Hermes 합산값을 `codex_tokens`에 유지하고 `hermes_tokens=0`으로 둔다.
 
 모든 데이터는 로컬 read-only 파싱. 원본 수정 없음.
 

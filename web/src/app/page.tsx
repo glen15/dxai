@@ -59,23 +59,26 @@ function TierProgressBar({ totalTokens }: { totalTokens: number }) {
 }
 
 const isDailyTab = (type: LeaderboardType) => type === "realtime" || type === "daily";
+type TokenDiff = { claude: number; codex: number; hermes: number };
 
 // Top 3 podium card (Live/Daily only)
-function PodiumCard({ entry, lang, diff, type }: {
+function PodiumCard({ entry, lang, diff }: {
   entry: RankEntry;
   lang: Lang;
-  diff?: { claude: number; codex: number };
-  type: LeaderboardType;
+  diff?: TokenDiff;
 }) {
   const tier = entry.vanguard_tier ?? entry.last_tier ?? "";
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const { level } = calculateLevel(entry.total_tokens ?? claude + codex);
+  const hermes = entry.hermes_tokens ?? 0;
+  const dailyTokens = claude + codex + hermes;
+  const { level } = calculateLevel(entry.total_tokens ?? dailyTokens);
   const message = vanguardMessage(tier, division, lang);
-  const milestone = tokenMilestone(claude + codex, lang);
+  const milestone = tokenMilestone(dailyTokens, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;
+  const hermesDiff = diff?.hermes ?? 0;
 
   const podiumClass =
     entry.rank === 1 ? "podium-card podium-gold" :
@@ -132,13 +135,13 @@ function PodiumCard({ entry, lang, diff, type }: {
       {/* Hero token number */}
       <div className="mb-2">
         <div className="font-mono text-lg font-bold text-white/90">
-          {formatHeroTokens(claude + codex, lang)}
+          {formatHeroTokens(dailyTokens, lang)}
         </div>
       </div>
 
       {/* Tier progress bar */}
       <div className="mb-3">
-        <TierProgressBar totalTokens={claude + codex} />
+        <TierProgressBar totalTokens={dailyTokens} />
       </div>
 
       {/* Token bars */}
@@ -157,6 +160,13 @@ function PodiumCard({ entry, lang, diff, type }: {
             {codexDiff > 0 && <span className="text-emerald-300 text-xs ml-1 token-diff">+{formatTokens(codexDiff)}</span>}
           </div>
         </div>
+        <div className="flex-1">
+          <div className="text-yellow-400/70 text-xs mb-0.5">Hermes</div>
+          <div className="text-yellow-400">
+            {formatTokens(hermes)}
+            {hermesDiff > 0 && <span className="text-yellow-300 text-xs ml-1 token-diff">+{formatTokens(hermesDiff)}</span>}
+          </div>
+        </div>
       </div>
 
       {/* Milestone */}
@@ -170,17 +180,20 @@ function PodiumCard({ entry, lang, diff, type }: {
 function RankRow({ entry, lang, diff, index }: {
   entry: RankEntry;
   lang: Lang;
-  diff?: { claude: number; codex: number };
+  diff?: TokenDiff;
   index: number;
 }) {
   const tier = entry.vanguard_tier ?? entry.last_tier ?? "";
   const division = entry.vanguard_division ?? entry.last_division ?? null;
   const claude = entry.claude_tokens ?? 0;
   const codex = entry.codex_tokens ?? 0;
-  const { level } = calculateLevel(entry.total_tokens ?? claude + codex);
-  const milestone = tokenMilestone(claude + codex, lang);
+  const hermes = entry.hermes_tokens ?? 0;
+  const dailyTokens = claude + codex + hermes;
+  const { level } = calculateLevel(entry.total_tokens ?? dailyTokens);
+  const milestone = tokenMilestone(dailyTokens, lang);
   const claudeDiff = diff?.claude ?? 0;
   const codexDiff = diff?.codex ?? 0;
+  const hermesDiff = diff?.hermes ?? 0;
 
   return (
     <motion.tr
@@ -202,7 +215,7 @@ function RankRow({ entry, lang, diff, index }: {
               {entry.nickname}
             </a>
             <span className="font-mono text-[10px] text-violet-400/80 bg-violet-400/10 px-1 py-0.5 rounded">Lv.{level}</span>
-            <span className="font-mono text-xs text-white/40">{formatHeroTokens(claude + codex, lang)}</span>
+            <span className="font-mono text-xs text-white/40">{formatHeroTokens(dailyTokens, lang)}</span>
           </div>
           {milestone && (
             <p className="text-xs text-purple-400/70 mt-0.5">{milestone}</p>
@@ -213,7 +226,7 @@ function RankRow({ entry, lang, diff, index }: {
         <div>
           <TierBadge tier={tier} division={division} />
           <div className="mt-1 w-24">
-            <TierProgressBar totalTokens={claude + codex} />
+            <TierProgressBar totalTokens={dailyTokens} />
           </div>
         </div>
       </td>
@@ -229,8 +242,14 @@ function RankRow({ entry, lang, diff, index }: {
           <span className="text-emerald-300 text-xs ml-1 token-diff">+{formatTokens(codexDiff)}</span>
         )}
       </td>
+      <td className="py-3 px-5 text-right font-mono text-sm hidden lg:table-cell">
+        <span className="text-yellow-400">{formatTokens(hermes)}</span>
+        {hermesDiff > 0 && (
+          <span className="text-yellow-300 text-xs ml-1 token-diff">+{formatTokens(hermesDiff)}</span>
+        )}
+      </td>
       <td className="py-3 px-5 text-right font-mono text-sm text-white/90">
-        {formatHeroTokens(claude + codex, lang)}
+        {formatHeroTokens(dailyTokens, lang)}
       </td>
     </motion.tr>
   );
@@ -249,7 +268,7 @@ export default function Home() {
     const saved = localStorage.getItem("lang");
     if (saved === "ko" || saved === "en") setLang(saved);
   }, []);
-  const [diffs, setDiffs] = useState<Record<string, { claude: number; codex: number }>>({});
+  const [diffs, setDiffs] = useState<Record<string, TokenDiff>>({});
   const dataRef = useRef<LeaderboardResponse | null>(null);
 
   const load = useCallback(async (silent = false) => {
@@ -261,19 +280,24 @@ export default function Home() {
 
     // diff: detect token changes for realtime/daily
     if (dataRef.current?.rankings && result?.rankings) {
-      const oldMap: Record<string, { claude: number; codex: number }> = {};
+      const oldMap: Record<string, TokenDiff> = {};
       for (const r of dataRef.current.rankings) {
-        oldMap[r.nickname] = { claude: r.claude_tokens ?? 0, codex: r.codex_tokens ?? 0 };
+        oldMap[r.nickname] = {
+          claude: r.claude_tokens ?? 0,
+          codex: r.codex_tokens ?? 0,
+          hermes: r.hermes_tokens ?? 0,
+        };
       }
-      const newDiffs: Record<string, { claude: number; codex: number }> = {};
+      const newDiffs: Record<string, TokenDiff> = {};
       let hasDiff = false;
       for (const r of result.rankings) {
         const old = oldMap[r.nickname];
         if (!old) continue;
         const cDiff = (r.claude_tokens ?? 0) - old.claude;
         const xDiff = (r.codex_tokens ?? 0) - old.codex;
-        if (cDiff > 0 || xDiff > 0) {
-          newDiffs[r.nickname] = { claude: cDiff, codex: xDiff };
+        const hDiff = (r.hermes_tokens ?? 0) - old.hermes;
+        if (cDiff > 0 || xDiff > 0 || hDiff > 0) {
+          newDiffs[r.nickname] = { claude: cDiff, codex: xDiff, hermes: hDiff };
           hasDiff = true;
         }
       }
@@ -465,7 +489,7 @@ function TabContent({ tab, rankings, data, lang, diffs, page, totalPages, onPage
   rankings: RankEntry[];
   data: LeaderboardResponse | null;
   lang: Lang;
-  diffs: Record<string, { claude: number; codex: number }>;
+  diffs: Record<string, TokenDiff>;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -503,7 +527,6 @@ function TabContent({ tab, rankings, data, lang, diffs, page, totalPages, onPage
               entry={entry}
               lang={lang}
               diff={diffs[entry.nickname]}
-              type={tab}
             />
           ))}
         </div>
@@ -522,6 +545,9 @@ function TabContent({ tab, rankings, data, lang, diffs, page, totalPages, onPage
                 </th>
                 <th className="text-right py-3 px-5 hidden sm:table-cell">
                   <span className="text-emerald-400/80">Codex</span>
+                </th>
+                <th className="text-right py-3 px-5 hidden lg:table-cell">
+                  <span className="text-yellow-400/80">Hermes</span>
                 </th>
                 <th className="text-right py-3 px-5">{lang === "ko" ? "합계" : "Total"}</th>
               </tr>

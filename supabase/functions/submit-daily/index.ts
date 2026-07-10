@@ -96,6 +96,8 @@ serve(async (req: Request) => {
 
   // Use daily_coins if present, fall back to daily_points for old clients
   const daily_coins = clientCoins ?? legacyPoints;
+  // Older app versions folded Hermes into codex_tokens and omit this field.
+  const hermes_tokens = body.hermes_tokens ?? 0;
 
   // --- Validation ---
 
@@ -144,6 +146,9 @@ serve(async (req: Request) => {
   }
   if (typeof codex_tokens !== "number" || codex_tokens < 0) {
     return respond({ ok: false, error: "invalid_codex_tokens" }, 400);
+  }
+  if (typeof hermes_tokens !== "number" || hermes_tokens < 0) {
+    return respond({ ok: false, error: "invalid_hermes_tokens" }, 400);
   }
 
   // Rate limit
@@ -210,7 +215,7 @@ serve(async (req: Request) => {
   // Upsert daily record (only update if higher coins or changed tokens)
   const { data: existingRecord } = await supabase
     .from("daily_records")
-    .select("id, daily_coins, claude_tokens, codex_tokens, vanguard_tier, vanguard_division")
+    .select("id, daily_coins, claude_tokens, codex_tokens, hermes_tokens, vanguard_tier, vanguard_division")
     .eq("user_id", userId)
     .eq("date", date)
     .single();
@@ -219,7 +224,8 @@ serve(async (req: Request) => {
     const shouldUpdate =
       daily_coins > existingRecord.daily_coins ||
       claude_tokens !== existingRecord.claude_tokens ||
-      codex_tokens !== existingRecord.codex_tokens;
+      codex_tokens !== existingRecord.codex_tokens ||
+      hermes_tokens !== existingRecord.hermes_tokens;
     if (shouldUpdate) {
       const newCoins = Math.max(daily_coins, existingRecord.daily_coins);
       await supabase
@@ -228,6 +234,7 @@ serve(async (req: Request) => {
           daily_coins: newCoins,
           claude_tokens,
           codex_tokens,
+          hermes_tokens,
           vanguard_tier: daily_coins >= existingRecord.daily_coins ? vanguard_tier : existingRecord.vanguard_tier,
           vanguard_division: daily_coins >= existingRecord.daily_coins ? vanguard_division : existingRecord.vanguard_division,
         })
@@ -241,15 +248,16 @@ serve(async (req: Request) => {
     const prevDateStr = prevDateObj.toISOString().slice(0, 10);
     const { data: prevRecord } = await supabase
       .from("daily_records")
-      .select("claude_tokens, codex_tokens")
+      .select("claude_tokens, codex_tokens, hermes_tokens")
       .eq("user_id", userId)
       .eq("date", prevDateStr)
       .single();
     if (
       prevRecord &&
-      (claude_tokens + codex_tokens) > 0 &&
+      (claude_tokens + codex_tokens + hermes_tokens) > 0 &&
       prevRecord.claude_tokens === claude_tokens &&
-      prevRecord.codex_tokens === codex_tokens
+      prevRecord.codex_tokens === codex_tokens &&
+      prevRecord.hermes_tokens === hermes_tokens
     ) {
       return respond({ ok: false, error: "duplicate_of_previous_day" }, 400);
     }
@@ -262,6 +270,7 @@ serve(async (req: Request) => {
         daily_coins,
         claude_tokens,
         codex_tokens,
+        hermes_tokens,
         vanguard_tier,
         vanguard_division,
       });
@@ -270,12 +279,14 @@ serve(async (req: Request) => {
   // Recalculate total_coins and total_tokens from daily_records
   const { data: sums } = await supabase
     .from("daily_records")
-    .select("daily_coins, claude_tokens, codex_tokens")
+    .select("daily_coins, claude_tokens, codex_tokens, hermes_tokens")
     .eq("user_id", userId);
 
   const totalCoins = sums?.reduce((s: any, r: any) => s + r.daily_coins, 0) ?? 0;
   const totalTokens = sums?.reduce(
-    (s: any, r: any) => s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0), 0
+    (s: any, r: any) =>
+      s + (r.claude_tokens ?? 0) + (r.codex_tokens ?? 0) + (r.hermes_tokens ?? 0),
+    0
   ) ?? 0;
 
   await supabase
@@ -292,14 +303,15 @@ serve(async (req: Request) => {
   const rank = (count ?? 0) + 1;
 
   // Live rank: 오늘 토큰 기준 순위
-  const todayTotalTokens = claude_tokens + codex_tokens;
+  const todayTotalTokens = claude_tokens + codex_tokens + hermes_tokens;
   const { data: todayRecords } = await supabase
     .from("daily_records")
-    .select("claude_tokens, codex_tokens")
+    .select("claude_tokens, codex_tokens, hermes_tokens")
     .eq("date", date);
 
   const liveRank = (todayRecords ?? []).filter(
-    (r: any) => (r.claude_tokens + r.codex_tokens) > todayTotalTokens
+    (r: any) =>
+      (r.claude_tokens + r.codex_tokens + r.hermes_tokens) > todayTotalTokens
   ).length + 1;
 
   // ── Achievement judgment ──
@@ -309,6 +321,7 @@ serve(async (req: Request) => {
     vanguard_tier,
     claude_tokens,
     codex_tokens,
+    hermes_tokens,
     date,
     rank,
     createdAt: existingUser?.created_at,
@@ -380,6 +393,7 @@ interface JudgeContext {
   vanguard_tier: string;
   claude_tokens: number;
   codex_tokens: number;
+  hermes_tokens: number;
   date: string;
   rank: number;
   createdAt?: string;
@@ -440,7 +454,11 @@ async function judgeAchievements(
   }
 
   // 7. Special 업적
-  if (!earned.has("dual_wielder") && ctx.claude_tokens > 0 && ctx.codex_tokens > 0) {
+  if (
+    !earned.has("dual_wielder") &&
+    ctx.claude_tokens > 0 &&
+    (ctx.codex_tokens > 0 || ctx.hermes_tokens > 0)
+  ) {
     candidates.push("dual_wielder");
   }
 

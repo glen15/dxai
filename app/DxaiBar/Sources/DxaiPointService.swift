@@ -16,6 +16,7 @@ final class DxaiPointService {
         let daily_coins: Int
         let claude_tokens: Int
         let codex_tokens: Int
+        let hermes_tokens: Int
         let vanguard_tier: String
         let vanguard_division: Int?
         let secret_token: String?
@@ -138,25 +139,34 @@ final class DxaiPointService {
 
     // MARK: - Record Daily Best
 
-    func recordDailyBest(tier: String, division: Int?, claudeTokens: Int, codexTokens: Int) {
+    func recordDailyBest(
+        tier: String,
+        division: Int?,
+        claudeTokens: Int,
+        codexTokens: Int,
+        hermesTokens: Int
+    ) {
         let today = Self.todayString()
         let points = Self.calculateCoins(tier: tier, division: division)
 
-        // 자정 경계 가드: 오늘 기록이 없는데 전일 로컬 기록과 claude/codex tokens가 정확히 동일하면
+        // 자정 경계 가드: 오늘 기록이 없는데 전일 로컬 기록과 세 도구 tokens가 정확히 동일하면
         // db.todayStats()가 어제 값을 반환한 것으로 판단하고 저장·제출 모두 스킵.
         // 이틀 연속 같은 정수 토큰이 찍힐 확률은 사실상 0.
         if store.getDailyRecord(date: today) == nil,
-           (claudeTokens + codexTokens) > 0,
+           (claudeTokens + codexTokens + hermesTokens) > 0,
            let prev = Self.previousDateString(of: today),
            let prevRow = store.getDailyRecord(date: prev),
            prevRow.claudeTokens == claudeTokens,
-           prevRow.codexTokens == codexTokens {
+           prevRow.codexTokens == codexTokens,
+           prevRow.hermesTokens == hermesTokens {
             NSLog("[DxaiPoint] Skip: 오늘 집계가 전일과 정확히 동일 (자정 경계 버그 의심)")
             return
         }
 
         if let existing = store.getDailyRecord(date: today) {
-            let tokensChanged = claudeTokens != existing.claudeTokens || codexTokens != existing.codexTokens
+            let tokensChanged = claudeTokens != existing.claudeTokens
+                || codexTokens != existing.codexTokens
+                || hermesTokens != existing.hermesTokens
             guard points > existing.dailyCoins || tokensChanged else { return }
             let newPoints = max(points, existing.dailyCoins)
             let newTier = points >= existing.dailyCoins ? tier : existing.vanguardTier
@@ -165,14 +175,16 @@ final class DxaiPointService {
             store.upsertDailyRecord(DxaiStore.DailyRow(
                 date: today, vanguardTier: newTier, vanguardDivision: newDiv,
                 dailyCoins: newPoints, claudeTokens: claudeTokens,
-                codexTokens: codexTokens, totalCoins: cumulative
+                codexTokens: codexTokens, hermesTokens: hermesTokens,
+                totalCoins: cumulative
             ))
         } else {
             let cumulative = totalCoins + points
             store.upsertDailyRecord(DxaiStore.DailyRow(
                 date: today, vanguardTier: tier, vanguardDivision: division,
                 dailyCoins: points, claudeTokens: claudeTokens,
-                codexTokens: codexTokens, totalCoins: cumulative
+                codexTokens: codexTokens, hermesTokens: hermesTokens,
+                totalCoins: cumulative
             ))
         }
 
@@ -289,6 +301,7 @@ final class DxaiPointService {
             daily_coins: record.dailyCoins,
             claude_tokens: record.claudeTokens,
             codex_tokens: record.codexTokens,
+            hermes_tokens: record.hermesTokens,
             vanguard_tier: record.vanguardTier,
             vanguard_division: record.vanguardDivision,
             secret_token: Self.loadSecretToken()
@@ -307,6 +320,7 @@ final class DxaiPointService {
                 device_uuid: p.deviceUUID, nickname: p.nickname,
                 date: p.date, daily_coins: p.dailyCoins,
                 claude_tokens: p.claudeTokens, codex_tokens: p.codexTokens,
+                hermes_tokens: p.hermesTokens,
                 vanguard_tier: p.vanguardTier, vanguard_division: p.vanguardDivision,
                 secret_token: p.secretToken
             )
@@ -326,6 +340,7 @@ final class DxaiPointService {
                 device_uuid: deviceUUID, nickname: nickname,
                 date: record.date, daily_coins: record.dailyCoins,
                 claude_tokens: record.claudeTokens, codex_tokens: record.codexTokens,
+                hermes_tokens: record.hermesTokens,
                 vanguard_tier: record.vanguardTier, vanguard_division: record.vanguardDivision,
                 secret_token: Self.loadSecretToken()
             )
@@ -395,6 +410,7 @@ final class DxaiPointService {
             id: nil, deviceUUID: payload.device_uuid, nickname: payload.nickname,
             date: payload.date, dailyCoins: payload.daily_coins,
             claudeTokens: payload.claude_tokens, codexTokens: payload.codex_tokens,
+            hermesTokens: payload.hermes_tokens,
             vanguardTier: payload.vanguard_tier, vanguardDivision: payload.vanguard_division,
             secretToken: payload.secret_token
         ))
