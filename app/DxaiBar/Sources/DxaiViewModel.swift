@@ -260,12 +260,13 @@ final class DxaiViewModel: ObservableObject {
 
         if let level = vanguardLevel {
             let claudeTokens = toolStats.filter { $0.tool == "claude" }.reduce(0) { $0 + $1.totalTokens }
-            let codexTokens = toolStats.filter { $0.tool == "codex" }.reduce(0) { $0 + $1.totalTokens }
+            let nativeCodexTokens = toolStats.filter { $0.tool == "codex" }.reduce(0) { $0 + $1.totalTokens }
+            let hermesTokens = toolStats.filter { $0.tool == "hermes" }.reduce(0) { $0 + $1.totalTokens }
             ps.recordDailyBest(
                 tier: level.tier.rawValue,
                 division: level.division,
                 claudeTokens: claudeTokens,
-                codexTokens: codexTokens
+                codexTokens: nativeCodexTokens + hermesTokens
             )
         }
 

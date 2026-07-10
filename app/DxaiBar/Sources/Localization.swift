@@ -28,7 +28,7 @@ struct L {
             return """
             AI 개발 환경을 한눈에.
 
-            Claude, Codex 등 AI 코딩 도구의 토큰 사용량을 \
+            Claude, Codex, Hermes 등 AI 코딩 도구의 토큰 사용량을 \
             실시간 추적하고, 쿼터 현황을 모니터링합니다.
 
             Quick Actions로 시스템 상태 확인, AI 환경 스캔, \
@@ -42,7 +42,7 @@ struct L {
             Your AI dev environment at a glance.
 
             Track token usage across AI coding tools like \
-            Claude and Codex in real time, and monitor quotas.
+            Claude, Codex, and Hermes in real time, and monitor quotas.
 
             Run system diagnostics, AI environment scans, \
             disk cleanup, and optimization right from the menu bar.
@@ -66,7 +66,10 @@ struct L {
 
     // MARK: - Insights
 
-    var insights: String { ko ? "Claude / Codex 주간 인사이트" : "Claude / Codex Weekly Insight" }
+    var insights: String {
+        ko ? "Claude / Codex / Hermes 주간 인사이트"
+           : "Claude / Codex / Hermes Weekly Insight"
+    }
     var insightsTitle: String { ko ? "주간 인사이트" : "Weekly Insights" }
     var insightsDailyAvg: String { ko ? "일 평균" : "Daily Avg" }
     var insightsPeakDay: String { ko ? "최고 사용일" : "Peak Day" }
@@ -118,8 +121,8 @@ struct L {
 
     var noDataYet: String { ko ? "아직 오늘의 데이터가 없습니다" : "No data for today yet" }
     var autoCollect: String {
-        ko ? "Claude 또는 Codex를 사용하면 자동 수집됩니다"
-            : "Data is collected automatically when using Claude or Codex"
+        ko ? "Claude, Codex 또는 Hermes를 사용하면 자동 수집됩니다"
+            : "Data is collected automatically from Claude, Codex, or Hermes"
     }
 
     // MARK: - Task Panel

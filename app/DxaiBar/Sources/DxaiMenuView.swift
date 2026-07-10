@@ -5,12 +5,13 @@ import UserNotifications
 // MARK: - Theme
 
 enum ToolTheme {
-    case claude, codex
+    case claude, codex, hermes
 
     var primary: Color {
         switch self {
         case .claude: return Color(red: 0.85, green: 0.47, blue: 0.34)
         case .codex:  return Color(red: 0.06, green: 0.64, blue: 0.50)
+        case .hermes: return Color(red: 0.93, green: 0.67, blue: 0.08)
         }
     }
 
@@ -26,6 +27,11 @@ enum ToolTheme {
                 colors: [Color(red: 0.06, green: 0.64, blue: 0.50),
                          Color(red: 0.10, green: 0.76, blue: 0.49)],
                 startPoint: .leading, endPoint: .trailing)
+        case .hermes:
+            return LinearGradient(
+                colors: [Color(red: 0.93, green: 0.67, blue: 0.08),
+                         Color(red: 0.99, green: 0.80, blue: 0.20)],
+                startPoint: .leading, endPoint: .trailing)
         }
     }
 
@@ -33,6 +39,7 @@ enum ToolTheme {
         switch self {
         case .claude: return "bolt.fill"
         case .codex:  return "chevron.left.forwardslash.chevron.right"
+        case .hermes: return "paperplane.fill"
         }
     }
 
@@ -40,6 +47,7 @@ enum ToolTheme {
         switch self {
         case .claude: return "Claude"
         case .codex:  return "Codex"
+        case .hermes: return "Hermes"
         }
     }
 
@@ -47,6 +55,7 @@ enum ToolTheme {
         switch tool.lowercased() {
         case "claude": return .claude
         case "codex":  return .codex
+        case "hermes": return .hermes
         default: return nil
         }
     }
@@ -493,11 +502,11 @@ struct DxaiMenuView: View {
         return prefix
     }
 
-    // MARK: - Tool Cards (Claude + Codex only)
+    // MARK: - Tool Cards
 
     private var toolCardsSection: some View {
         let filtered = viewModel.toolStats.filter {
-            $0.tool.lowercased() == "claude" || $0.tool.lowercased() == "codex"
+            ToolTheme.from($0.tool) != nil
         }
 
         return VStack(spacing: 0) {
@@ -551,9 +560,11 @@ struct DxaiMenuView: View {
 
     private func toolCard(_ stat: DxaiDatabase.DailyStats) -> some View {
         let theme = ToolTheme.from(stat.tool) ?? .claude
-        let quota = stat.tool.lowercased() == "claude"
-            ? viewModel.claudeQuota
-            : viewModel.codexQuota
+        let quota: DxaiDatabase.QuotaInfo? = switch stat.tool.lowercased() {
+        case "claude": viewModel.claudeQuota
+        case "codex": viewModel.codexQuota
+        default: nil
+        }
         let sessionStat = viewModel.sessionStats.first {
             $0.tool.lowercased() == stat.tool.lowercased()
         }

@@ -3,10 +3,11 @@
 dxai ai - AI 서비스 통합 사용량 대시보드
 
 사용법:
-    dxai ai              # 전체 요약 (Claude + Codex)
+    dxai ai              # 전체 요약 (Claude + Codex + Hermes)
     dxai ai claude       # Claude 상세
     dxai ai codex        # Codex 상세
-    dxai ai tokens       # 전체 토큰 요약 (Claude + Codex)
+    dxai ai hermes       # Hermes 상세
+    dxai ai tokens       # 전체 토큰 요약 (Claude + Codex + Hermes)
     dxai ai today        # Claude 오늘 토큰 사용량
     dxai ai week         # Claude 최근 7일
     dxai ai month        # Claude 최근 30일
@@ -497,7 +498,7 @@ def _format_date(iso_str):
 def get_codex_token_stats(period='today'):
     jsonl_files = list(iter_codex_jsonl_files())
     start_time = get_period_start(period)
-    stats = empty_token_stats(extra_keys=['reasoning_output_tokens', 'hermes_codex_tokens'])
+    stats = empty_token_stats(extra_keys=['reasoning_output_tokens'])
 
     for filepath in jsonl_files:
         prev_totals = None
@@ -567,14 +568,7 @@ def get_codex_token_stats(period='today'):
             continue
 
     _apply_codex_state_floor(stats, period)
-    _add_token_stats(stats, get_hermes_codex_token_stats(period))
     return stats
-
-
-def _add_token_stats(target, source):
-    for key, value in source.items():
-        if key in target and isinstance(value, int):
-            target[key] += value
 
 
 def iter_hermes_state_dbs():
@@ -599,10 +593,10 @@ def iter_hermes_state_dbs():
         yield db_path
 
 
-def get_hermes_codex_token_stats(period='today'):
+def get_hermes_token_stats(period='today'):
     start_time = get_period_start(period)
     start_epoch = int(start_time.timestamp())
-    stats = empty_token_stats(extra_keys=['reasoning_output_tokens', 'hermes_codex_tokens'])
+    stats = empty_token_stats(extra_keys=['reasoning_output_tokens'])
 
     query = """
         SELECT
@@ -614,7 +608,9 @@ def get_hermes_codex_token_stats(period='today'):
             COUNT(*)
         FROM sessions
         WHERE started_at >= ?
-          AND billing_provider = 'openai-codex'
+          AND COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
+              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_write_tokens, 0)
+              + COALESCE(reasoning_tokens, 0) > 0
     """
 
     for db_path in iter_hermes_state_dbs():
@@ -648,7 +644,6 @@ def get_hermes_codex_token_stats(period='today'):
         stats["cache_creation_tokens"] += cache_write_tokens
         stats["reasoning_output_tokens"] += reasoning_tokens
         stats["total_tokens"] += total_tokens
-        stats["hermes_codex_tokens"] += total_tokens
         stats["requests"] += requests
 
     return stats
@@ -692,7 +687,8 @@ def _get_codex_state_tokens(period):
 def _get_total_today_tokens():
     claude = get_claude_token_stats('today') or empty_token_stats()
     codex = get_codex_token_stats('today') or empty_token_stats()
-    return claude['total_tokens'] + codex['total_tokens']
+    hermes = get_hermes_token_stats('today') or empty_token_stats()
+    return claude['total_tokens'] + codex['total_tokens'] + hermes['total_tokens']
 
 
 def display_summary():
@@ -732,6 +728,7 @@ def display_summary():
 
     # Codex
     codex = get_codex_usage()
+    codex_today = get_codex_token_stats('today') or empty_token_stats()
     print(f"\n{Colors.BOLD} Codex{Colors.END}", end="")
     if codex:
         plan_label = (codex.get("plan") or "?").capitalize()
@@ -748,17 +745,29 @@ def display_summary():
         print(f"  세션 (5h)  {make_bar(five, 25, five_c)} {five_c}{five}%{Colors.END} | 리셋 {five_reset}")
         print(f"  주간 (7d)  {make_bar(seven, 25, seven_c)} {seven_c}{seven}%{Colors.END} | 리셋 {seven_reset}")
     else:
-        codex_today = get_codex_token_stats('today') or empty_token_stats()
-        codex_week = get_codex_token_stats('week') or empty_token_stats()
-        if codex_today['total_tokens'] > 0 or codex_week['total_tokens'] > 0:
+        if codex_today['total_tokens'] > 0:
             print(f" {Colors.YELLOW}(OAuth 할당량 미연결 · 로컬 토큰){Colors.END}")
-            print(
-                f"  오늘 {format_number(codex_today['total_tokens'])}"
-                f" | 7일 {format_number(codex_week['total_tokens'])}"
-                f" | 요청 {codex_today['requests']}"
-            )
         else:
             print(f" {Colors.RED}(데이터 없음){Colors.END}")
+
+    if codex_today['total_tokens'] > 0:
+        print(
+            f"  오늘 {Colors.GREEN}{format_number(codex_today['total_tokens'])}{Colors.END} tokens"
+            f" · {codex_today['requests']} req"
+        )
+
+    print_separator()
+
+    # Hermes
+    hermes_today = get_hermes_token_stats('today') or empty_token_stats()
+    print(f"\n{Colors.BOLD} Hermes{Colors.END}")
+    if hermes_today['total_tokens'] > 0:
+        print(
+            f"  오늘 {Colors.GREEN}{format_number(hermes_today['total_tokens'])}{Colors.END} tokens"
+            f" · {hermes_today['requests']} sessions"
+        )
+    else:
+        print(f"  {Colors.RED}데이터 없음{Colors.END}")
 
     # Vanguard Alert
     total_today = _get_total_today_tokens()
@@ -864,6 +873,32 @@ def display_codex_detail():
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
 
 
+def display_hermes_detail():
+    print_header("  Hermes 상세 정보")
+
+    today = get_hermes_token_stats('today')
+    week = get_hermes_token_stats('week')
+    month = get_hermes_token_stats('month')
+
+    print(f"\n{Colors.BOLD}토큰 사용량:{Colors.END}")
+    print(
+        f"  오늘 {format_number(today['total_tokens'])}"
+        f" | 7일 {format_number(week['total_tokens'])}"
+        f" | 30일 {format_number(month['total_tokens'])}"
+    )
+    if today['total_tokens'] > 0:
+        total = today['total_tokens']
+        print(f"\n{Colors.BOLD}오늘 상세:{Colors.END}")
+        _print_bar("입력 토큰", today['input_tokens'], total, Colors.BLUE)
+        _print_bar("출력 토큰", today['output_tokens'], total, Colors.GREEN)
+        _print_bar("캐시 읽기", today['cache_read_tokens'], total, Colors.CYAN)
+        _print_bar("캐시 생성", today['cache_creation_tokens'], total, Colors.HEADER)
+        _print_bar("추론 토큰", today['reasoning_output_tokens'], total, Colors.YELLOW)
+        print(f"  세션 수      {today['requests']}")
+
+    print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 60}{Colors.END}\n")
+
+
 def display_claude_period(period):
     period_names = {
         'today': '오늘',
@@ -905,6 +940,10 @@ def display_token_overview():
     codex_week = get_codex_token_stats('week') or empty_token_stats()
     codex_month = get_codex_token_stats('month') or empty_token_stats()
 
+    hermes_today = get_hermes_token_stats('today') or empty_token_stats()
+    hermes_week = get_hermes_token_stats('week') or empty_token_stats()
+    hermes_month = get_hermes_token_stats('month') or empty_token_stats()
+
     print(f"\n{Colors.BOLD}Claude{Colors.END}")
     print(
         f"  오늘 {format_number(claude_today['total_tokens'])}"
@@ -919,10 +958,18 @@ def display_token_overview():
         f" | 30일 {format_number(codex_month['total_tokens'])}"
     )
 
+    print(f"\n{Colors.BOLD}Hermes{Colors.END}")
+    print(
+        f"  오늘 {format_number(hermes_today['total_tokens'])}"
+        f" | 7일 {format_number(hermes_week['total_tokens'])}"
+        f" | 30일 {format_number(hermes_month['total_tokens'])}"
+    )
+
     # Vanguard Alert
     total_today = (
         claude_today['total_tokens']
         + codex_today['total_tokens']
+        + hermes_today['total_tokens']
     )
     show_vanguard_alert(total_today)
 
@@ -976,6 +1023,11 @@ def collect_to_db():
     if codex and codex['total_tokens'] > 0:
         db.upsert_daily(today, 'codex', codex)
         print(f"  Codex:  {format_number(codex['total_tokens'])} tokens")
+
+    hermes = get_hermes_token_stats('today')
+    if hermes and hermes['total_tokens'] > 0:
+        db.upsert_daily(today, 'hermes', hermes)
+        print(f"  Hermes: {format_number(hermes['total_tokens'])} tokens")
 
     # 할당량 스냅샷 저장
     quota = get_claude_quota()
@@ -1081,11 +1133,17 @@ def main():
                 "week": get_codex_token_stats('week'),
                 "month": get_codex_token_stats('month'),
             },
+            "hermes_tokens": {
+                "today": get_hermes_token_stats('today'),
+                "week": get_hermes_token_stats('week'),
+                "month": get_hermes_token_stats('month'),
+            },
             "vanguard": None,
         }
         total_today = (
             (data["claude_tokens"]["today"] or {}).get("total_tokens", 0)
             + (data["codex_tokens"]["today"] or {}).get("total_tokens", 0)
+            + (data["hermes_tokens"]["today"] or {}).get("total_tokens", 0)
         )
         level, _, message = get_vanguard_alert(total_today)
         if level:
@@ -1099,6 +1157,10 @@ def main():
 
     if command == 'codex':
         display_codex_detail()
+        return
+
+    if command == 'hermes':
+        display_hermes_detail()
         return
 
     if command == 'tokens':
@@ -1118,7 +1180,7 @@ def main():
         return
 
     valid_commands = ['', 'today', 'week', 'month', 'all',
-                      'claude', 'codex', 'tokens', 'watch', 'json',
+                      'claude', 'codex', 'hermes', 'tokens', 'watch', 'json',
                       'collect', 'insights']
     if command and command not in valid_commands:
         print(f"{Colors.RED}잘못된 명령어: {command}{Colors.END}")
@@ -1126,6 +1188,7 @@ def main():
         print("  (없음)     전체 요약")
         print("  claude     Claude 상세")
         print("  codex      Codex 상세")
+        print("  hermes     Hermes 상세")
         print("  tokens     통합 토큰 요약")
         print("  today      Claude 오늘 토큰")
         print("  week       Claude 최근 7일")

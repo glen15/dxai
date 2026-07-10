@@ -1,6 +1,6 @@
 # DXAI 전체 아키텍처
 
-**마지막 업데이트:** 2026-07-08
+**마지막 업데이트:** 2026-07-11
 **레포:** glen15/dxai (public)
 **브랜딩:** DXAI (회사) / Vanguard (랭킹 서비스)
 
@@ -56,7 +56,7 @@ Claude Code .jsonl     -+
 Codex CLI/App .jsonl    +-> DxaiDatabase.swift (read-only 파싱)
 Codex state_5.sqlite    +       |
 Hermes state.db         -+       v
-                     DxaiViewModel.swift (집계)
+                     DxaiViewModel.swift (도구별 독립 집계)
                              |
                      15초 타이머 refresh()
 ```
@@ -65,6 +65,7 @@ Hermes state.db         -+       v
 ```
 DxaiViewModel.refresh()
   -> DxaiPointService.recordDailyBest()
+    -> 기존 서버 계약용 Codex + Hermes 호환 합산
     -> submitToServer() [POST]
       -> submit-daily Edge Function
         -> users + daily_records upsert

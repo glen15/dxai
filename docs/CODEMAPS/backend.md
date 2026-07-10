@@ -63,7 +63,7 @@ calculateStreak()  -- 연속 활동일 계산
 
 | 커맨드 | 실행 파일 | 언어 | 역할 |
 |--------|----------|------|------|
-| `dxai ai` | `bin/ai.py` | Python 3 | AI 토큰 대시보드 (Claude+Codex) |
+| `dxai ai` | `bin/ai.py` | Python 3 | AI 토큰 대시보드 (Claude+Codex+Hermes) |
 | `dxai scan` | `bin/scan.py` | Python 3 | AI 환경 스캔 (MCP, Skills, Projects) |
 | `dxai status` | `bin/status-go` | Go (bubbletea) | 시스템 모니터링 TUI/JSON |
 | `dxai analyze` | `bin/analyze-go` | Go (bubbletea) | 디스크 분석 TUI/JSON |
@@ -130,7 +130,7 @@ lib/
 
 | 파일 | 역할 |
 |------|------|
-| `bin/ai.py` | AI 토큰 대시보드: Claude/Codex JSONL, Codex SQLite, Hermes SQLite 집계, 쿼터 조회, 실시간 모니터링 |
+| `bin/ai.py` | AI 토큰 대시보드: Claude/Codex/Hermes 독립 집계, 쿼터 조회, 실시간 모니터링, JSON 계약 |
 | `bin/scan.py` | AI 환경 스캔: Claude/Codex 설정, MCP, Skills, 활성 세션, 포트 |
 | `bin/telemetry.py` | 텔레메트리 수집 |
 | `lib/ai/db.py` | AI 데이터 DB 헬퍼 |

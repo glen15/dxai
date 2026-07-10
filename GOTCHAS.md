@@ -2,6 +2,20 @@
 
 프로젝트에서 발견된 함정과 근본 원인 기록. fix 커밋 시 반드시 여기에 항목 추가.
 
+### Hermes를 billing provider 기준으로 Codex에 합치면 도구별 통계가 왜곡됨
+- **발견**: 2026-07-11
+- **증상**: Hermes에서 수행한 작업이 모두 Codex 카드와 그래프에 표시되어 native Codex 사용량과 Hermes 오케스트레이션 사용량을 비교할 수 없음
+- **근본 원인**: 최초 Hermes 지원은 누락된 OpenAI Codex 할당량을 복원하는 데 초점을 맞춰 `billing_provider = 'openai-codex'` 세션을 Codex에 합산함. 비용 제공자와 실제 실행 도구를 같은 분류 축으로 취급함
+- **방어**:
+  - 앱/CLI 통계는 실행 도구 기준으로 분류하고 Hermes DB의 모든 non-zero 세션을 `hermes`로 독립 반환
+  - native Codex는 `.codex` 원천만 사용하며 Hermes를 다시 합산하지 않음
+  - 로컬 총합은 Claude + Codex + Hermes를 한 번씩 더하고, 기존 서버 API 경계에서만 Codex + Hermes로 호환 합산
+  - 기본 Hermes DB와 profile DB는 경로 중복을 제거하고 0-token 세션은 요청 수에서도 제외
+  - 앱 번들에는 개발 중 생성된 `__pycache__`/`.pyc`를 복사하지 않아 서명 리소스와 배포물을 결정적으로 유지
+- **교훈**: “어디에서 실행했는가”와 “어느 provider의 quota를 썼는가”는 별도 축이다. 제품의 도구별 그래프는 실행 도구를, quota 바는 billing provider를 기준으로 해야 한다
+
+---
+
 ### Hermes openai-codex 사용량 누락
 - **발견**: 2026-07-08 (V1.0.23 준비)
 - **증상**: Hermes에서 `openai-codex` OAuth/provider로 Codex를 사용하면 실제 Codex 할당량은 소모되지만 DXAI의 `codex_tokens`가 0 또는 과소 집계됨. 같은 날 `~/.hermes/state.db`에는 `billing_provider='openai-codex'` 세션 토큰이 존재하지만 `~/.codex/sessions`에는 오늘 `token_count` 이벤트가 없을 수 있음
@@ -11,6 +25,7 @@
   - CLI `bin/ai.py`: 동일한 Hermes state DB 집계를 `get_codex_token_stats()`에 합산
   - 메시지 내용은 읽지 않고 `sessions`의 숫자 집계 컬럼만 조회하며, 프로필 DB schema/lock 문제는 fail-soft 처리
 - **교훈**: “Codex 사용량”은 Codex CLI/App 로그만이 아니라 Codex 인증을 사용하는 상위 에이전트(Hermes 등)의 세션 저장소도 포함해야 한다. 새 agent/provider 경로가 추가될 때는 실제 billing provider와 로컬 저장 위치를 함께 확인할 것
+- **후속**: 2026-07-11부터 Hermes는 로컬 앱/CLI에서 독립 도구로 표시하고, 기존 서버 제출 경계에서만 Codex와 호환 합산한다
 
 ---
 

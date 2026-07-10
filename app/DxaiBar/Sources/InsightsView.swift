@@ -25,18 +25,28 @@ struct InsightsView: View {
 
     // MARK: - This Week Computed Data
 
-    private var dailyTotals: [(date: String, total: Int, claude: Int, codex: Int)] {
-        var byDate: [String: (claude: Int, codex: Int)] = [:]
+    private var dailyTotals: [(date: String, total: Int, claude: Int, codex: Int, hermes: Int)] {
+        var byDate: [String: (claude: Int, codex: Int, hermes: Int)] = [:]
         for s in thisWeekStats {
-            var entry = byDate[s.date] ?? (claude: 0, codex: 0)
-            if s.tool == "claude" { entry.claude += s.totalTokens }
-            else { entry.codex += s.totalTokens }
+            var entry = byDate[s.date] ?? (claude: 0, codex: 0, hermes: 0)
+            switch s.tool {
+            case "claude": entry.claude += s.totalTokens
+            case "codex": entry.codex += s.totalTokens
+            case "hermes": entry.hermes += s.totalTokens
+            default: continue
+            }
             byDate[s.date] = entry
         }
         let dates = Set(thisWeekStats.map(\.date)).sorted()
         return dates.map { d in
-            let e = byDate[d] ?? (claude: 0, codex: 0)
-            return (date: d, total: e.claude + e.codex, claude: e.claude, codex: e.codex)
+            let e = byDate[d] ?? (claude: 0, codex: 0, hermes: 0)
+            return (
+                date: d,
+                total: e.claude + e.codex + e.hermes,
+                claude: e.claude,
+                codex: e.codex,
+                hermes: e.hermes
+            )
         }
     }
 
@@ -50,6 +60,7 @@ struct InsightsView: View {
     }
     private var claudeTotal: Int { thisWeekStats.filter { $0.tool == "claude" }.reduce(0) { $0 + $1.totalTokens } }
     private var codexTotal: Int { thisWeekStats.filter { $0.tool == "codex" }.reduce(0) { $0 + $1.totalTokens } }
+    private var hermesTotal: Int { thisWeekStats.filter { $0.tool == "hermes" }.reduce(0) { $0 + $1.totalTokens } }
     private var totalInput: Int { thisWeekStats.reduce(0) { $0 + $1.inputTokens } }
     private var totalOutput: Int { thisWeekStats.reduce(0) { $0 + $1.outputTokens } }
     private var totalCache: Int { thisWeekStats.reduce(0) { $0 + $1.cacheReadTokens } }
@@ -203,6 +214,7 @@ struct InsightsView: View {
             ForEach(dailyTotals, id: \.date) { day in
                 let claudeH = barHeight * CGFloat(day.claude) / CGFloat(maxVal)
                 let codexH = barHeight * CGFloat(day.codex) / CGFloat(maxVal)
+                let hermesH = barHeight * CGFloat(day.hermes) / CGFloat(maxVal)
                 let isToday = day.date == dailyTotals.last?.date
 
                 VStack(spacing: 2) {
@@ -211,6 +223,11 @@ struct InsightsView: View {
                         .foregroundColor(.secondary.opacity(colors.textDim))
 
                     VStack(spacing: 0) {
+                        if hermesH > 0 {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(ToolTheme.hermes.primary.opacity(isToday ? 1 : 0.6))
+                                .frame(height: max(2, hermesH))
+                        }
                         if codexH > 0 {
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(ToolTheme.codex.primary.opacity(isToday ? 1 : 0.6))
@@ -236,9 +253,10 @@ struct InsightsView: View {
     // MARK: - Tool Breakdown
 
     private var toolBreakdown: some View {
-        let total = max(1, claudeTotal + codexTotal)
-        let claudePct = Int(Double(claudeTotal) / Double(total) * 100)
-        let codexPct = 100 - claudePct
+        let total = max(1, claudeTotal + codexTotal + hermesTotal)
+        let claudePct = Int(round(Double(claudeTotal) / Double(total) * 100))
+        let codexPct = Int(round(Double(codexTotal) / Double(total) * 100))
+        let hermesPct = Int(round(Double(hermesTotal) / Double(total) * 100))
 
         return VStack(alignment: .leading, spacing: 8) {
             Text(l.insightsToolBreakdown)
@@ -246,27 +264,34 @@ struct InsightsView: View {
                 .foregroundColor(.secondary)
 
             GeometryReader { geo in
+                let contentWidth = max(0, geo.size.width - 2)
                 HStack(spacing: 1) {
-                    if claudePct > 0 {
+                    if claudeTotal > 0 {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(ToolTheme.claude.primary)
-                            .frame(width: geo.size.width * CGFloat(claudePct) / 100)
+                            .frame(width: contentWidth * CGFloat(claudeTotal) / CGFloat(total))
                     }
-                    if codexPct > 0 {
+                    if codexTotal > 0 {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(ToolTheme.codex.primary)
-                            .frame(width: geo.size.width * CGFloat(codexPct) / 100)
+                            .frame(width: contentWidth * CGFloat(codexTotal) / CGFloat(total))
+                    }
+                    if hermesTotal > 0 {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(ToolTheme.hermes.primary)
+                            .frame(width: contentWidth * CGFloat(hermesTotal) / CGFloat(total))
                     }
                 }
             }
             .frame(height: 14)
 
-            HStack {
+            VStack(spacing: 5) {
                 legendDot(color: ToolTheme.claude.primary, label: "Claude",
                           value: "\(claudePct)%  \(formatCompact(claudeTotal))")
-                Spacer()
                 legendDot(color: ToolTheme.codex.primary, label: "Codex",
                           value: "\(codexPct)%  \(formatCompact(codexTotal))")
+                legendDot(color: ToolTheme.hermes.primary, label: "Hermes",
+                          value: "\(hermesPct)%  \(formatCompact(hermesTotal))")
             }
         }
     }
@@ -327,6 +352,7 @@ struct InsightsView: View {
         HStack(spacing: 5) {
             Circle().fill(color).frame(width: 9, height: 9)
             Text(label).font(.system(size: 12, weight: .medium))
+            Spacer()
             Text(value).font(.system(size: 12, design: .monospaced))
                 .foregroundColor(.secondary)
         }

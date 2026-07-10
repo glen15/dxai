@@ -1,6 +1,6 @@
 # 프론트엔드 코드맵
 
-**마지막 업데이트:** 2026-07-08
+**마지막 업데이트:** 2026-07-11
 
 ## A. macOS 메뉴바 앱 (DxaiBar)
 
@@ -33,9 +33,9 @@ app/DxaiBar/Sources/
 |------|----------|------|
 | DxaiBarApp | DxaiViewModel, UpdaterManager, DxaiMenuView | 앱 진입, 메뉴바 등록 |
 | DxaiViewModel | DxaiDatabase, DxaiPointService, L | 토큰 집계, 알림, 타이머(15s), 태스크 실행 |
-| DxaiDatabase | (로컬 파일시스템, `/usr/bin/sqlite3`) | Claude/Codex JSONL, Codex SQLite, Hermes SQLite 토큰 파싱, Quota API 호출 |
+| DxaiDatabase | (로컬 파일시스템, `/usr/bin/sqlite3`) | Claude/Codex/Hermes 독립 토큰 파싱, Quota API 호출 |
 | DxaiStore | SQLite3 | `~/.config/dxai/points/dxai.db` config/daily/pending 영속화 및 JSON 마이그레이션 |
-| DxaiPointService | (URLSession, DxaiStore) | 코인 계산, 서버 제출, pending queue 관리 |
+| DxaiPointService | (URLSession, DxaiStore) | 코인 계산, 서버 제출, pending queue 관리. 기존 서버 계약에는 Codex+Hermes 합산 제출 |
 | DxaiMenuView | DxaiViewModel, InsightsView, SettingsView, DxaiColors, L | 전체 UI 조합 |
 | StatusPanelView | DxaiColors | JSON -> 시스템 상태 시각화 |
 | ScanPanelView | DxaiColors, L, FlowLayout | JSON -> AI 환경 시각화 |
@@ -45,7 +45,7 @@ app/DxaiBar/Sources/
 ```
 DxaiViewModel.VanguardLevel    # 8티어 x 5디비전 + Challenger
 DxaiViewModel.MilestoneInfo    # 14단계 토큰 마일스톤 (2천만 ~ 20억)
-DxaiDatabase.DailyStats        # 일별 도구별 토큰 통계
+DxaiDatabase.DailyStats        # 일별 Claude/Codex/Hermes 독립 토큰 통계
 DxaiDatabase.QuotaInfo         # Claude/Codex 쿼터 (5h/7d)
 DxaiPointService.PointConfig   # 닉네임, UUID, opt-in
 DxaiPointService.DailyRecord   # 일별 코인/토큰 기록

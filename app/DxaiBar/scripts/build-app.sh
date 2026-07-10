@@ -119,6 +119,8 @@ if [[ -f "$CLI_SCRIPT" ]]; then
             cp -R "$DXAI_ROOT/$dir" "$APP_DIR/Contents/Resources/$dir"
         fi
     done
+    find "$APP_DIR/Contents/Resources" -type d -name "__pycache__" -prune -exec rm -rf {} +
+    find "$APP_DIR/Contents/Resources" -type f -name "*.pyc" -delete
     echo "CLI bundled into app"
 fi
 

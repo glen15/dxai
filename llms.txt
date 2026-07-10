@@ -2,7 +2,7 @@
 
 > AI dev environment manager for macOS
 
-dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI, Hermes-backed Codex). It tracks token usage, monitors quotas, and offers system optimization — all locally without API keys.
+dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI coding tools (Claude Code, Codex CLI, Hermes). It tracks each tool separately, monitors quotas, and offers system optimization — all locally without API keys.
 
 ## Repository
 
@@ -17,7 +17,7 @@ dxai is a macOS menu bar app and CLI that provides a unified dashboard for AI co
 SwiftUI macOS menu bar app (`MenuBarExtra` with `.window` style). Bundle ID: `com.dxai.DxaiBar`.
 
 Features:
-- Real-time token usage tracking across Claude Code, Codex CLI, Hermes openai-codex
+- Real-time token usage tracking with separate Claude Code, Codex CLI, and Hermes metrics
 - Quota bars for Claude/Codex 5-hour session and 7-day limits
 - Vanguard Rank system: 8 tiers (Bronze → Challenger), 36 levels with unique messages per division
 - Token Milestone achievement notifications (16 thresholds)
@@ -34,7 +34,8 @@ Build: `cd app/DxaiBar && ./scripts/build-app.sh release`
 Bash entrypoint (`dxai`) dispatching to Python/Shell/Go implementations.
 
 Commands:
-- `dxai ai` — Token usage dashboard (Claude + Codex)
+- `dxai ai` — Token usage dashboard (Claude + Codex + Hermes)
+- `dxai ai hermes` — Hermes token details
 - `dxai ai watch` — Real-time token monitoring
 - `dxai scan` — AI agent environment diagnosis
 - `dxai scan --json` — Structured JSON output (used by menu bar app)
@@ -99,7 +100,9 @@ dxai/
 
 - Claude Code: `~/.claude/projects/*/logs/*.jsonl`
 - Codex CLI: `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/*.jsonl`, `~/.codex/state_5.sqlite`
-- Hermes Codex: `~/.hermes/state.db`, `~/.hermes/profiles/*/state.db` (`sessions.billing_provider = 'openai-codex'`)
+- Hermes: `~/.hermes/state.db`, `~/.hermes/profiles/*/state.db` (all non-zero token sessions, provider-independent)
+
+The local app and CLI report Hermes separately. Until the Vanguard server adds a `hermes_tokens` field, submissions preserve compatibility by folding Hermes into `codex_tokens` only at the server boundary.
 
 ## Vanguard Rank Tiers
 

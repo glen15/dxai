@@ -88,6 +88,18 @@ final class DxaiDatabase {
             ))
         }
 
+        let hermes = combinedAccum(parseHermes(from: startOfDay, to: nil))
+        if hermes.totalTokens > 0 {
+            results.append(DailyStats(
+                date: today, tool: "hermes",
+                totalTokens: hermes.totalTokens,
+                inputTokens: hermes.inputTokens,
+                outputTokens: hermes.outputTokens,
+                cacheReadTokens: hermes.cacheReadTokens,
+                requests: hermes.requests
+            ))
+        }
+
         return results
     }
 
@@ -224,7 +236,6 @@ final class DxaiDatabase {
         }
 
         applyCodexStateFloor(to: &accum, from: startOfDay, to: nil)
-        accum.add(combinedAccum(parseHermesCodex(from: startOfDay, to: nil)))
         return accum
     }
 
@@ -244,7 +255,7 @@ final class DxaiDatabase {
 
         let claudeByDate = parseClaude(from: startDate, to: endDate)
         let codexByDate = parseCodex(from: startDate, to: endDate)
-        let hermesCodexByDate = parseHermesCodex(from: startDate, to: endDate)
+        let hermesByDate = parseHermes(from: startDate, to: endDate)
 
         var results: [DailyStats] = []
         for daysAgo in (0...13).reversed() {
@@ -259,13 +270,20 @@ final class DxaiDatabase {
                 requests: c.requests
             ))
 
-            var x = codexByDate[dateKey] ?? TokenAccum()
-            x.add(hermesCodexByDate[dateKey] ?? TokenAccum())
+            let x = codexByDate[dateKey] ?? TokenAccum()
             results.append(DailyStats(
                 date: dateKey, tool: "codex",
                 totalTokens: x.totalTokens, inputTokens: x.inputTokens,
                 outputTokens: x.outputTokens, cacheReadTokens: x.cacheReadTokens,
                 requests: x.requests
+            ))
+
+            let h = hermesByDate[dateKey] ?? TokenAccum()
+            results.append(DailyStats(
+                date: dateKey, tool: "hermes",
+                totalTokens: h.totalTokens, inputTokens: h.inputTokens,
+                outputTokens: h.outputTokens, cacheReadTokens: h.cacheReadTokens,
+                requests: h.requests
             ))
         }
 
@@ -282,7 +300,7 @@ final class DxaiDatabase {
         let claude = combinedAccum(parseClaude(from: startDate, to: endDate))
         var codex = combinedAccum(parseCodex(from: startDate, to: endDate))
         applyCodexStateFloor(to: &codex, from: startDate, to: endDate)
-        codex.add(combinedAccum(parseHermesCodex(from: startDate, to: endDate)))
+        let hermes = combinedAccum(parseHermes(from: startDate, to: endDate))
 
         var results: [DailyStats] = []
         if claude.totalTokens > 0 {
@@ -303,6 +321,16 @@ final class DxaiDatabase {
                 outputTokens: codex.outputTokens,
                 cacheReadTokens: codex.cacheReadTokens,
                 requests: codex.requests
+            ))
+        }
+        if hermes.totalTokens > 0 {
+            results.append(DailyStats(
+                date: dateKey, tool: "hermes",
+                totalTokens: hermes.totalTokens,
+                inputTokens: hermes.inputTokens,
+                outputTokens: hermes.outputTokens,
+                cacheReadTokens: hermes.cacheReadTokens,
+                requests: hermes.requests
             ))
         }
         return results
@@ -450,7 +478,7 @@ final class DxaiDatabase {
         return accum
     }
 
-    private func parseHermesCodex(from startDate: Date, to endDate: Date?) -> [String: TokenAccum] {
+    private func parseHermes(from startDate: Date, to endDate: Date?) -> [String: TokenAccum] {
         var accum: [String: TokenAccum] = [:]
         let start = Int(startDate.timeIntervalSince1970)
         let endClause: String
@@ -470,7 +498,9 @@ final class DxaiDatabase {
                COUNT(*)
         FROM sessions
         WHERE started_at >= \(start)\(endClause)
-          AND billing_provider = 'openai-codex'
+          AND COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
+              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_write_tokens, 0)
+              + COALESCE(reasoning_tokens, 0) > 0
         GROUP BY day;
         """
 
